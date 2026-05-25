@@ -1,0 +1,30 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local-only — raw upstream API references used for development.
+# Not redistributable, not relevant for consumers of the package.
+docs/
+
+# Knowledge graph artefacts (graphify). Regenerable, large, machine-local.
+graphify-out/
+
+# Integration test credentials and local-only fixtures.
+# `.env.test.example` is the committed schema template; the real
+# `.env.test` (and any cached upstream specs / Docker volumes) stay
+# on the developer's machine.
+.env.test
+test/.spec_cache/
+test/integration/volumes/
+test/integration/seed/
+test/fixtures/captured/

@@ -1,0 +1,26 @@
+# pubignore — controls what gets uploaded to pub.dev.
+# When this file is present `.gitignore` is ignored, so every
+# development-only path must be listed here too.
+
+# Test infrastructure — kept on GitHub for contributors, not shipped
+# to package consumers.
+test/
+dart_test.yaml
+
+# Local-only — raw upstream API references used during development.
+docs/
+
+# Knowledge graph artefacts (graphify). Regenerable, large.
+graphify-out/
+
+# IDE / OS noise.
+.dart_tool/
+.idea/
+.vscode/
+*.iml
+.DS_Store
+build/
+pubspec.lock
+
+# Integration test credentials and local fixtures.
+.env.test
