@@ -20,6 +20,7 @@ import '../plex_models.dart';
 class PlexUltraBlurApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.ultraBlur].
   PlexUltraBlurApi(this._http);
 
   /// `GET /services/ultrablur/colors` — extract four corner colours

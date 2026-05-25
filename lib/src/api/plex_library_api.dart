@@ -9,6 +9,7 @@ import '../plex_models.dart';
 class PlexLibraryApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.library].
   PlexLibraryApi(this._http);
 
   // -------------------------------------------------------------------------

@@ -17,6 +17,7 @@ class PlexSessionsApi {
 
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.sessions].
   PlexSessionsApi(this._http);
 
   /// All active playback sessions on the server.

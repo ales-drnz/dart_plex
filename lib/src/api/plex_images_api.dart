@@ -16,6 +16,7 @@ import '../plex_exception.dart';
 class PlexImagesApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.images].
   PlexImagesApi(this._http);
 
   /// Build a transcoded image URL.

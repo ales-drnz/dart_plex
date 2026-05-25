@@ -58,34 +58,89 @@ import 'plex_credentials.dart';
 class PlexClient {
   final PlexConnection _http;
 
+  /// `https://plex.tv/api/v2` operations — server identity, user info, friends.
   late final PlexAccountApi account;
+
+  /// Top-level PMS endpoints — `/`, `/identity`, `/capabilities`.
   late final PlexServerApi server;
+
+  /// `/library/sections` and `/library/metadata/{id}` browsing.
   late final PlexLibraryApi library;
+
+  /// `/playlists` and `/playlists/{id}/items` — create, list, mutate playlists.
   late final PlexPlaylistsApi playlists;
+
+  /// `/hubs/search` and legacy `/search` — global and per-section search.
   late final PlexSearchApi search;
+
+  /// `/:/timeline`, `/:/scrobble`, `/:/rate` — playback reporting and ratings.
   late final PlexPlaybackApi playback;
+
+  /// Build signed `/music/:/transcode/universal/*` streaming URLs.
   late final PlexStreamingApi streaming;
+
+  /// `/photo/:/transcode` — resized artwork URLs.
   late final PlexImagesApi images;
+
+  /// `/status/sessions` — currently active playback sessions.
   late final PlexSessionsApi sessions;
+
+  /// `/hubs` — home-screen rails (Recently Added, Continue Listening, …).
   late final PlexHubsApi hubs;
+
+  /// `/playQueues` — server-side queues for cast / multi-device playback.
   late final PlexPlayQueuesApi playQueues;
+
+  /// `/livetv/sessions` and related Live TV consumer endpoints.
   late final PlexLiveTvApi liveTv;
+
+  /// `/services/ultrablur/colors` — corner-colour artwork gradients.
   late final PlexUltraBlurApi ultraBlur;
+
+  /// `/library/collections` — create / add / remove / reorder collections.
   late final PlexCollectionsApi collections;
+
+  /// `/media/grabbers` and related tuner / grabber device endpoints.
   late final PlexDevicesApi devices;
+
+  /// `/livetv/dvrs` — DVR configuration (admin).
   late final PlexDVRsApi dvrs;
+
+  /// `/media/subscriptions` — DVR recording rules.
   late final PlexSubscriptionsApi subscriptions;
+
+  /// `/downloadQueue` — legacy mobile sync surface.
   late final PlexDownloadQueueApi downloadQueue;
+
+  /// `/livetv/epg/*` — electronic program guide.
   late final PlexEpgApi epg;
+
+  /// `/butler` — scheduled maintenance tasks (thumbnails, intro detection, …).
   late final PlexButlerApi butler;
+
+  /// `/:/transcode/*` — subtitle/image transcode endpoints not covered by [streaming].
   late final PlexTranscoderApi transcoder;
+
+  /// `/media/providers` — registered media providers.
   late final PlexProvidersApi providers;
+
+  /// `/:/prefs` — server preferences (settings).
   late final PlexPreferencesApi preferences;
+
+  /// `/log` — write entries into the server log stream.
   late final PlexLogApi log;
+
+  /// `/updater/*` — server software update lifecycle (admin).
   late final PlexUpdaterApi updater;
+
+  /// `/activities` — list and cancel running background activities.
   late final PlexActivitiesApi activities;
+
+  /// `/:/websockets/notifications` and `/:/eventsource/notifications` — server-push events.
   late final PlexNotificationsApi notifications;
 
+  /// Build a client carrying [credentials]; optionally inject a custom [dio]
+  /// and override the default timeouts.
   PlexClient({
     required PlexCredentials credentials,
     Dio? dio,
@@ -207,6 +262,7 @@ class PlexClient {
   // Prefer the typed sub-APIs (account, library, …) when possible —
   // these are the escape hatch for endpoints not yet covered.
 
+  /// Issue a `GET` via [request].
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -218,6 +274,7 @@ class PlexClient {
         extraHeaders: extraHeaders,
       );
 
+  /// Issue a `POST` via [request].
   Future<Response<T>> post<T>(
     String path, {
     Object? data,
@@ -232,6 +289,7 @@ class PlexClient {
         extraHeaders: extraHeaders,
       );
 
+  /// Issue a `PUT` via [request].
   Future<Response<T>> put<T>(
     String path, {
     Object? data,
@@ -246,6 +304,7 @@ class PlexClient {
         extraHeaders: extraHeaders,
       );
 
+  /// Issue a `DELETE` via [request].
   Future<Response<T>> delete<T>(
     String path, {
     Map<String, dynamic>? queryParameters,

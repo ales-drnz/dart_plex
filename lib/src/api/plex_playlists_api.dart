@@ -9,6 +9,7 @@ import '../plex_models.dart';
 class PlexPlaylistsApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.playlists].
   PlexPlaylistsApi(this._http);
 
   /// List playlists (optionally filtered by [type] — `'audio' | 'video' |

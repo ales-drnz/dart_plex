@@ -14,6 +14,7 @@ import '../plex_connection.dart';
 class PlexDownloadQueueApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.downloadQueue].
   PlexDownloadQueueApi(this._http);
 
   /// `POST /downloadQueue` — create a new download queue.

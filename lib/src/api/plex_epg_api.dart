@@ -13,6 +13,7 @@ import '../plex_connection.dart';
 class PlexEpgApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.epg].
   PlexEpgApi(this._http);
 
   /// `GET /livetv/epg/countries` — every country with EPG support.

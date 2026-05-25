@@ -14,6 +14,7 @@ import '../plex_models.dart';
 class PlexLiveTvApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.liveTv].
   PlexLiveTvApi(this._http);
 
   /// `GET /livetv/sessions` — currently-streaming Live TV sessions.

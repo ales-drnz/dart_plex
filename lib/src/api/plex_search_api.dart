@@ -9,6 +9,7 @@ import '../plex_models.dart';
 class PlexSearchApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.search].
   PlexSearchApi(this._http);
 
   /// Modern hub-based search (`/hubs/search`). Returns one [PlexHub] per

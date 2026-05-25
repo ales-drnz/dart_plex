@@ -13,6 +13,7 @@ import '../plex_connection.dart';
 class PlexButlerApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.butler].
   PlexButlerApi(this._http);
 
   /// `GET /butler` — list configured tasks and their state.

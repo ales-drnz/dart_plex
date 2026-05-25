@@ -36,6 +36,7 @@ class PlexException implements Exception {
   /// The underlying error, if any (DioException, FormatException, …).
   final Object? cause;
 
+  /// Construct an exception with a [message] and optional classification fields.
   const PlexException(
     this.message, {
     this.type = PlexErrorType.unknown,
@@ -68,7 +69,10 @@ class PlexException implements Exception {
     );
   }
 
+  /// Shorthand for [PlexErrorType.isAuthError] on [type] — token expired / invalid.
   bool get isAuthError => type.isAuthError;
+
+  /// Shorthand for [PlexErrorType.isRetriable] on [type] — transient failure worth retrying.
   bool get isRetriable => type.isRetriable;
 
   @override

@@ -33,6 +33,7 @@ class PlexNotificationsApi {
   StreamController<PlexNotification>? _sseController;
   StreamSubscription<List<int>>? _sseSub;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.notifications].
   PlexNotificationsApi(this._http);
 
   /// True while a WebSocket is open.
@@ -284,12 +285,14 @@ class PlexNotification {
   /// not yet promoted to a typed accessor.
   final Map<String, dynamic> raw;
 
+  /// Wraps a notification frame with its [type] discriminator and [raw] payload.
   const PlexNotification({
     required this.type,
     required this.size,
     required this.raw,
   });
 
+  /// Parse a single notification frame from its server-side JSON representation.
   factory PlexNotification.fromJson(Map<String, dynamic> json) {
     final t = json['type']?.toString() ?? 'unknown';
     final sz = json['size'];

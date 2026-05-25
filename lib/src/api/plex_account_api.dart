@@ -16,6 +16,7 @@ class PlexAccountApi {
 
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.account].
   PlexAccountApi(this._http);
 
   // -------------------------------------------------------------------------

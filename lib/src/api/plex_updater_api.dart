@@ -10,6 +10,7 @@ import '../plex_connection.dart';
 class PlexUpdaterApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.updater].
   PlexUpdaterApi(this._http);
 
   /// `GET /updater/status` — current update state (last check,

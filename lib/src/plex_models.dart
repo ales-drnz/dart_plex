@@ -20,15 +20,28 @@ import 'plex_error_type.dart';
 /// Top-level library category (the `type` field on a `<Directory>` returned
 /// from `/library/sections`).
 enum PlexLibraryType {
+  /// Music library (Plex wire value `artist`).
   music('artist'),
+
+  /// Movie library.
   movie('movie'),
+
+  /// TV show library.
   show('show'),
+
+  /// Photo library.
   photo('photo'),
+
+  /// Unrecognised or missing type — fallback when the wire value doesn't
+  /// match any known variant.
   unknown('');
 
+  /// Raw Plex wire string for this variant (e.g. `artist` for music).
   final String wire;
   const PlexLibraryType(this.wire);
 
+  /// Resolves a wire string to a [PlexLibraryType], returning [unknown]
+  /// when `value` is null or unrecognised.
   static PlexLibraryType fromWire(String? value) {
     switch (value) {
       case 'artist':
@@ -50,24 +63,56 @@ enum PlexLibraryType {
 /// `type=1 movie, 2 show, 3 season, 4 episode, 5 trailer, 8 artist,
 ///  9 album, 10 track, 13 photoAlbum, 14 photo, 15 playlist, 18 collection`.
 enum PlexMetadataType {
+  /// Movie (`type=1`).
   movie(1, 'movie'),
+
+  /// TV show / series root (`type=2`).
   show(2, 'show'),
+
+  /// Season under a show (`type=3`).
   season(3, 'season'),
+
+  /// Episode under a season (`type=4`).
   episode(4, 'episode'),
+
+  /// Trailer (`type=5`).
   trailer(5, 'trailer'),
+
+  /// Music artist (`type=8`).
   artist(8, 'artist'),
+
+  /// Music album (`type=9`).
   album(9, 'album'),
+
+  /// Music track (`type=10`).
   track(10, 'track'),
+
+  /// Photo album (`type=13`).
   photoAlbum(13, 'photoAlbum'),
+
+  /// Photo (`type=14`).
   photo(14, 'photo'),
+
+  /// Playlist (`type=15`).
   playlist(15, 'playlist'),
+
+  /// Collection (`type=18`).
   collection(18, 'collection'),
+
+  /// Unrecognised or missing type — fallback used when the int / wire
+  /// string doesn't match any known variant.
   unknown(0, 'unknown');
 
+  /// Numeric `type` tag as used in Plex JSON.
   final int value;
+
+  /// Lowercase wire string Plex sometimes uses in place of the numeric
+  /// [value] (e.g. `track`, `episode`).
   final String wire;
   const PlexMetadataType(this.value, this.wire);
 
+  /// Resolves a numeric `type` tag, returning [unknown] when null or
+  /// unmatched.
   static PlexMetadataType fromValue(int? value) {
     for (final t in PlexMetadataType.values) {
       if (t.value == value) return t;
@@ -75,6 +120,8 @@ enum PlexMetadataType {
     return PlexMetadataType.unknown;
   }
 
+  /// Resolves a wire string variant, returning [unknown] when null or
+  /// unmatched.
   static PlexMetadataType fromWire(String? value) {
     if (value == null) return PlexMetadataType.unknown;
     for (final t in PlexMetadataType.values) {
@@ -103,6 +150,8 @@ class PlexMediaContainer<T> {
   /// The raw envelope, accessible for fields not lifted into [items].
   final Map<String, dynamic> raw;
 
+  /// Creates a container with already-parsed [items] and a copy of the
+  /// envelope in [raw].
   const PlexMediaContainer({
     required this.totalSize,
     required this.size,
@@ -147,14 +196,28 @@ class PlexMediaContainer<T> {
 
 /// User profile returned by `/api/v2/user` and `/users/sign_in.json`.
 class PlexUser {
+  /// Numeric plex.tv account id.
   final int id;
+
+  /// Stable account UUID.
   final String uuid;
+
+  /// Plex username (handle).
   final String username;
+
+  /// Account email address.
   final String email;
+
+  /// Avatar URL, when the user has set one.
   final String? thumb;
+
+  /// X-Plex-Token used to authenticate subsequent requests as this user.
   final String authToken;
+
+  /// Whether the account currently has an active Plex Pass subscription.
   final bool hasPlexPass;
 
+  /// Creates a user with the given fields; [thumb] is optional.
   const PlexUser({
     required this.id,
     required this.uuid,
@@ -165,6 +228,8 @@ class PlexUser {
     this.thumb,
   });
 
+  /// Parses either the flat `/api/v2/user` shape or the legacy
+  /// `{"user": {...}}` envelope returned by `/users/sign_in.json`.
   factory PlexUser.fromJson(Map<String, dynamic> json) {
     // Legacy /users/sign_in.json wraps it in {"user": {...}}; v2 returns flat.
     final src = json['user'] is Map<String, dynamic>
@@ -189,23 +254,57 @@ class PlexUser {
 /// `connections` is the list of candidate URIs to reach the server —
 /// pick the best one with [bestConnection].
 class PlexResource {
+  /// Friendly display name of the resource (server or player).
   final String name;
+
+  /// Stable per-install identifier (matches `X-Plex-Client-Identifier`).
   final String clientIdentifier;
+
+  /// Product name, e.g. `Plex Media Server` or `Plex for iOS`.
   final String product;
+
+  /// Product version string reported by the resource.
   final String productVersion;
+
+  /// Host platform, e.g. `Linux`, `macOS`, `iOS`.
   final String platform;
+
+  /// Optional device descriptor (model / form factor).
   final String? device;
+
+  /// True when the resource is owned by the authenticated account.
   final bool owned;
+
+  /// True when shared via Plex Home.
   final bool home;
+
+  /// True when this is a synced/cloud resource.
   final bool synced;
+
+  /// True when only reachable via Plex Relay (no direct path).
   final bool relay;
+
+  /// True when the resource is currently online / presencing.
   final bool presence;
+
+  /// True when the server requires HTTPS for non-local traffic.
   final bool httpsRequired;
+
+  /// Account-scoped access token to use when connecting to this resource.
   final String accessToken;
+
+  /// Public (WAN) IP address last reported by the resource, if any.
   final String? publicAddress;
+
+  /// Capabilities advertised by the resource (`server`, `player`,
+  /// `controller`, …), split from Plex's comma-separated string.
   final List<String> provides;
+
+  /// Candidate URIs to reach the resource — pass through [bestConnection]
+  /// for the preferred one.
   final List<PlexServerConnection> connections;
 
+  /// Creates a resource record; [device] and [publicAddress] are optional.
   const PlexResource({
     required this.name,
     required this.clientIdentifier,
@@ -225,6 +324,8 @@ class PlexResource {
     this.publicAddress,
   });
 
+  /// Parses one resource entry from `plex.tv/api/v2/resources`, including
+  /// its nested `connections` array.
   factory PlexResource.fromJson(Map<String, dynamic> json) {
     final conns = json['connections'];
     return PlexResource(
@@ -281,14 +382,28 @@ class PlexResource {
 ///   `https://1-2-3-4.{uuid}.plex.direct:32400`     for remote-https
 ///   `https://relay-…plex.tv`                       for relay
 class PlexServerConnection {
+  /// `http` or `https`.
   final String protocol;
+
+  /// Raw address (IP or hostname) advertised by the server.
   final String address;
+
+  /// Listening port (typically `32400`).
   final int port;
+
+  /// Full URI (`protocol://address:port`) ready to use.
   final String uri;
+
+  /// True when this candidate is on the same LAN as the requesting client.
   final bool local;
+
+  /// True when reachable only through Plex Relay.
   final bool relay;
+
+  /// True when [address] is an IPv6 literal.
   final bool ipv6;
 
+  /// Creates a connection candidate.
   const PlexServerConnection({
     required this.protocol,
     required this.address,
@@ -299,6 +414,7 @@ class PlexServerConnection {
     required this.ipv6,
   });
 
+  /// Parses one `<Connection>` entry from a `/api/v2/resources` payload.
   factory PlexServerConnection.fromJson(Map<String, dynamic> json) =>
       PlexServerConnection(
         protocol: _str(json['protocol']) ?? '',
@@ -317,13 +433,27 @@ class PlexServerConnection {
 /// Poll [PlexAccountApi.pollPin] until [authToken] is non-null, or until
 /// [expiresAt] passes.
 class PlexPin {
+  /// Server-assigned pin id used to poll for completion.
   final int id;
+
+  /// 4-character code the user types at <https://plex.tv/link>.
   final String code;
+
+  /// Client identifier the pin was created with (must match on poll).
   final String clientIdentifier;
+
+  /// X-Plex-Token, populated once the user has linked the pin; null until
+  /// then.
   final String? authToken;
+
+  /// Pin creation timestamp (UTC).
   final DateTime createdAt;
+
+  /// Pin expiry timestamp (UTC); after this the pin can no longer be
+  /// completed.
   final DateTime expiresAt;
 
+  /// Creates a pin state snapshot.
   const PlexPin({
     required this.id,
     required this.code,
@@ -333,9 +463,13 @@ class PlexPin {
     this.authToken,
   });
 
+  /// True once the user has approved the pin and an [authToken] is present.
   bool get isAuthenticated => authToken != null && authToken!.isNotEmpty;
+
+  /// True when [expiresAt] is in the past.
   bool get isExpired => DateTime.now().toUtc().isAfter(expiresAt);
 
+  /// Parses the response of `POST /api/v2/pins` or `GET /api/v2/pins/{id}`.
   factory PlexPin.fromJson(Map<String, dynamic> json) => PlexPin(
         id: _int(json['id']) ?? 0,
         code: _str(json['code']) ?? '',
@@ -354,17 +488,38 @@ class PlexPin {
 class PlexLibrarySection {
   /// `key` field — the numeric/string id used in `/library/sections/{id}/all`.
   final String id;
+
+  /// User-facing library name (e.g. `Movies`, `Music`).
   final String title;
+
+  /// Coarse library kind (movies, music, …).
   final PlexLibraryType type;
+
+  /// Metadata agent identifier (e.g. `tv.plex.agents.movie`).
   final String agent;
+
+  /// Scanner identifier (e.g. `Plex Movie Scanner`).
   final String scanner;
+
+  /// Preferred metadata language as a BCP-47 code.
   final String language;
+
+  /// Stable section UUID, when present.
   final String? uuid;
+
+  /// Last scan time (UTC), null if never scanned.
   final DateTime? scannedAt;
+
+  /// Library creation time (UTC).
   final DateTime? createdAt;
+
+  /// Filesystem paths backing this section.
   final List<String> locations;
+
+  /// Full raw JSON of the section for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a section record.
   const PlexLibrarySection({
     required this.id,
     required this.title,
@@ -379,6 +534,7 @@ class PlexLibrarySection {
     this.createdAt,
   });
 
+  /// Parses one `<Directory>` entry from `/library/sections`.
   factory PlexLibrarySection.fromJson(Map<String, dynamic> json) {
     final locs = json['Location'];
     final out = <String>[];
@@ -420,28 +576,60 @@ class PlexMetadata {
   /// some endpoint shapes.
   final String key;
 
+  /// Globally unique Plex `guid` (e.g. `plex://album/...`).
   final String? guid;
+
+  /// Item kind — determines which fields below are meaningful.
   final PlexMetadataType type;
+
+  /// Display title.
   final String title;
+
+  /// Optional sort title used by Plex when ordering alphabetically.
   final String? titleSort;
+
+  /// Original-language title when localised differently from [title].
   final String? originalTitle;
+
+  /// Long-form description / synopsis.
   final String? summary;
+
+  /// Release year (4-digit), when known.
   final int? year;
 
   /// Parent (album for tracks, artist for albums, season for episodes).
+  /// `ratingKey` of the parent item.
   final String? parentRatingKey;
+
+  /// Relative `/library/metadata/...` path of the parent.
   final String? parentKey;
+
+  /// Display title of the parent.
   final String? parentTitle;
+
+  /// Parent thumbnail path, relative to the server root.
   final String? parentThumb;
+
+  /// Parent index (e.g. season number for episodes, disc number for
+  /// tracks).
   final int? parentIndex;
 
   /// Grandparent (artist for tracks, show for episodes).
   final String? grandparentRatingKey;
+
+  /// Relative `/library/metadata/...` path of the grandparent.
   final String? grandparentKey;
+
+  /// Display title of the grandparent.
   final String? grandparentTitle;
+
+  /// Grandparent thumbnail path.
   final String? grandparentThumb;
 
+  /// Thumbnail path, relative to the server root.
   final String? thumb;
+
+  /// Art / backdrop path, relative to the server root.
   final String? art;
 
   /// Track / episode index within its parent.
@@ -453,11 +641,23 @@ class PlexMetadata {
   /// User rating, 0..10 (used for favorites — `userRating == 10` means
   /// "favourite" in the music UI).
   final double? userRating;
+
+  /// Aggregated audience/critic rating, 0..10.
   final double? rating;
+
+  /// Number of times the user has played this item to completion.
   final int? viewCount;
+
+  /// Resume position from the last partial playback, in milliseconds.
   final int? viewOffsetMs;
+
+  /// Timestamp of the most recent playback (UTC).
   final DateTime? lastViewedAt;
+
+  /// Timestamp when the item was added to the library (UTC).
   final DateTime? addedAt;
+
+  /// Timestamp of the last metadata update (UTC).
   final DateTime? updatedAt;
 
   /// Audio/video container/codec metadata. Empty for items where Plex
@@ -466,13 +666,19 @@ class PlexMetadata {
 
   /// Genres, tags, moods, …
   final List<String> genres;
+
+  /// Mood tags (typically music-only).
   final List<String> moods;
+
+  /// Style tags (typically music-only).
   final List<String> styles;
 
   /// Full raw map — keep around for fields not lifted onto strongly
   /// typed properties yet.
   final Map<String, dynamic> raw;
 
+  /// Creates a metadata item; only [ratingKey], [key], [type], [title],
+  /// [media], [genres], [moods], [styles] and [raw] are required.
   const PlexMetadata({
     required this.ratingKey,
     required this.key,
@@ -510,6 +716,9 @@ class PlexMetadata {
     this.updatedAt,
   });
 
+  /// Parses one `<Video>` / `<Track>` / `<Directory>` metadata entry. The
+  /// input is the inner item map — caller is responsible for unwrapping the
+  /// `MediaContainer` envelope first.
   factory PlexMetadata.fromJson(Map<String, dynamic> json) {
     return PlexMetadata(
       ratingKey: _str(json['ratingKey']) ?? '',
@@ -553,26 +762,54 @@ class PlexMetadata {
     );
   }
 
+  /// True when [userRating] indicates a favourite (>= 10 on Plex's 0..10
+  /// scale).
   bool get isFavorite => (userRating ?? 0) >= 10;
 }
 
 /// One `<Media>` node under a [PlexMetadata]. Tracks/movies usually have
 /// exactly one; some items have alternate versions and produce several.
 class PlexMedia {
+  /// Per-server media id.
   final int? id;
+
+  /// Total runtime of this media variant, in milliseconds.
   final int? durationMs;
+
+  /// Overall bitrate in kbps.
   final int? bitrate;
+
+  /// Number of audio channels (2, 6, …).
   final int? audioChannels;
+
+  /// Audio codec short name (e.g. `flac`, `aac`).
   final String? audioCodec;
+
+  /// Video codec short name (e.g. `h264`, `hevc`).
   final String? videoCodec;
+
+  /// File container short name (e.g. `mp4`, `mkv`, `flac`).
   final String? container;
+
+  /// Audio sample rate in Hz.
   final int? sampleRate;
+
+  /// Audio bit depth in bits per sample (16, 24, …).
   final int? bitDepth;
+
+  /// Pixel width for video media.
   final int? width;
+
+  /// Pixel height for video media.
   final int? height;
+
+  /// Backing file parts — usually exactly one.
   final List<PlexPart> parts;
+
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a media variant; only [parts] and [raw] are required.
   const PlexMedia({
     required this.parts,
     required this.raw,
@@ -589,6 +826,7 @@ class PlexMedia {
     this.height,
   });
 
+  /// Parses one `<Media>` node from a [PlexMetadata] entry.
   factory PlexMedia.fromJson(Map<String, dynamic> json) => PlexMedia(
         id: _int(json['id']),
         durationMs: _int(json['duration']),
@@ -612,15 +850,31 @@ class PlexMedia {
 
 /// One `<Part>` node — a single file backing a [PlexMedia].
 class PlexPart {
+  /// Per-server part id.
   final int? id;
+
+  /// Relative streaming key, e.g. `/library/parts/123/.../file.flac`.
   final String? key;
+
+  /// Part runtime in milliseconds.
   final int? durationMs;
+
+  /// Absolute filesystem path as Plex sees it.
   final String? file;
+
+  /// File size in bytes.
   final int? size;
+
+  /// File container short name.
   final String? container;
+
+  /// Audio/video/subtitle/lyrics streams inside this part.
   final List<PlexStream> streams;
+
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a part record; only [streams] and [raw] are required.
   const PlexPart({
     required this.streams,
     required this.raw,
@@ -632,6 +886,7 @@ class PlexPart {
     this.container,
   });
 
+  /// Parses one `<Part>` node from a [PlexMedia].
   factory PlexPart.fromJson(Map<String, dynamic> json) => PlexPart(
         id: _int(json['id']),
         key: _str(json['key']),
@@ -650,20 +905,46 @@ class PlexPart {
 
 /// `streamType`: 1 video, 2 audio, 3 subtitle, 4 lyrics.
 class PlexStream {
+  /// Per-server stream id.
   final int? id;
+
+  /// `streamType`: `1` video, `2` audio, `3` subtitle, `4` lyrics.
   final int? streamType;
+
+  /// Codec short name (e.g. `flac`, `aac`, `h264`).
   final String? codec;
+
+  /// Audio channel count (audio streams only).
   final int? channels;
+
+  /// Stream bitrate in kbps.
   final int? bitrate;
+
+  /// Audio sampling rate in Hz.
   final int? samplingRate;
+
+  /// Audio bit depth in bits per sample.
   final int? bitDepth;
+
+  /// Language display name as Plex reports it.
   final String? language;
+
+  /// ISO language code (e.g. `eng`, `ita`).
   final String? languageCode;
+
+  /// Optional stream title (e.g. subtitle track name).
   final String? title;
+
+  /// Relative path used to download the stream (subtitles, lyrics, …).
   final String? key;
+
+  /// True when this stream is the currently selected one for its type.
   final bool selected;
+
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a stream record; only [raw] is required.
   const PlexStream({
     required this.raw,
     this.id,
@@ -680,6 +961,7 @@ class PlexStream {
     this.selected = false,
   });
 
+  /// Parses one `<Stream>` node from a [PlexPart].
   factory PlexStream.fromJson(Map<String, dynamic> json) => PlexStream(
         id: _int(json['id']),
         streamType: _int(json['streamType']),
@@ -696,9 +978,16 @@ class PlexStream {
         raw: json,
       );
 
+  /// True when this is an audio stream (`streamType == 2`).
   bool get isAudio => streamType == 2;
+
+  /// True when this is a video stream (`streamType == 1`).
   bool get isVideo => streamType == 1;
+
+  /// True when this is a subtitle stream (`streamType == 3`).
   bool get isSubtitle => streamType == 3;
+
+  /// True when this is a lyrics stream (`streamType == 4`).
   bool get isLyrics => streamType == 4;
 }
 
@@ -706,16 +995,34 @@ class PlexStream {
 // Hubs (used by /hubs and /hubs/search)
 // ---------------------------------------------------------------------------
 
+/// One `<Hub>` entry from `/hubs` or `/hubs/search` — a titled, optionally
+/// paginated bucket of [PlexMetadata] items grouped by Plex.
 class PlexHub {
+  /// Relative URL to fetch the full contents of this hub.
   final String hubKey;
+
+  /// Stable hub identifier (e.g. `home.continue`, `music.recent.played`).
   final String hubIdentifier;
+
+  /// Display title of the hub.
   final String title;
+
+  /// Optional sub-type, e.g. `clip`, `mixed`, `movie`.
   final String? type;
+
+  /// Number of items returned in this slice.
   final int size;
+
+  /// True when more items exist beyond what's in [items].
   final bool more;
+
+  /// Items in this hub slice.
   final List<PlexMetadata> items;
+
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a hub record; [type] is optional.
   const PlexHub({
     required this.hubKey,
     required this.hubIdentifier,
@@ -727,6 +1034,7 @@ class PlexHub {
     this.type,
   });
 
+  /// Parses one `<Hub>` entry from `/hubs` or `/hubs/search`.
   factory PlexHub.fromJson(Map<String, dynamic> json) => PlexHub(
         hubKey: _str(json['hubKey']) ?? '',
         hubIdentifier: _str(json['hubIdentifier']) ?? '',
@@ -778,6 +1086,7 @@ class PlexPlayQueue {
   /// Raw MediaContainer envelope, for fields not promoted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a play queue snapshot.
   const PlexPlayQueue({
     required this.id,
     required this.shuffled,
@@ -787,6 +1096,9 @@ class PlexPlayQueue {
     this.version,
   });
 
+  /// Parses a `POST /playQueues` (or fetch) response, lifting the queue
+  /// identity off the `MediaContainer` envelope and the items out of the
+  /// nested `Metadata` array.
   factory PlexPlayQueue.fromJson(Map<String, dynamic> json) {
     final container = json['MediaContainer'];
     if (container is! Map<String, dynamic>) {
@@ -843,8 +1155,10 @@ class PlexSession {
   /// `protocol`, `progress`. Null on direct-play sessions.
   final Map<String, dynamic>? transcodeSession;
 
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a session record.
   const PlexSession({
     required this.metadata,
     required this.raw,
@@ -856,6 +1170,8 @@ class PlexSession {
     this.transcodeSession,
   });
 
+  /// Parses one item from `/status/sessions` along with its nested
+  /// `Player`, `User`, `Session` and `TranscodeSession` sub-nodes.
   factory PlexSession.fromJson(Map<String, dynamic> json) {
     final session = json['Session'];
     return PlexSession(
@@ -877,16 +1193,34 @@ class PlexSession {
   }
 }
 
+/// `Player` sub-node of a [PlexSession] — identifies the device that's
+/// driving playback.
 class PlexSessionPlayer {
+  /// Friendly device name (`Living Room Apple TV`, …).
   final String? title;
+
+  /// Product name (`Plex for tvOS`, …).
   final String? product;
+
+  /// Host platform (`tvOS`, `iOS`, …).
   final String? platform;
+
+  /// Device descriptor / form factor.
   final String? device;
+
+  /// Playback state: `playing`, `paused`, `buffering`, `stopped`.
   final String? state; // playing | paused | buffering | stopped
+
+  /// True when the player is on the same LAN as the server.
   final bool local;
+
+  /// Player IP address as the server sees it.
   final String? address;
+
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a player descriptor; only [raw] is required.
   const PlexSessionPlayer({
     required this.raw,
     this.title,
@@ -898,6 +1232,7 @@ class PlexSessionPlayer {
     this.address,
   });
 
+  /// Parses a `<Player>` sub-node.
   factory PlexSessionPlayer.fromJson(Map<String, dynamic> json) =>
       PlexSessionPlayer(
         title: _str(json['title']),
@@ -911,12 +1246,22 @@ class PlexSessionPlayer {
       );
 }
 
+/// `User` sub-node of a [PlexSession] — identifies the account streaming
+/// the item.
 class PlexSessionUser {
+  /// Plex account id of the streaming user.
   final String id;
+
+  /// Display name of the user.
   final String title;
+
+  /// Avatar URL, when set.
   final String? thumb;
+
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates a session-user record.
   const PlexSessionUser({
     required this.id,
     required this.title,
@@ -924,6 +1269,7 @@ class PlexSessionUser {
     this.thumb,
   });
 
+  /// Parses a `<User>` sub-node.
   factory PlexSessionUser.fromJson(Map<String, dynamic> json) =>
       PlexSessionUser(
         id: _str(json['id']) ?? '',
@@ -941,12 +1287,22 @@ class PlexSessionUser {
 /// the same four values to ask `/services/ultrablur/image` for a
 /// server-rendered gradient backdrop.
 class PlexUltraBlurColors {
+  /// Top-left swatch as a hex string (e.g. `#1a2b3c`).
   final String? topLeft;
+
+  /// Top-right swatch as a hex string.
   final String? topRight;
+
+  /// Bottom-left swatch as a hex string.
   final String? bottomLeft;
+
+  /// Bottom-right swatch as a hex string.
   final String? bottomRight;
+
+  /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
+  /// Creates an UltraBlur colour quad; all swatches are optional.
   const PlexUltraBlurColors({
     this.topLeft,
     this.topRight,
@@ -955,6 +1311,7 @@ class PlexUltraBlurColors {
     this.raw = const {},
   });
 
+  /// Parses the response of `/services/ultrablur/colors`.
   factory PlexUltraBlurColors.fromJson(Map<String, dynamic> json) =>
       PlexUltraBlurColors(
         topLeft: _str(json['topLeft']),

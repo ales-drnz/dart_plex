@@ -8,6 +8,7 @@ import '../plex_connection.dart';
 class PlexServerApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.server].
   PlexServerApi(this._http);
 
   /// Cheapest possible reachability check — `/identity` doesn't require

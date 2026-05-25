@@ -12,6 +12,7 @@ import '../plex_connection.dart';
 class PlexPreferencesApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.preferences].
   PlexPreferencesApi(this._http);
 
   /// `GET /:/prefs` — every preference.

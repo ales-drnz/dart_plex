@@ -17,6 +17,7 @@ import '../plex_exception.dart';
 class PlexStreamingApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.streaming].
   PlexStreamingApi(this._http);
 
   /// Build a `/music/:/transcode/universal/start.{ext}` URL.
@@ -257,6 +258,7 @@ class PlexTranscodeDecision {
   /// The raw `MediaContainer` for fields not promoted here.
   final Map<String, dynamic> raw;
 
+  /// Wraps a transcode decision response with its numeric [code] and [raw] container.
   const PlexTranscodeDecision({required this.code, required this.raw});
 
   /// `true` when Plex agreed to direct-play / direct-stream (1xxx).

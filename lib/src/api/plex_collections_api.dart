@@ -16,6 +16,7 @@ import '../plex_models.dart';
 class PlexCollectionsApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.collections].
   PlexCollectionsApi(this._http);
 
   /// `POST /library/collections?sectionId={id}&uri={uri}` — create

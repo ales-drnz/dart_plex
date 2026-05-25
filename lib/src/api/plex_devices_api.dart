@@ -13,6 +13,7 @@ import '../plex_connection.dart';
 class PlexDevicesApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.devices].
   PlexDevicesApi(this._http);
 
   /// `GET /media/grabbers?protocol={...}` — available grabber

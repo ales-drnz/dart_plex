@@ -46,6 +46,7 @@ class PlexCredentials {
   /// ```
   final String? clientProfileExtra;
 
+  /// Build a credentials bundle. [clientIdentifier] must be a stable per-install UUID.
   const PlexCredentials({
     required this.clientIdentifier,
     required this.product,
@@ -78,6 +79,7 @@ class PlexCredentials {
     return h;
   }
 
+  /// Return a copy with the given fields replaced; preserves [clientIdentifier] unless overridden.
   PlexCredentials copyWith({
     String? clientIdentifier,
     String? product,

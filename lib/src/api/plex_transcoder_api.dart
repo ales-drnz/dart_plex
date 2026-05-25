@@ -15,6 +15,7 @@ import '../plex_connection.dart';
 class PlexTranscoderApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.transcoder].
   PlexTranscoderApi(this._http);
 
   /// Build a `/photo/:/transcode` URL. [sourceUrl] is the relative

@@ -13,6 +13,7 @@ import '../plex_connection.dart';
 class PlexActivitiesApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.activities].
   PlexActivitiesApi(this._http);
 
   /// `GET /activities` — list running activities.

@@ -14,12 +14,19 @@ class PlexPlaybackApi {
 
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.playback].
   PlexPlaybackApi(this._http);
 
-  /// Playback states accepted by `/:/timeline`.
+  /// `'stopped'` — playback ended or was cancelled.
   static const String stateStopped = 'stopped';
+
+  /// `'paused'` — playback is paused but the session is still alive.
   static const String statePaused = 'paused';
+
+  /// `'playing'` — playback is actively progressing.
   static const String statePlaying = 'playing';
+
+  /// `'buffering'` — playback is stalled while the player refills its buffer.
   static const String stateBuffering = 'buffering';
 
   /// Report a playback heartbeat. Send on every state change plus a

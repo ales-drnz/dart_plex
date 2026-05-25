@@ -17,11 +17,15 @@ import 'plex_exception.dart';
 /// Lives inside `src/`; not exported. Public API is [PlexClient].
 class PlexConnection {
   final Dio _dio;
+
+  /// Identity headers (`X-Plex-*`) applied to every outgoing request.
   final PlexCredentials credentials;
 
   String? _baseUrl;
   String? _token;
 
+  /// Build the transport with [credentials]; optionally inject a custom [dio]
+  /// and override the default timeouts.
   PlexConnection({
     required this.credentials,
     Dio? dio,

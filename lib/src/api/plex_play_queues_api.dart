@@ -19,6 +19,7 @@ import '../plex_models.dart';
 class PlexPlayQueuesApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.playQueues].
   PlexPlayQueuesApi(this._http);
 
   /// `POST /playQueues` — create a new queue from a single item, an

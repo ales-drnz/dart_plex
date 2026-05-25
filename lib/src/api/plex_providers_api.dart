@@ -11,6 +11,7 @@ import '../plex_connection.dart';
 class PlexProvidersApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.providers].
   PlexProvidersApi(this._http);
 
   /// `GET /media/providers` — list every registered provider.

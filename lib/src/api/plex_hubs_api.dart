@@ -15,6 +15,7 @@ import '../plex_models.dart';
 class PlexHubsApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.hubs].
   PlexHubsApi(this._http);
 
   /// Global hubs (`/hubs`). Returns rails the server thinks belong on

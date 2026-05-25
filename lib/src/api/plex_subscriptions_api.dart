@@ -12,6 +12,7 @@ import '../plex_connection.dart';
 class PlexSubscriptionsApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.subscriptions].
   PlexSubscriptionsApi(this._http);
 
   /// `GET /media/subscriptions` — list every subscription.

@@ -14,6 +14,7 @@ import '../plex_connection.dart';
 class PlexLogApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.log].
   PlexLogApi(this._http);
 
   /// `PUT /log?level={l}&message={m}&source={s}` — log one line.

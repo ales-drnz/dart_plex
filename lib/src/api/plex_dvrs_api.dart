@@ -13,6 +13,7 @@ import '../plex_connection.dart';
 class PlexDVRsApi {
   final PlexConnection _http;
 
+  /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.dvrs].
   PlexDVRsApi(this._http);
 
   /// `GET /livetv/dvrs/{dvrId}` — one DVR's full configuration.
