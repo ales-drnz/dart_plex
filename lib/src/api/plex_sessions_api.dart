@@ -35,7 +35,8 @@ class PlexSessionsApi {
   /// Past sessions (scrobble history).
   ///
   /// [accountId] filters to one user (`1` is the owner). [mindate]
-  /// uses `viewedAt >= unixtime`.
+  /// uses `viewedAt >= unixtime` and [maxdate] uses `viewedAt <= unixtime`
+  /// (both bounds inclusive).
   Future<List<Map<String, dynamic>>> history({
     int? accountId,
     int? mindate,
@@ -50,8 +51,8 @@ class PlexSessionsApi {
       'X-Plex-Container-Size': size,
     };
     if (accountId != null) qp['accountID'] = accountId;
-    if (mindate != null) qp['viewedAt>'] = mindate;
-    if (maxdate != null) qp['viewedAt<'] = maxdate;
+    if (mindate != null) qp['viewedAt>='] = mindate;
+    if (maxdate != null) qp['viewedAt<='] = maxdate;
     if (librarySectionId != null) {
       qp['librarySectionID'] = librarySectionId;
     }
@@ -83,6 +84,25 @@ class PlexSessionsApi {
         'reason': reason,
       },
     );
+  }
+
+  /// A single history entry by its numeric history id.
+  ///
+  /// Wraps `GET /status/sessions/history/{historyId}`. [historyId] is the
+  /// numeric history identifier (the `historyKey` field is its full key
+  /// path); pass it as a [String] or [int] — Plex accepts the numeric id
+  /// either way, mirroring how [deleteHistoryEntry] deals in keys. Returns
+  /// the first `Metadata` entry, or `null` when no matching entry exists.
+  Future<Map<String, dynamic>?> historyItem(Object historyId) async {
+    final res = await _http.request<Map<String, dynamic>>(
+      '/status/sessions/history/$historyId',
+    );
+    final container = res.data?['MediaContainer'];
+    if (container is! Map<String, dynamic>) return null;
+    final list = container['Metadata'];
+    if (list is! List || list.isEmpty) return null;
+    final first = list.first;
+    return first is Map<String, dynamic> ? first : null;
   }
 
   /// Delete a single history entry by its history `key`.

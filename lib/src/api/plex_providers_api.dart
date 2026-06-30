@@ -16,8 +16,7 @@ class PlexProvidersApi {
 
   /// `GET /media/providers` — list every registered provider.
   Future<Map<String, dynamic>> list() async {
-    final res =
-        await _http.request<Map<String, dynamic>>('/media/providers');
+    final res = await _http.request<Map<String, dynamic>>('/media/providers');
     return res.data ?? const {};
   }
 

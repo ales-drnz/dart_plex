@@ -12,35 +12,39 @@ import '_fixture.dart';
 
 /// Smoke tests for [PlexServerApi] against a live PMS.
 void main() {
-  group('Plex server', () {
-    late PlexClient plex;
-    late PlexBootstrapCache cache;
+  group(
+    'Plex server',
+    () {
+      late PlexClient plex;
+      late PlexBootstrapCache cache;
 
-    setUpAll(() {
-      cache = PlexBootstrapCache.load();
-      plex = plexFromCache();
-    });
+      setUpAll(() {
+        cache = PlexBootstrapCache.load();
+        plex = plexFromCache();
+      });
 
-    test('identity returns the machine identifier from the bootstrap',
-        () async {
-      final id = await plex.server.identity();
-      expect(id['machineIdentifier'], cache.machineIdentifier);
-      expect(id['version'], isNotEmpty);
-    });
+      test('identity returns the machine identifier from the bootstrap',
+          () async {
+        final id = await plex.server.identity();
+        expect(id['machineIdentifier'], cache.machineIdentifier);
+        expect(id['version'], isNotEmpty);
+      });
 
-    test('info returns extended server metadata', () async {
-      final info = await plex.server.info();
-      expect(info['machineIdentifier'], cache.machineIdentifier);
-      expect(info['platform'] ?? info['Platform'], isNotEmpty);
-    });
+      test('info returns extended server metadata', () async {
+        final info = await plex.server.info();
+        expect(info['machineIdentifier'], cache.machineIdentifier);
+        expect(info['platform'] ?? info['Platform'], isNotEmpty);
+      });
 
-    test('ping returns true for a reachable PMS', () async {
-      expect(await plex.server.ping(), isTrue);
-    });
+      test('ping returns true for a reachable PMS', () async {
+        expect(await plex.server.ping(), isTrue);
+      });
 
-    test('backgroundTasks is callable', () async {
-      final bg = await plex.server.backgroundTasks();
-      expect(bg, isNotEmpty);
-    });
-  }, skip: bootstrapSkipReason);
+      test('backgroundTasks is callable', () async {
+        final bg = await plex.server.backgroundTasks();
+        expect(bg, isNotEmpty);
+      });
+    },
+    skip: bootstrapSkipReason,
+  );
 }

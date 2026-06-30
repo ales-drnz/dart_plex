@@ -20,12 +20,12 @@
 /// );
 ///
 /// // 1. Authenticate against plex.tv
-/// final user = await plex.account.signInWithPassword('alex', 'hunter2');
+/// final user = await plex.account.signInWithPassword(username: 'alex', password: 'hunter2');
 ///
 /// // 2. Discover the user's servers and connect to one
 /// final resources = await plex.account.fetchResources();
 /// final server = resources.firstWhere((r) => r.owned);
-/// await plex.connect(server.bestConnection().uri, accessToken: server.accessToken);
+/// plex.connect(server.bestConnection()!.uri, accessToken: server.accessToken);
 ///
 /// // 3. Browse libraries
 /// final libs = await plex.library.sections();
@@ -39,39 +39,38 @@
 ///
 /// Higher-level use cases (artwork URLs, transcode session URLs,
 /// playback reporting) are exposed through dedicated sub-APIs:
-/// [PlexClient.artwork], [PlexClient.streaming], [PlexClient.playback].
+/// [PlexClient.images], [PlexClient.streaming], [PlexClient.playback].
 library;
 
-export 'src/plex_client.dart';
-export 'src/plex_credentials.dart';
-export 'src/plex_error_type.dart';
-export 'src/plex_exception.dart';
-export 'src/plex_models.dart';
-
 export 'src/api/plex_account_api.dart';
-export 'src/api/plex_server_api.dart';
-export 'src/api/plex_library_api.dart';
-export 'src/api/plex_playlists_api.dart';
-export 'src/api/plex_search_api.dart';
-export 'src/api/plex_playback_api.dart';
-export 'src/api/plex_streaming_api.dart';
-export 'src/api/plex_images_api.dart';
-export 'src/api/plex_sessions_api.dart';
-export 'src/api/plex_hubs_api.dart';
-export 'src/api/plex_play_queues_api.dart';
-export 'src/api/plex_live_tv_api.dart';
-export 'src/api/plex_ultra_blur_api.dart';
+export 'src/api/plex_activities_api.dart';
+export 'src/api/plex_butler_api.dart';
 export 'src/api/plex_collections_api.dart';
 export 'src/api/plex_devices_api.dart';
 export 'src/api/plex_download_queue_api.dart';
 export 'src/api/plex_dvrs_api.dart';
 export 'src/api/plex_epg_api.dart';
-export 'src/api/plex_subscriptions_api.dart';
-export 'src/api/plex_activities_api.dart';
-export 'src/api/plex_butler_api.dart';
+export 'src/api/plex_hubs_api.dart';
+export 'src/api/plex_images_api.dart';
+export 'src/api/plex_library_api.dart';
+export 'src/api/plex_live_tv_api.dart';
 export 'src/api/plex_log_api.dart';
+export 'src/api/plex_notifications_api.dart';
+export 'src/api/plex_play_queues_api.dart';
+export 'src/api/plex_playback_api.dart';
+export 'src/api/plex_playlists_api.dart';
 export 'src/api/plex_preferences_api.dart';
 export 'src/api/plex_providers_api.dart';
+export 'src/api/plex_search_api.dart';
+export 'src/api/plex_server_api.dart';
+export 'src/api/plex_sessions_api.dart';
+export 'src/api/plex_streaming_api.dart';
+export 'src/api/plex_subscriptions_api.dart';
 export 'src/api/plex_transcoder_api.dart';
+export 'src/api/plex_ultra_blur_api.dart';
 export 'src/api/plex_updater_api.dart';
-export 'src/api/plex_notifications_api.dart';
+export 'src/plex_client.dart';
+export 'src/plex_credentials.dart';
+export 'src/plex_error_type.dart';
+export 'src/plex_exception.dart';
+export 'src/plex_models.dart';

@@ -46,6 +46,18 @@ class PlexCredentials {
   /// ```
   final String? clientProfileExtra;
 
+  /// Optional, potentially less friendly device model identifier
+  /// (e.g. `'4200X'`, `'iPhone14,2'`). Sent as `X-Plex-Model`.
+  final String? model;
+
+  /// Optional device vendor (e.g. `'Apple'`, `'Roku'`).
+  /// Sent as `X-Plex-Device-Vendor`.
+  final String? deviceVendor;
+
+  /// Optional marketplace the client application is distributed on
+  /// (e.g. `'appleAppStore'`, `'googlePlay'`). Sent as `X-Plex-Marketplace`.
+  final String? marketplace;
+
   /// Build a credentials bundle. [clientIdentifier] must be a stable per-install UUID.
   const PlexCredentials({
     required this.clientIdentifier,
@@ -56,6 +68,9 @@ class PlexCredentials {
     required this.platform,
     this.platformVersion,
     this.clientProfileExtra,
+    this.model,
+    this.deviceVendor,
+    this.marketplace,
   });
 
   /// Headers to attach to every request — auth token is added by the
@@ -76,6 +91,15 @@ class PlexCredentials {
     if (clientProfileExtra != null) {
       h['X-Plex-Client-Profile-Extra'] = clientProfileExtra!;
     }
+    if (model != null) {
+      h['X-Plex-Model'] = model!;
+    }
+    if (deviceVendor != null) {
+      h['X-Plex-Device-Vendor'] = deviceVendor!;
+    }
+    if (marketplace != null) {
+      h['X-Plex-Marketplace'] = marketplace!;
+    }
     return h;
   }
 
@@ -89,6 +113,9 @@ class PlexCredentials {
     String? platform,
     String? platformVersion,
     String? clientProfileExtra,
+    String? model,
+    String? deviceVendor,
+    String? marketplace,
   }) =>
       PlexCredentials(
         clientIdentifier: clientIdentifier ?? this.clientIdentifier,
@@ -99,5 +126,8 @@ class PlexCredentials {
         platform: platform ?? this.platform,
         platformVersion: platformVersion ?? this.platformVersion,
         clientProfileExtra: clientProfileExtra ?? this.clientProfileExtra,
+        model: model ?? this.model,
+        deviceVendor: deviceVendor ?? this.deviceVendor,
+        marketplace: marketplace ?? this.marketplace,
       );
 }

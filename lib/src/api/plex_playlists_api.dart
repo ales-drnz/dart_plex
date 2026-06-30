@@ -160,17 +160,18 @@ class PlexPlaylistsApi {
   }
 
   /// `PUT /playlists/{playlistId}/items/{playlistItemId}/move` —
-  /// reorder an item. Pass [afterPlaylistItemId] = `'0'` to move
-  /// to the very start.
+  /// reorder an item. Omit [afterPlaylistItemId] (leave it null) to
+  /// move the item to the very start.
   Future<void> moveItem({
     required String playlistId,
     required String playlistItemId,
-    required String afterPlaylistItemId,
+    String? afterPlaylistItemId,
   }) async {
     await _http.request<void>(
       '/playlists/$playlistId/items/$playlistItemId/move',
       method: 'PUT',
-      queryParameters: {'after': afterPlaylistItemId},
+      queryParameters:
+          afterPlaylistItemId == null ? null : {'after': afterPlaylistItemId},
     );
   }
 
@@ -183,9 +184,12 @@ class PlexPlaylistsApi {
     );
     final container = res.data?['MediaContainer'];
     if (container is! Map<String, dynamic>) return const [];
-    final list = container['Metadata'];
+    final list = container['PlayQueueGenerator'];
     if (list is! List) return const [];
-    return [for (final e in list) if (e is Map<String, dynamic>) e];
+    return [
+      for (final e in list)
+        if (e is Map<String, dynamic>) e,
+    ];
   }
 
   /// `GET /playlists/{playlistId}/items/{generatorId}/items` — items
@@ -205,7 +209,8 @@ class PlexPlaylistsApi {
   }
 
   /// `PUT /playlists/{playlistId}/items/{generatorId}/{metadataId}/{action}`
-  /// — re-run a generator with an action (e.g. `reset`, `refresh`).
+  /// — re-run a generator with an action (`reprocess`, `disable`, or
+  /// `enable`).
   Future<void> reprocessGenerator({
     required String playlistId,
     required String generatorId,
@@ -216,5 +221,36 @@ class PlexPlaylistsApi {
       '/playlists/$playlistId/items/$generatorId/$metadataId/$action',
       method: 'PUT',
     );
+  }
+
+  /// `POST /playlists/upload` — import m3u playlists from a server-side path.
+  ///
+  /// [path] is the absolute path on the server to either a directory of
+  /// m3u files (each file becomes a separate playlist) or a single
+  /// playlist file.
+  ///
+  /// [force] controls duplicate handling and defaults to `true` to match
+  /// the server's default behaviour: a playlist uploaded with the same
+  /// path overwrites the existing one. Pass `false` to instead create a
+  /// new playlist suffixed with the upload date and time.
+  ///
+  /// Returns the playlists created or overwritten by the import.
+  Future<List<PlexMetadata>> upload({
+    required String path,
+    bool force = true,
+  }) async {
+    final res = await _http.request<Map<String, dynamic>>(
+      '/playlists/upload',
+      method: 'POST',
+      queryParameters: {
+        'path': path,
+        'force': force ? 1 : 0,
+      },
+    );
+    return PlexMediaContainer.fromJson(
+      res.data ?? const {},
+      'Metadata',
+      PlexMetadata.fromJson,
+    ).items;
   }
 }

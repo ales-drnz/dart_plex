@@ -31,10 +31,13 @@ class PlexSubscriptionsApi {
   }
 
   /// `POST /media/subscriptions` — create a new recording rule.
+  ///
+  /// [type] is the Plex metadata type to subscribe to (e.g. `2` for
+  /// show/season), matching the spec's integer `type` parameter.
   Future<Map<String, dynamic>> create({
     required int targetLibrarySectionID,
     int? targetSectionLocationID,
-    String? type,
+    int? type,
     Map<String, dynamic>? hints,
     Map<String, dynamic>? prefs,
     Map<String, dynamic>? params,
@@ -109,7 +112,7 @@ class PlexSubscriptionsApi {
     Map<String, dynamic>? prefs,
   }) async {
     final qp = <String, dynamic>{};
-    if (prefs != null) qp.addAll(prefs);
+    if (prefs != null) qp['prefs'] = prefs;
     await _http.request<void>(
       '/media/subscriptions/$subscriptionId',
       method: 'PUT',
@@ -129,14 +132,18 @@ class PlexSubscriptionsApi {
   /// `PUT /media/subscriptions/{subscriptionId}/move?after={otherId}`
   /// — reorder a subscription against its peers (order matters for
   /// conflict resolution).
+  ///
+  /// Pass [after] to place this subscription immediately after the
+  /// subscription with that id. Omit it to insert at the beginning of
+  /// the list.
   Future<void> reorder({
     required String subscriptionId,
-    required String after,
+    String? after,
   }) async {
     await _http.request<void>(
       '/media/subscriptions/$subscriptionId/move',
       method: 'PUT',
-      queryParameters: {'after': after},
+      queryParameters: after != null ? {'after': after} : null,
     );
   }
 

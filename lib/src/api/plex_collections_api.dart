@@ -19,20 +19,38 @@ class PlexCollectionsApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.collections].
   PlexCollectionsApi(this._http);
 
-  /// `POST /library/collections?sectionId={id}&uri={uri}` — create
-  /// a new collection seeded with the items at [seedUri].
+  /// `POST /library/collections?sectionId={id}` — create a new
+  /// collection in the library section [sectionId].
   ///
-  /// Build [seedUri] like a play-queue URI:
+  /// Only [sectionId] is required by the server. Provide [title] to
+  /// name the collection, [type] (a [PlexMediaType]-style numeric
+  /// code) to constrain its contents, and [smart] to create a smart
+  /// collection driven by a filter.
+  ///
+  /// [seedUri] is the play-queue-style URI of the items to seed the
+  /// collection with, built like:
   /// `server://{machineIdentifier}/com.plexapp.plugins.library/library/metadata/{id1},{id2}`.
+  /// It is optional for a regular collection (omit it to create an
+  /// empty collection, then add items with [addItems]) but is
+  /// **required when [smart] is `true`** — the server returns 400
+  /// ("The uri is missing for a smart collection") otherwise. The
+  /// `smart` flag is sent as Plex's conventional `1`/`0` BoolInt.
   Future<PlexMetadata> create({
     required String sectionId,
-    required String seedUri,
     String? title,
     String? type,
+    bool? smart,
+    String? seedUri,
   }) async {
-    final qp = <String, dynamic>{'sectionId': sectionId, 'uri': seedUri};
+    assert(
+      smart != true || seedUri != null,
+      'seedUri is required when smart is true',
+    );
+    final qp = <String, dynamic>{'sectionId': sectionId};
     if (title != null) qp['title'] = title;
     if (type != null) qp['type'] = type;
+    if (smart != null) qp['smart'] = smart ? '1' : '0';
+    if (seedUri != null) qp['uri'] = seedUri;
     final res = await _http.request<Map<String, dynamic>>(
       '/library/collections',
       method: 'POST',

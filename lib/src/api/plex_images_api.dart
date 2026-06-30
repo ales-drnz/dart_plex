@@ -34,7 +34,7 @@ class PlexImagesApi {
     int minSize = 1,
     bool upscale = false,
   }) {
-    _requireConnected();
+    _http.requireConnected();
     final base = _http.baseUrl!;
     final token = _http.token ?? '';
     final qp = <String, String>{
@@ -67,15 +67,6 @@ class PlexImagesApi {
     } on PlexException catch (e) {
       if (e.type == PlexErrorType.notFound) return null;
       rethrow;
-    }
-  }
-
-  void _requireConnected() {
-    if (_http.baseUrl == null) {
-      throw const PlexException(
-        'No PMS connection — call PlexClient.connect() first.',
-        type: PlexErrorType.state,
-      );
     }
   }
 }

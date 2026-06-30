@@ -172,6 +172,32 @@ class PlexHubsApi {
     ).items;
   }
 
+  /// `/hubs/metadata/{metadataId}` — discovery hubs rooted at a single
+  /// metadata item (e.g. "More by this artist", "Appears on").
+  /// Currently only meaningful for music sections.
+  ///
+  /// This is the base sibling of [postplay] and [related]. [onlyTransient]
+  /// limits the result to hubs prone to changing after playback/additions;
+  /// [count] caps each hub's item list. Both are sent only when non-null.
+  Future<List<PlexHub>> forMetadata({
+    required String metadataId,
+    bool? onlyTransient,
+    int? count,
+  }) async {
+    final qp = <String, dynamic>{};
+    if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
+    if (count != null) qp['count'] = count;
+    final res = await _http.request<Map<String, dynamic>>(
+      '/hubs/metadata/$metadataId',
+      queryParameters: qp.isEmpty ? null : qp,
+    );
+    return PlexMediaContainer.fromJson(
+      res.data ?? const {},
+      'Hub',
+      PlexHub.fromJson,
+    ).items;
+  }
+
   // ---------------------------------------------------------------------------
   // Custom hub management (admin)
   // ---------------------------------------------------------------------------

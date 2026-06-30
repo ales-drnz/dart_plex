@@ -18,7 +18,7 @@ class PlexLogApi {
   PlexLogApi(this._http);
 
   /// `PUT /log?level={l}&message={m}&source={s}` — log one line.
-  /// [level] is `0..9` (0=trace, 4=info, 6=error).
+  /// [level] is `0..4` (0=Error, 1=Warning, 2=Info, 3=Debug, 4=Verbose).
   Future<void> writeMessage({
     required int level,
     required String message,

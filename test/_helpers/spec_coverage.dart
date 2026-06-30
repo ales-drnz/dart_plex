@@ -6,6 +6,20 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+/// Soft floor for [computePlexLocalCoverage] used as a regression
+/// tripwire by `test/spec_drift_watchdog_test.dart`.
+///
+/// Measured coverage is ~0.98 (192/196 spec paths) as of the last
+/// audit. This floor sits ~5% below that so ordinary churn does not
+/// trip it, but deleting a meaningful chunk of the typed wrappers
+/// (which halves coverage) fails the suite — the "sudden drop is the
+/// signal" mechanism that was previously only `print`ed.
+///
+/// Raise this number deliberately when real coverage climbs; never
+/// lower it to make a failing build pass without first confirming the
+/// wrappers were intentionally removed.
+const double plexLocalCoverageFloor = 0.93;
+
 /// Compute approximate static coverage of the pinned Plex spec by
 /// the library's typed wrappers. Returns `(matched, total)` where
 /// `matched` is the count of spec paths whose canonical form appears
@@ -27,7 +41,8 @@ import 'package:yaml/yaml.dart';
     if (path is! String || ops is! Map) return;
     for (final method in ops.keys) {
       if (method is String &&
-          {'get', 'post', 'put', 'delete', 'patch'}.contains(method.toLowerCase())) {
+          {'get', 'post', 'put', 'delete', 'patch'}
+              .contains(method.toLowerCase())) {
         specPaths.add(path);
       }
     }

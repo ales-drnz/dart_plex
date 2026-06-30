@@ -25,7 +25,7 @@ Add `dart_plex` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_plex: ^0.0.2
+  dart_plex: ^0.1.0
 ```
 
 ---
@@ -222,7 +222,7 @@ dependencies:
 <td valign="middle" width="48"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/package.png" width="32"></td>
 <td valign="middle" width="45%"><b>Pure Dart</b><br>no native plugin, no Flutter dependency. Runs on every Dart-supported platform.</td>
 <td valign="middle" width="48"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/shield-check.png" width="32"></td>
-<td valign="middle" width="45%"><b>Typed DTOs</b><br><code>PlexMetadata</code>, <code>PlexMedia</code>, <code>PlexPart</code>, <code>PlexStream</code>, <code>PlexLibrarySection</code>, <code>PlexHub</code>, <code>PlexResource</code>, <code>PlexUser</code>, <code>PlexPin</code>, each with <code>factory fromJson</code> and a <code>.raw</code> map for forward compatibility.</td>
+<td valign="middle" width="45%"><b>Typed DTOs</b><br>every response is a typed Dart object (libraries, items, media, streams, hubs, users), each with a <code>.raw</code> map so new server fields are never lost.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/key-round.png" width="32"></td>
@@ -232,13 +232,13 @@ dependencies:
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/layers.png" width="32"></td>
-<td valign="middle"><b>Stateful façade</b><br><code>PlexClient</code> holds the <code>X-Plex-*</code> headers, the active server URL and the token; sub-APIs reuse the same Dio internally.</td>
+<td valign="middle"><b>Stateful façade</b><br>one <code>PlexClient</code> holds your identity, server and token. Every sub-API works through it, so you set things up once.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/audio-lines.png" width="32"></td>
 <td valign="middle"><b>Audio streaming</b><br><code>streaming.universalAudioUrl()</code> builds <code>.m3u8</code> (HLS) or <code>.mpd</code> (DASH) manifest URLs; <code>directFileUrl()</code> gives the zero-transcode original.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/triangle-alert.png" width="32"></td>
-<td valign="middle"><b>Semantic errors</b><br>one <code>PlexException</code> hierarchy with <code>PlexErrorType</code> enum (<code>auth</code>, <code>notFound</code>, <code>connection</code>, <code>timeout</code>, <code>serverError</code>, <code>parse</code>, …), never raw Dio exceptions in your code.</td>
+<td valign="middle"><b>Semantic errors</b><br>every failure is a <code>PlexException</code> you can branch on (auth, not found, timeout, connection), never a raw network error in your code.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/terminal.png" width="32"></td>
 <td valign="middle"><b>Escape hatch</b><br><code>client.request&lt;T&gt;()</code> and <code>client.requestBytes()</code> for endpoints not yet covered by the typed sub-APIs.</td>
 </tr>
@@ -320,7 +320,7 @@ final plex = PlexClient(
 ```
 
 The constructor optionally accepts a custom `dio: Dio()` instance plus
-`connectTimeout` / `receiveTimeout`. By default it owns its own Dio.
+`connectTimeout` and `receiveTimeout`. By default it owns its own Dio.
 
 #### 1.2 Credentials
 
@@ -622,7 +622,7 @@ for (final f in facets) {
 
 `albums()`, `folderLocations()`, and `categories()` are cheap
 sub-bucket endpoints when the consumer does not need the full
-sort/filter machinery of `allByType`:
+sort and filter machinery of `allByType`:
 
 ```dart
 final paged = await plex.library.albums(
@@ -802,8 +802,7 @@ HLS, `.mpd` for DASH, the supplied `container` for HTTP.
 
 ```dart
 final (url, ext) = plex.streaming.directFileUrl(
-  partId: track.media.first.parts.first.id!.toString(),
-  container: 'flac',
+  partKey: track.media.first.parts.first.key!,
   download: true,
 );
 ```
@@ -837,8 +836,12 @@ available. Parsing into typed `LyricLine` is left to the consumer.
 
 For video, the universal endpoint alone is not enough. Plex wants a
 `/decision` round-trip first: the server inspects the source and
-your client profile and answers with a numeric code telling you
-whether to direct-play (1xxx) or transcode (2xxx).
+your client profile and answers with a numeric `generalDecisionCode`.
+A code in the 1xxx band means playback can succeed (whether by
+direct-play, direct-stream, or transcode) while 2xxx, 3xxx and 4xxx are
+error bands (general, direct-play, and transcode errors respectively).
+Whether a playable decision is direct or transcode is read from the
+sibling `directPlayDecisionCode` and `transcodeDecisionCode` fields.
 
 #### 10.1 Decision call
 
@@ -867,11 +870,13 @@ final decision = await plex.streaming.decisionUniversal(
 );
 
 if (decision.isDirect) {
-  // direct-play / direct-stream — start.{m3u8|mpd|mp4} will work as-is
+  // playable, directPlayDecisionCode in 1xxx, start.{m3u8|mpd|mp4}
+  // will work as-is
 } else if (decision.isTranscode) {
-  // server agreed to transcode — fetch the manifest
+  // playable, transcodeDecisionCode in 1xxx, fetch the manifest
 } else {
-  // server refused: codec mismatch, unauthorised, ...
+  // not playable (generalDecisionCode 2xxx/3xxx/4xxx): bandwidth,
+  // codec mismatch, unauthorised, ...
 }
 ```
 
@@ -897,7 +902,7 @@ for DASH, the container otherwise. Bandwidth is in kbps.
 
 #### 10.3 Session lifecycle
 
-Same `stopUniversal()` / `pingUniversal()` calls as audio — Plex
+Same `stopUniversal()` and `pingUniversal()` calls as audio. Plex
 uses one universal endpoint family for both. Ping every 30 s while
 the player is paused to keep the session warm; call `stopUniversal()`
 when the user navigates away.
@@ -989,7 +994,7 @@ Returns `null` on 404. Throws `PlexException` on transient failures
 
 ### 13. Hubs
 
-Hubs power Plex's "Home" screen — `Recently Added Music`, `Continue
+Hubs power Plex's "Home" screen: `Recently Added Music`, `Continue
 Listening`, `More from <artist>`, `On Deck`. Each hub is a typed row
 of items; render them as horizontal carousels.
 
@@ -1093,7 +1098,7 @@ await plex.playQueues.addItems(
   ),
 );
 
-// "Play next" — splice right after the current item.
+// "Play next": splice right after the current item.
 await plex.playQueues.addItems(
   playQueueId: queueId,
   uri: PlexPlayQueuesApi.seedFromItems(
@@ -1103,11 +1108,11 @@ await plex.playQueues.addItems(
   playNext: true,
 );
 
-// Move an entry. Pass `afterPlaylistItemId: 0` to move to the start.
+// Move an entry. Omit `afterPlaylistItemId` (leave it null) to move to
+// the start.
 await plex.playQueues.moveItem(
   playQueueId: queueId,
   playQueueItemId: entryId,
-  afterPlaylistItemId: 0,
 );
 
 // Remove an entry.
@@ -1147,9 +1152,9 @@ into the queue.
 
 ### 15. Live TV and DVR
 
-Plex Live TV streams broadcast/cable channels through a tuner +
+Plex Live TV streams broadcast and cable channels through a tuner +
 listings provider; DVR records scheduled programs to disk. This
-sub-API covers the **consumer-facing** slice — current sessions,
+sub-API covers the **consumer-facing** slice: current sessions,
 DVR backends, recording subscriptions. Tuner provisioning and EPG
 listings provider setup stay on the escape hatch (admin-only).
 
@@ -1161,10 +1166,11 @@ for (final entry in liveSessions) {
   print('${entry['title']} on ${entry['channelCallSign']}'
         ' (${entry['Player']?['title']})');
 }
-
-// Past live-TV viewing history:
-final history = await plex.liveTv.history(start: 0, size: 50);
 ```
+
+> Past live-TV viewing history is not exposed by `plex.liveTv`; use
+> [`plex.sessions.history()`](#112-playback-history). Live TV plays are
+> reported into the same playback-history store as on-demand items.
 
 #### 15.2 DVR backends
 
@@ -1180,20 +1186,25 @@ final channels = await plex.liveTv.dvrChannels(dvrs.first['key'] as String);
 
 #### 15.3 Subscriptions
 
+DVR recording subscriptions live on their own sub-API,
+`plex.subscriptions` (`PlexSubscriptionsApi`), not on `plex.liveTv`:
+
 ```dart
-final subs = await plex.liveTv.subscriptions();
+// List every recording rule. Returns the raw `MediaContainer` map.
+final container = await plex.subscriptions.list();
+final subs = (container['MediaContainer']?['MediaSubscription'] as List?)
+    ?.cast<Map<String, dynamic>>() ?? const [];
 for (final sub in subs) {
-  print('${sub['title']} — ${sub['subscriptionType']}');
+  print('${sub['title']} - ${sub['type']}');
 }
 
-// Cancel a subscription.
-await plex.liveTv.cancelSubscription(subs.first['key'] as String);
+// Delete a subscription by its id.
+await plex.subscriptions.delete(subs.first['id'].toString());
 ```
 
-> Live TV results are returned as raw maps. Typed DTOs can be
-> promoted later if the consumer pressure justifies it; the upstream
-> shapes (DVR, MediaSubscription) are deeply nested and frequently
-> change between PMS releases.
+> Live TV (sessions, DVRs) results come back as raw maps. They could get
+> typed wrappers later, but the underlying shapes are deeply nested and
+> change often between Plex releases, so the raw map is the safer bet for now.
 
 ---
 
@@ -1233,15 +1244,18 @@ dominates the radio).
 #### 16.3 Nearest tracks in a section
 
 ```dart
+// The sonic vector lives in the raw envelope under `musicAnalysis`
+// (a track has one once the server has analysed it).
+final seed = (track.raw['musicAnalysis'] as List).cast<num>();
 final radio = await plex.library.nearestInSection(
   sectionId: musicSection.key,
-  values: track.musicAnalysisValues,
+  values: seed,
   limit: 50,
 );
 ```
 
-Seeds the search from a music-analysis vector instead of a single
-track. Average several vectors together to build a "mood" radio.
+Seeds the search from a raw music-analysis vector instead of a single
+track. Average several such vectors together to build a "mood" radio.
 
 ---
 
@@ -1355,7 +1369,7 @@ final container = response.data?['MediaContainer'];
 ```
 
 Same Dio, same headers, same `PlexException` translation as the
-typed sub-APIs. Pass `method: 'POST'`/`'PUT'`/`'DELETE'`,
+typed sub-APIs. Pass `method: 'POST'`, `'PUT'` or `'DELETE'`,
 `extraHeaders`, `data`, `absoluteUrl: true` as needed.
 
 #### 19.2 Raw bytes

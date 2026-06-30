@@ -33,12 +33,23 @@ class PlexPlayQueuesApi {
   /// '/com.plexapp.plugins.library/library/metadata/{id}'` to start
   /// from one item.
   ///
+  /// [key] is the key of the first item to play (defaults server-side to
+  /// the first item in the queue). Set it when seeding from an album or
+  /// artist: per Plex, an album-seeded queue can only be shuffled if a
+  /// `key` is supplied.
+  ///
+  /// [continuous] defaults to `true` here (Plex's API default is
+  /// 0/false); we opt into auto-fill (e.g. continuing from an episode)
+  /// because that is the common client expectation. Pass `false` for a
+  /// fixed-length queue.
+  ///
   /// Returns a [PlexPlayQueue] carrying the server-assigned queue id
   /// (needed by every subsequent call: [items], [addItems],
   /// [removeItem], …) plus the queue's initial contents.
   Future<PlexPlayQueue> create({
     required String type,
     required String uri,
+    String? key,
     bool shuffle = false,
     bool repeat = false,
     bool continuous = true,
@@ -51,8 +62,11 @@ class PlexPlayQueuesApi {
       'shuffle': shuffle ? 1 : 0,
       'repeat': repeat ? 1 : 0,
       'continuous': continuous ? 1 : 0,
+      // Non-spec param honoured by Plex servers.
       'includeChapters': includeChapters ? 1 : 0,
     };
+    if (key != null) qp['key'] = key;
+    // Non-spec param honoured by Plex servers.
     if (playQueueItemId != null) qp['playQueueItemID'] = playQueueItemId;
     final res = await _http.request<Map<String, dynamic>>(
       '/playQueues',
@@ -114,17 +128,19 @@ class PlexPlayQueuesApi {
   }
 
   /// `PUT /playQueues/{id}/items/{playQueueItemId}/move?after={otherId}`
-  /// — reorder the queue. Pass [afterPlaylistItemId] = 0 to move the
-  /// item to the very start.
+  /// — reorder the queue. Omit [afterPlaylistItemId] (leave null) to
+  /// move the item to the very start.
   Future<void> moveItem({
     required int playQueueId,
     required int playQueueItemId,
-    required int afterPlaylistItemId,
+    int? afterPlaylistItemId,
   }) async {
     await _http.request<void>(
       '/playQueues/$playQueueId/items/$playQueueItemId/move',
       method: 'PUT',
-      queryParameters: {'after': afterPlaylistItemId},
+      queryParameters: {
+        if (afterPlaylistItemId != null) 'after': afterPlaylistItemId,
+      },
     );
   }
 

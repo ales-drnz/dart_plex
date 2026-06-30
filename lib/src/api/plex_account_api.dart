@@ -190,6 +190,9 @@ class PlexAccountApi {
     if (container is! Map<String, dynamic>) return const [];
     final list = container['User'];
     if (list is! List) return const [];
-    return [for (final e in list) if (e is Map<String, dynamic>) e];
+    return [
+      for (final e in list)
+        if (e is Map<String, dynamic>) e,
+    ];
   }
 }

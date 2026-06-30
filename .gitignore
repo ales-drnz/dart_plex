@@ -3,27 +3,27 @@
 .packages
 .pub-cache/
 .pub/
+**/doc/api/
 build/
+coverage/
 pubspec.lock
 
-# IDE
+# IDE / OS
 .idea/
 .vscode/
 *.iml
 .DS_Store
 
-# Local-only — raw upstream API references used for development.
-# Not redistributable, not relevant for consumers of the package.
+# Docs
 docs/
 
-# Knowledge graph artefacts (graphify). Regenerable, large, machine-local.
-graphify-out/
+# AI tooling
+.claude/
+CLAUDE.md
 
-# Integration test credentials and local-only fixtures.
-# `.env.test.example` is the committed schema template; the real
-# `.env.test` (and any cached upstream specs / Docker volumes) stay
-# on the developer's machine.
+# Tests
 .env.test
+test/integration/.bootstrap-cache.json
 test/.spec_cache/
 test/integration/volumes/
 test/integration/seed/

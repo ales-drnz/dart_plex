@@ -59,7 +59,7 @@ class PlexUltraBlurApi {
     int? height,
     int? noise,
   }) {
-    _requireConnected();
+    _http.requireConnected();
     final base = _http.baseUrl!;
     final token = _http.token ?? '';
     final qp = <String, String>{};
@@ -105,15 +105,6 @@ class PlexUltraBlurApi {
     } on PlexException catch (e) {
       if (e.type == PlexErrorType.notFound) return null;
       rethrow;
-    }
-  }
-
-  void _requireConnected() {
-    if (_http.baseUrl == null) {
-      throw const PlexException(
-        'No PMS connection. Call PlexClient.connect() first.',
-        type: PlexErrorType.state,
-      );
     }
   }
 }

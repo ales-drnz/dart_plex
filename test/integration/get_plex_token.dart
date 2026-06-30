@@ -70,7 +70,7 @@ Future<void> main() async {
     }
     stdout.write('.');
   }
-  stderr.writeln('');
+  stderr.writeln();
   stderr.writeln('PIN expired. Re-run the helper to get a fresh code.');
   exit(1);
 }

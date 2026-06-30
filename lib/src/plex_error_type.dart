@@ -37,6 +37,11 @@ enum PlexErrorType {
   /// endpoint before [PlexClient.connect]).
   state,
 
+  /// The request was cancelled by the caller via a `CancelToken` before it
+  /// completed. Not an error condition — distinct from [unknown] so callers
+  /// can ignore cancellations instead of logging them as failures.
+  cancelled,
+
   /// Anything else.
   unknown;
 

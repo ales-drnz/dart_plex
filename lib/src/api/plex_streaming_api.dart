@@ -74,24 +74,30 @@ class PlexStreamingApi {
 
   /// Build the direct-file download URL — best quality, no transcode.
   ///
-  /// Returns `(url, ext)`. The extension comes from [container] when
-  /// supplied, otherwise from the part's `file` query (which the caller
-  /// usually already knows from a previous metadata fetch).
+  /// [partKey] is the metadata-supplied `Part.key`, which already carries
+  /// the partId, the required `{changestamp}` cache-busting segment, and
+  /// the real filename — e.g. `/library/parts/872/1348327790/file.mkv`.
+  /// The spec download endpoint (`getMediaPart`) is
+  /// `/library/parts/{partId}/{changestamp}/{filename}`, so the key is
+  /// used verbatim rather than reconstructing those segments.
+  ///
+  /// Returns `(url, ext)` where `ext` is derived from the filename in
+  /// [partKey] (the substring after the last `.`, empty if none).
   (String url, String extension) directFileUrl({
-    required String partId,
-    String? container,
+    required String partKey,
     bool download = true,
   }) {
     _requireConnected();
     final base = _http.baseUrl!;
     final token = _http.token ?? '';
-    final ext = container ?? '';
-    final filename = ext.isEmpty ? 'file' : 'file.$ext';
+    final dot = partKey.lastIndexOf('.');
+    final slash = partKey.lastIndexOf('/');
+    final ext = dot > slash ? partKey.substring(dot + 1) : '';
     final query = <String, String>{
       'X-Plex-Token': token,
       if (download) 'download': '1',
     };
-    final url = '$base/library/parts/$partId/$filename?${_encode(query)}';
+    final url = '$base$partKey?${_encode(query)}';
     return (url, ext);
   }
 
@@ -157,28 +163,34 @@ class PlexStreamingApi {
     return '$base/video/:/transcode/universal/start.$ext?${_encode(qp)}';
   }
 
-  /// Call `/video/:/transcode/universal/decision`.
+  /// Call `/{transcodeType}/:/transcode/universal/decision`.
   ///
   /// Plex inspects the supplied media + client capabilities and decides
   /// whether to direct-play (no transcoding), direct-stream (re-mux
   /// only), or full transcode (re-encode). The same endpoint serves
-  /// both audio and video — pass the relevant `audioCodec`/`videoCodec`
-  /// hints in [params].
+  /// audio, video, and photo — set [transcodeType] (`'video'` by
+  /// default, or `'audio'` / `'photo'`) and pass the relevant
+  /// `audioCodec`/`videoCodec` hints in [params].
   ///
   /// Returns a [PlexTranscodeDecision]:
-  ///   - `code` in [1000, 2000) means direct-play / direct-stream OK
-  ///   - `code` in [2000, 3000) means transcode required
-  ///   - everything else means the server refused or errored out
+  ///   - `generalDecisionCode` in [1000, 2000) means playback can
+  ///     succeed (direct-play, direct-stream, or transcode)
+  ///   - 2xxx is a general error (e.g. insufficient bandwidth), 3xxx a
+  ///     direct-play error, 4xxx a transcode error — all unplayable
+  /// Whether the playable decision is direct or a transcode is read from
+  /// the sibling `directPlayDecisionCode` / `transcodeDecisionCode`
+  /// fields, not from `generalDecisionCode`.
   ///
   /// [extraHeaders] is how you pass `X-Plex-Client-Profile-Extra`
   /// (a per-call override of the global profile declared in
   /// [PlexCredentials.clientProfileExtra]).
   Future<PlexTranscodeDecision> decisionUniversal({
     required Map<String, dynamic> params,
+    String transcodeType = 'video',
     Map<String, String>? extraHeaders,
   }) async {
     final res = await _http.request<Map<String, dynamic>>(
-      '/video/:/transcode/universal/decision',
+      '/$transcodeType/:/transcode/universal/decision',
       queryParameters: params,
       extraHeaders: extraHeaders,
     );
@@ -236,20 +248,22 @@ class PlexStreamingApi {
     }
   }
 
-  String _encode(Map<String, String> qp) =>
-      qp.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&');
+  String _encode(Map<String, String> qp) => qp.entries
+      .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+      .join('&');
 }
 
 /// Outcome of [PlexStreamingApi.decisionUniversal].
 ///
-/// Plex returns `generalDecisionCode` inside `MediaContainer` with the
-/// following ranges (from the upstream
-/// [transcoder docs](https://plexapi.dev/api-reference/transcoder/make-a-decision-on-media-playback.md)):
-///
-///   - `1000`–`1999` direct-play / direct-stream variants
-///   - `2000`–`2999` transcode (with codec re-encode)
-///   - other codes means the server refused (codec mismatch the
-///     profile can't even transcode, item not found, etc.)
+/// Plex returns `generalDecisionCode` inside `MediaContainer`. Per the
+/// spec it is the *overall* decision and follows the convention
+/// "1xxx = playback can succeed, 2xxx = a general error (such as
+/// insufficient bandwidth), 3xxx = errors in direct play, 4xxx = errors
+/// in transcodes" — so a successful transcode lives in the 1xxx range,
+/// not 2xxx. The 1xxx code alone does not say *how* playback succeeds;
+/// that is read from the sibling `directPlayDecisionCode` /
+/// `transcodeDecisionCode` fields (same 1xxx-means-success convention),
+/// which [PlexStreamingApi.decisionUniversal] preserves in [raw].
 class PlexTranscodeDecision {
   /// The numeric `generalDecisionCode` from the response. Null when
   /// the response shape was unexpected.
@@ -261,13 +275,29 @@ class PlexTranscodeDecision {
   /// Wraps a transcode decision response with its numeric [code] and [raw] container.
   const PlexTranscodeDecision({required this.code, required this.raw});
 
-  /// `true` when Plex agreed to direct-play / direct-stream (1xxx).
-  bool get isDirect => code != null && code! >= 1000 && code! < 2000;
+  /// `true` when the decision call returned a success code (1xxx).
+  /// `false` (and so unplayable) for 2xxx/3xxx/4xxx error bands.
+  bool get isPlayable => code != null && code! >= 1000 && code! < 2000;
 
-  /// `true` when Plex requires a transcoded session (2xxx).
-  bool get isTranscode => code != null && code! >= 2000 && code! < 3000;
+  /// `true` when Plex agreed to direct-play / direct-stream, i.e.
+  /// playback succeeds and `directPlayDecisionCode` is in the 1xxx band.
+  bool get isDirect {
+    if (!isPlayable) return false;
+    final dp = _subCode('directPlayDecisionCode');
+    return dp != null && dp >= 1000 && dp < 2000;
+  }
 
-  /// `true` when the decision call returned a usable code (direct or
-  /// transcode). `false` means the server refused.
-  bool get isPlayable => isDirect || isTranscode;
+  /// `true` when Plex requires a transcoded session, i.e. playback
+  /// succeeds, `transcodeDecisionCode` is in the 1xxx band, and it is
+  /// not a direct-play decision.
+  bool get isTranscode {
+    if (!isPlayable || isDirect) return false;
+    final tc = _subCode('transcodeDecisionCode');
+    return tc != null && tc >= 1000 && tc < 2000;
+  }
+
+  int? _subCode(String key) {
+    final raw = this.raw[key];
+    return raw is int ? raw : (raw is String ? int.tryParse(raw) : null);
+  }
 }

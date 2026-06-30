@@ -36,6 +36,10 @@ class PlexException implements Exception {
   /// The underlying error, if any (DioException, FormatException, …).
   final Object? cause;
 
+  /// The originating stack trace, when captured. Preserves the async stack
+  /// across catch-and-rethrow so crash reporters can pinpoint the failure.
+  final StackTrace? stackTrace;
+
   /// Construct an exception with a [message] and optional classification fields.
   const PlexException(
     this.message, {
@@ -43,10 +47,13 @@ class PlexException implements Exception {
     this.statusCode,
     this.path,
     this.cause,
+    this.stackTrace,
   });
 
   /// Build a [PlexException] from a [DioException] — maps timeouts /
-  /// connection errors / status codes onto [PlexErrorType].
+  /// connection errors / status codes onto [PlexErrorType]. A response-body
+  /// decode failure (Dio surfaces a [FormatException] under
+  /// [DioExceptionType.unknown]) maps to [PlexErrorType.parse].
   factory PlexException.fromDio(DioException e, {String? path}) {
     final code = e.response?.statusCode;
     final type = switch (e.type) {
@@ -57,7 +64,9 @@ class PlexException implements Exception {
       DioExceptionType.connectionError => PlexErrorType.connection,
       DioExceptionType.badResponse when code != null =>
         PlexErrorType.fromHttpStatus(code),
-      DioExceptionType.cancel => PlexErrorType.unknown,
+      DioExceptionType.cancel => PlexErrorType.cancelled,
+      DioExceptionType.unknown when e.error is FormatException =>
+        PlexErrorType.parse,
       _ => PlexErrorType.unknown,
     };
     return PlexException(
@@ -66,6 +75,7 @@ class PlexException implements Exception {
       statusCode: code,
       path: path ?? e.requestOptions.path,
       cause: e,
+      stackTrace: e.stackTrace,
     );
   }
 

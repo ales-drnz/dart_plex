@@ -43,55 +43,6 @@ class PlexLiveTvApi {
     ];
   }
 
-  /// `GET /livetv/subscriptions` — recording subscriptions (single +
-  /// series). Each entry carries a `key`, `type`, `subscriptionType`,
-  /// linked metadata, schedule info.
-  Future<List<Map<String, dynamic>>> subscriptions() async {
-    final res = await _http.request<Map<String, dynamic>>(
-      '/livetv/subscriptions',
-    );
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
-    final list = container['MediaSubscription'];
-    if (list is! List) return const [];
-    return [
-      for (final e in list)
-        if (e is Map<String, dynamic>) e,
-    ];
-  }
-
-  /// `DELETE /livetv/subscriptions/{key}` — cancel a recording
-  /// subscription.
-  Future<void> cancelSubscription(String key) async {
-    await _http.request<void>(
-      '/livetv/subscriptions/$key',
-      method: 'DELETE',
-    );
-  }
-
-  /// `GET /livetv/sessions/history/all` — past Live TV viewing
-  /// history. Same shape as `sessions.history()` for VOD.
-  Future<List<Map<String, dynamic>>> history({
-    int start = 0,
-    int size = 50,
-  }) async {
-    final res = await _http.request<Map<String, dynamic>>(
-      '/livetv/sessions/history/all',
-      queryParameters: {
-        'X-Plex-Container-Start': start,
-        'X-Plex-Container-Size': size,
-      },
-    );
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
-    final list = container['Metadata'];
-    if (list is! List) return const [];
-    return [
-      for (final e in list)
-        if (e is Map<String, dynamic>) e,
-    ];
-  }
-
   /// Helper to drill into the EPG inside a Live TV DVR. The id comes
   /// from [dvrs] → entry's `key` field. Returns the channel listing.
   Future<List<PlexMetadata>> dvrChannels(String dvrKey) async {

@@ -55,18 +55,18 @@ Future<void> main(List<String> args) async {
   final envPassword = env['PLEX_TEST_PASSWORD'] ?? '';
   final envToken = env['PLEX_TEST_TOKEN'] ?? '';
   if ((envUsername.isEmpty || envPassword.isEmpty) && envToken.isEmpty) {
-    stderr.writeln('');
+    stderr.writeln();
     stderr.writeln(
       'Plex auth is required in .env.test — either PLEX_TEST_USERNAME + '
       'PLEX_TEST_PASSWORD or PLEX_TEST_TOKEN.',
     );
-    stderr.writeln('');
+    stderr.writeln();
     stderr.writeln(
       'PLEX_TEST_USERNAME is the auto-assigned plex.tv handle (NOT your '
       'email\'s local part). Find it at the top right of plex.tv after '
       'logging in.',
     );
-    stderr.writeln('');
+    stderr.writeln();
     stderr.writeln(
       'For 2FA accounts run `dart run test/integration/get_plex_token.dart` '
       'and set PLEX_TEST_TOKEN instead.',
@@ -111,7 +111,7 @@ Future<void> main(List<String> args) async {
 
   // Find any pre-existing claimed server with our bootstrap client
   // identifier. If found, this volume has already been claimed.
-  final resources = await client.account.fetchResources(serverOnly: true);
+  final resources = await client.account.fetchResources();
   final existingClaim = resources.where(_isOurTestServer).firstOrNull;
   String? claimToken;
   if (existingClaim != null && !force) {
@@ -127,9 +127,11 @@ Future<void> main(List<String> args) async {
 
   // 3. Docker stack
   _step('Starting Docker stack (Plex ${env['PLEX_IMAGE_TAG'] ?? '1.41.x'})');
-  await _composeUp(extraEnv: {
-    if (claimToken != null) 'PLEX_CLAIM': claimToken,
-  });
+  await _composeUp(
+    extraEnv: {
+      if (claimToken != null) 'PLEX_CLAIM': claimToken,
+    },
+  );
 
   // 4. Wait for PMS to respond
   _step('Waiting for $baseUrl/identity to respond');
@@ -234,7 +236,7 @@ Future<PlexResource> _waitForClaimedServer(
 }) async {
   final deadline = DateTime.now().add(Duration(seconds: maxSeconds));
   while (DateTime.now().isBefore(deadline)) {
-    final resources = await client.account.fetchResources(serverOnly: true);
+    final resources = await client.account.fetchResources();
     final hit = resources.where(_isOurTestServer).firstOrNull;
     if (hit != null) {
       print('   ✓ plex.tv knows about ${hit.name}');

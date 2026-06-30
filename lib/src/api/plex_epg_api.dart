@@ -73,16 +73,16 @@ class PlexEpgApi {
 
   /// `GET /livetv/epg/lineup?device={d}&lineupGroup={g}` — server's
   /// recommended lineup for a device (uses postal code + tuning).
+  ///
+  /// Both [device] and [lineupGroup] are required by the server; omitting
+  /// either yields a 404.
   Future<Map<String, dynamic>> bestLineup({
-    String? device,
-    String? lineupGroup,
+    required String device,
+    required String lineupGroup,
   }) async {
-    final qp = <String, dynamic>{};
-    if (device != null) qp['device'] = device;
-    if (lineupGroup != null) qp['lineupGroup'] = lineupGroup;
     final res = await _http.request<Map<String, dynamic>>(
       '/livetv/epg/lineup',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'device': device, 'lineupGroup': lineupGroup},
     );
     return res.data ?? const {};
   }
@@ -109,11 +109,15 @@ class PlexEpgApi {
     return res.data ?? const {};
   }
 
-  /// `GET /livetv/epg/lineupchannels?lineup={l1,l2,...}` — channels
+  /// `GET /livetv/epg/lineupchannels?lineup={l1}&lineup={l2}&…` — channels
   /// across multiple lineups in one call.
+  ///
+  /// [lineup] is the list of lineup URIs to fetch; it is serialized as
+  /// repeated `lineup=` query parameters. Must not be empty.
   Future<Map<String, dynamic>> lineupChannels({
-    required String lineup,
+    required List<String> lineup,
   }) async {
+    assert(lineup.isNotEmpty, 'lineup must contain at least one URI');
     final res = await _http.request<Map<String, dynamic>>(
       '/livetv/epg/lineupchannels',
       queryParameters: {'lineup': lineup},

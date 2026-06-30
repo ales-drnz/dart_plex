@@ -97,19 +97,27 @@ class PlexDevicesApi {
 
   /// `PUT /media/grabbers/devices/{deviceId}/channelmap` — set the
   /// device's channel map (which channels are visible, optional
-  /// remapping by key).
+  /// remapping by VCN or by lineup key).
+  ///
+  /// [channelMapping] maps each device channel to a lineup VCN
+  /// (e.g. `{'46.3': 2, '48.9': 4}`); [channelMappingByKey] maps each
+  /// device channel to a lineup key. Both are `deepObject` query
+  /// params, so each entry is flattened into a bracket-notation key
+  /// (`channelMapping[46.3]=2`) to match the wire format the server
+  /// expects. [channelsEnabled] lists the channels to enable and is
+  /// sent as a comma-separated array.
   Future<void> setChannelMap({
     required String deviceId,
-    String? channelMapping,
-    String? channelMappingByKey,
-    String? channelsEnabled,
+    Map<String, Object>? channelMapping,
+    Map<String, Object>? channelMappingByKey,
+    List<String>? channelsEnabled,
   }) async {
     final qp = <String, dynamic>{};
-    if (channelMapping != null) qp['channelMapping'] = channelMapping;
-    if (channelMappingByKey != null) {
-      qp['channelMappingByKey'] = channelMappingByKey;
+    channelMapping?.forEach((k, v) => qp['channelMapping[$k]'] = v);
+    channelMappingByKey?.forEach((k, v) => qp['channelMappingByKey[$k]'] = v);
+    if (channelsEnabled != null) {
+      qp['channelsEnabled'] = channelsEnabled.join(',');
     }
-    if (channelsEnabled != null) qp['channelsEnabled'] = channelsEnabled;
     await _http.request<void>(
       '/media/grabbers/devices/$deviceId/channelmap',
       method: 'PUT',

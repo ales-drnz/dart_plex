@@ -10,8 +10,8 @@
 /// nested inside a `MediaContainer` envelope (PMS endpoints).
 library;
 
-import 'plex_exception.dart';
 import 'plex_error_type.dart';
+import 'plex_exception.dart';
 
 // ---------------------------------------------------------------------------
 // Type tags
@@ -88,7 +88,12 @@ enum PlexMetadataType {
   track(10, 'track'),
 
   /// Photo album (`type=13`).
-  photoAlbum(13, 'photoAlbum'),
+  ///
+  /// The wire string `photoalbum` matches Plex's lowercase library/libtype
+  /// token. Note that individual photo-album *metadata* items report their
+  /// `type` as `photo`, so they resolve to [photo] via [fromWire]; use
+  /// [fromValue] with `13` to obtain this variant explicitly.
+  photoAlbum(13, 'photoalbum'),
 
   /// Photo (`type=14`).
   photo(14, 'photo'),
@@ -297,7 +302,8 @@ class PlexResource {
   final String? publicAddress;
 
   /// Capabilities advertised by the resource (`server`, `player`,
-  /// `controller`, …), split from Plex's comma-separated string.
+  /// `controller`, …), split and trimmed from Plex's comma-separated
+  /// string. Empty when the resource advertises nothing.
   final List<String> provides;
 
   /// Candidate URIs to reach the resource — pass through [bestConnection]
@@ -343,7 +349,11 @@ class PlexResource {
       httpsRequired: json['httpsRequired'] == true,
       accessToken: _str(json['accessToken']) ?? '',
       publicAddress: _str(json['publicAddress']),
-      provides: (_str(json['provides']) ?? '').split(','),
+      provides: (_str(json['provides']) ?? '')
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList(growable: false),
       connections: [
         if (conns is List)
           for (final c in conns)
@@ -362,16 +372,14 @@ class PlexResource {
   ///   4. relay (last resort)
   PlexServerConnection? bestConnection() {
     if (connections.isEmpty) return null;
-    final localDirect = connections
-        .where((c) => c.local && !c.relay)
-        .toList(growable: false);
+    final localDirect =
+        connections.where((c) => c.local && !c.relay).toList(growable: false);
     if (localDirect.isNotEmpty) return localDirect.first;
     final httpsDirect = connections
         .where((c) => c.protocol == 'https' && !c.relay)
         .toList(growable: false);
     if (httpsDirect.isNotEmpty) return httpsDirect.first;
-    final direct =
-        connections.where((c) => !c.relay).toList(growable: false);
+    final direct = connections.where((c) => !c.relay).toList(growable: false);
     if (direct.isNotEmpty) return direct.first;
     return connections.first;
   }
@@ -938,8 +946,14 @@ class PlexStream {
   /// Relative path used to download the stream (subtitles, lyrics, …).
   final String? key;
 
-  /// True when this stream is the currently selected one for its type.
+  /// True when this stream is the currently selected one for its type
+  /// (Plex's `selected` flag; applicable mainly to audio streams).
   final bool selected;
+
+  /// True when this stream is the file default (Plex's `default` flag).
+  /// Distinct from [selected]: a stream can be the file default without
+  /// being the one currently selected for playback.
+  final bool isDefault;
 
   /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
@@ -959,6 +973,7 @@ class PlexStream {
     this.title,
     this.key,
     this.selected = false,
+    this.isDefault = false,
   });
 
   /// Parses one `<Stream>` node from a [PlexPart].
@@ -974,7 +989,8 @@ class PlexStream {
         languageCode: _str(json['languageCode']),
         title: _str(json['title']),
         key: _str(json['key']),
-        selected: json['selected'] == true || json['default'] == true,
+        selected: json['selected'] == true,
+        isDefault: json['default'] == true,
         raw: json,
       );
 
@@ -998,7 +1014,15 @@ class PlexStream {
 /// One `<Hub>` entry from `/hubs` or `/hubs/search` — a titled, optionally
 /// paginated bucket of [PlexMetadata] items grouped by Plex.
 class PlexHub {
-  /// Relative URL to fetch the full contents of this hub.
+  /// Relative URL to fetch the full contents of this hub (e.g.
+  /// `/hubs/sections/home/onDeck`). This is the field to use for
+  /// fetching or paginating a hub's contents.
+  final String key;
+
+  /// Optional re-fetch key for the *exact* content currently displayed.
+  /// Important when the hub is random — re-requesting [key] may yield
+  /// different results, whereas [hubKey] reproduces the same slice. Often
+  /// absent, in which case it is the empty string.
   final String hubKey;
 
   /// Stable hub identifier (e.g. `home.continue`, `music.recent.played`).
@@ -1024,6 +1048,7 @@ class PlexHub {
 
   /// Creates a hub record; [type] is optional.
   const PlexHub({
+    required this.key,
     required this.hubKey,
     required this.hubIdentifier,
     required this.title,
@@ -1036,6 +1061,7 @@ class PlexHub {
 
   /// Parses one `<Hub>` entry from `/hubs` or `/hubs/search`.
   factory PlexHub.fromJson(Map<String, dynamic> json) => PlexHub(
+        key: _str(json['key']) ?? '',
         hubKey: _str(json['hubKey']) ?? '',
         hubIdentifier: _str(json['hubIdentifier']) ?? '',
         title: _str(json['title']) ?? '',

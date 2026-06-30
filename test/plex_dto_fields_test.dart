@@ -92,7 +92,6 @@ const _trackMetadataJson = r'''
       "audioChannels": 2,
       "audioCodec": "mp3",
       "container": "mp3",
-      "audioSampleRate": 44100,
       "Part": [
         {
           "id": 1,
@@ -109,7 +108,8 @@ const _trackMetadataJson = r'''
               "codec": "mp3",
               "index": 0,
               "channels": 2,
-              "bitrate": 128
+              "bitrate": 128,
+              "samplingRate": 44100
             }
           ]
         }
@@ -135,6 +135,7 @@ const _hubsSearchJson = r'''
         "title": "Tracks",
         "type": "track",
         "hubIdentifier": "track",
+        "key": "/hubs/search/track",
         "hubKey": "hubkey-track",
         "context": "",
         "size": 1,
@@ -154,6 +155,7 @@ const _hubsSearchJson = r'''
         "title": "Albums",
         "type": "album",
         "hubIdentifier": "album",
+        "key": "/hubs/search/album",
         "hubKey": "hubkey-album",
         "size": 0,
         "more": false
@@ -332,14 +334,18 @@ void main() {
       expect(m.media.single.audioCodec, 'mp3');
       expect(m.media.single.bitrate, 128);
       expect(m.media.single.audioChannels, 2);
-      expect(m.media.single.sampleRate, 44100);
       expect(m.media.single.parts, hasLength(1));
-      expect(m.media.single.parts.single.file,
-          '/data/Music/Test Artist/Test Album/01 - Track 1.mp3');
+      expect(
+        m.media.single.parts.single.file,
+        '/data/Music/Test Artist/Test Album/01 - Track 1.mp3',
+      );
       expect(m.media.single.parts.single.size, 49038);
       expect(m.media.single.parts.single.streams, hasLength(1));
       expect(m.media.single.parts.single.streams.single.codec, 'mp3');
       expect(m.media.single.parts.single.streams.single.isAudio, isTrue);
+      // Real PMS reports sample rate on the Stream (`samplingRate`), not on
+      // the Media node — see captured fixtures / plex-api-spec.yaml.
+      expect(m.media.single.parts.single.streams.single.samplingRate, 44100);
 
       // Tag lists (Genre/Mood/Style come as `{tag: ...}` maps, not strings)
       expect(m.genres, ['Rock']);
@@ -387,6 +393,7 @@ void main() {
       final tracksHub = mc.items.first;
       expect(tracksHub.title, 'Tracks');
       expect(tracksHub.hubIdentifier, 'track');
+      expect(tracksHub.key, '/hubs/search/track');
       expect(tracksHub.hubKey, 'hubkey-track');
       expect(tracksHub.type, 'track');
       expect(tracksHub.size, 1);
@@ -485,11 +492,13 @@ void main() {
     test('throws PlexException(parse) when MediaContainer is missing', () {
       expect(
         () => PlexPlayQueue.fromJson(const {}),
-        throwsA(isA<PlexException>().having(
-          (e) => e.type,
-          'type',
-          PlexErrorType.parse,
-        )),
+        throwsA(
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.parse,
+          ),
+        ),
       );
     });
   });
@@ -503,6 +512,89 @@ void main() {
       expect(c.topRight, '445566');
       expect(c.bottomLeft, '778899');
       expect(c.bottomRight, 'aabbcc');
+    });
+  });
+
+  group('PlexServerConnection.fromJson', () {
+    test('parses protocol/address/port/uri/local/relay', () {
+      final c = PlexServerConnection.fromJson(const {
+        'protocol': 'https',
+        'address': '192.168.1.10',
+        'port': 32400,
+        'uri': 'https://192-168-1-10.abc.plex.direct:32400',
+        'local': true,
+        'relay': false,
+      });
+      expect(c.protocol, 'https');
+      expect(c.address, '192.168.1.10');
+      expect(c.port, 32400);
+      expect(c.uri, 'https://192-168-1-10.abc.plex.direct:32400');
+      expect(c.local, isTrue);
+      expect(c.relay, isFalse);
+      expect(c.ipv6, isFalse);
+    });
+
+    test('reads ipv6 from the capitalised plex.tv `IPv6` spelling', () {
+      final c = PlexServerConnection.fromJson(const {'IPv6': true});
+      expect(c.ipv6, isTrue);
+    });
+
+    test('reads ipv6 from the lowercase `ipv6` spelling too', () {
+      final c = PlexServerConnection.fromJson(const {'ipv6': true});
+      expect(c.ipv6, isTrue);
+    });
+  });
+
+  group('PlexResource.bestConnection fallback chain', () {
+    PlexResource resourceWith(List<Map<String, dynamic>> connections) =>
+        PlexResource.fromJson({
+          'name': 'Server',
+          'clientIdentifier': 'cid',
+          'provides': 'server',
+          'connections': connections,
+        });
+
+    test('falls back to https-direct when no local connection exists', () {
+      final r = resourceWith(const [
+        {
+          'protocol': 'http',
+          'uri': 'http://remote:32400',
+          'local': false,
+          'relay': false,
+        },
+        {
+          'protocol': 'https',
+          'uri': 'https://remote:32400',
+          'local': false,
+          'relay': false,
+        },
+      ]);
+      expect(r.bestConnection()!.uri, 'https://remote:32400');
+    });
+
+    test('falls back to any-direct when only http remote exists', () {
+      final r = resourceWith(const [
+        {
+          'protocol': 'http',
+          'uri': 'http://remote:32400',
+          'local': false,
+          'relay': false,
+        },
+      ]);
+      expect(r.bestConnection()!.uri, 'http://remote:32400');
+    });
+
+    test('returns relay only as a last resort', () {
+      final r = resourceWith(const [
+        {
+          'protocol': 'https',
+          'uri': 'https://relay.plex.tv',
+          'local': false,
+          'relay': true,
+        },
+      ]);
+      expect(r.bestConnection()!.relay, isTrue);
+      expect(r.bestConnection()!.uri, 'https://relay.plex.tv');
     });
   });
 
@@ -558,14 +650,88 @@ void main() {
     });
   });
 
+  group('PlexTranscodeDecision', () {
+    // Per the Plex spec, generalDecisionCode follows "1xxx = playback can
+    // succeed, 2xxx = a general error, 3xxx = direct-play error, 4xxx =
+    // transcode error". The *kind* of successful playback (direct vs
+    // transcode) is read from the sibling directPlayDecisionCode /
+    // transcodeDecisionCode fields, NOT from the 2xxx band.
+
+    test('1xxx general code with a direct-play sub-code is playable + direct',
+        () {
+      const d = PlexTranscodeDecision(
+        code: 1001,
+        raw: {'directPlayDecisionCode': 1000},
+      );
+      expect(d.isPlayable, isTrue);
+      expect(d.isDirect, isTrue);
+      expect(d.isTranscode, isFalse);
+    });
+
+    test('1xxx general code with a transcode sub-code is playable + transcode',
+        () {
+      const d = PlexTranscodeDecision(
+        code: 1001,
+        raw: {'transcodeDecisionCode': 1001},
+      );
+      expect(d.isPlayable, isTrue);
+      expect(d.isDirect, isFalse);
+      expect(d.isTranscode, isTrue);
+    });
+
+    test('1999 is still in the playable band', () {
+      const d = PlexTranscodeDecision(code: 1999, raw: {});
+      expect(d.isPlayable, isTrue);
+    });
+
+    test('999 (below the success band) is not playable', () {
+      const d = PlexTranscodeDecision(code: 999, raw: {});
+      expect(d.isPlayable, isFalse);
+      expect(d.isDirect, isFalse);
+      expect(d.isTranscode, isFalse);
+    });
+
+    test('2xxx is a general error band, not a successful transcode', () {
+      const d = PlexTranscodeDecision(
+        code: 2001,
+        raw: {'transcodeDecisionCode': 1001},
+      );
+      expect(d.isPlayable, isFalse);
+      expect(d.isDirect, isFalse);
+      expect(d.isTranscode, isFalse);
+    });
+
+    test('3xxx (direct-play error) is not playable', () {
+      const d = PlexTranscodeDecision(code: 3000, raw: {});
+      expect(d.isPlayable, isFalse);
+    });
+
+    test('a null code (unexpected response shape) is not playable', () {
+      const d = PlexTranscodeDecision(code: null, raw: {});
+      expect(d.isPlayable, isFalse);
+      expect(d.isDirect, isFalse);
+      expect(d.isTranscode, isFalse);
+    });
+
+    test('sub-codes delivered as strings are parsed', () {
+      const d = PlexTranscodeDecision(
+        code: 1001,
+        raw: {'directPlayDecisionCode': '1000'},
+      );
+      expect(d.isDirect, isTrue);
+    });
+  });
+
   group('PlexMetadataType.fromWire / numeric', () {
     test('round-trips the canonical names', () {
       expect(PlexMetadataType.track.wire, 'track');
       expect(PlexMetadataType.fromWire('track'), PlexMetadataType.track);
       expect(PlexMetadataType.album.wire, 'album');
       expect(PlexMetadataType.fromWire('album'), PlexMetadataType.album);
-      expect(PlexMetadataType.fromWire('unknown-type'),
-          PlexMetadataType.unknown);
+      expect(
+        PlexMetadataType.fromWire('unknown-type'),
+        PlexMetadataType.unknown,
+      );
     });
   });
 }

@@ -1,3 +1,9 @@
+# Static analysis configuration for a published package.
+#
+# Builds on package:lints/recommended with a stricter, curated ruleset:
+# enforced API docs, stricter type checking, const correctness, trailing
+# commas, and awaited futures.
+
 include: package:lints/recommended.yaml
 
 analyzer:
@@ -5,9 +11,24 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  exclude:
+    - docs/**
 
 linter:
   rules:
+    - public_member_api_docs
+    - package_api_docs
     - prefer_const_constructors
+    - prefer_const_constructors_in_immutables
     - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
     - prefer_final_locals
+    - prefer_final_in_for_each
+    - unawaited_futures
+    - require_trailing_commas
+    - directives_ordering
+    - sort_pub_dependencies
+    - prefer_single_quotes
+    - use_super_parameters
+    - avoid_redundant_argument_values
+    - unnecessary_parenthesis

@@ -22,16 +22,31 @@ class PlexPreferencesApi {
     if (container is! Map<String, dynamic>) return const [];
     final list = container['Setting'];
     if (list is! List) return const [];
-    return [for (final e in list) if (e is Map<String, dynamic>) e];
+    return [
+      for (final e in list)
+        if (e is Map<String, dynamic>) e,
+    ];
   }
 
   /// `GET /:/prefs/get?id={id}` — fetch a single preference.
+  ///
+  /// Returns the matching `Setting` map (the same shape as an entry
+  /// of [all]), unwrapped from the `MediaContainer`/`Setting`
+  /// envelope. Returns an empty map when the id is unknown.
   Future<Map<String, dynamic>> byId(String id) async {
     final res = await _http.request<Map<String, dynamic>>(
       '/:/prefs/get',
       queryParameters: {'id': id},
     );
-    return res.data ?? const {};
+    final container = res.data?['MediaContainer'];
+    if (container is! Map<String, dynamic>) return const {};
+    final list = container['Setting'];
+    if (list is! List) return const {};
+    final first = list.firstWhere(
+      (e) => e is Map<String, dynamic>,
+      orElse: () => null,
+    );
+    return first is Map<String, dynamic> ? first : const {};
   }
 
   /// `PUT /:/prefs?{name}={value}&...` — set one or more

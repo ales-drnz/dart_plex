@@ -16,10 +16,11 @@ Future<void> main() async {
     ),
   );
 
-  await plex.account.signInWithPassword(
+  final user = await plex.account.signInWithPassword(
     username: 'user',
     password: 'password',
   );
+  plex.setToken(user.authToken);
 
   final resources = await plex.account.fetchResources();
   final server = resources.firstWhere((r) => r.owned && r.isServer);

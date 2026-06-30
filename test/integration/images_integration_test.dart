@@ -12,41 +12,46 @@ import '_fixture.dart';
 
 /// Smoke tests for [PlexImagesApi] (image transcode URL builders).
 void main() {
-  group('Plex images', () {
-    late PlexClient plex;
+  group(
+    'Plex images',
+    () {
+      late PlexClient plex;
 
-    setUpAll(() {
-      plex = plexFromCache();
-    });
+      setUpAll(() {
+        plex = plexFromCache();
+      });
 
-    test('transcodeUrl builds a deterministic transcoded image URL', () {
-      final url = plex.images.transcodeUrl(
-        sourcePath: '/library/metadata/12345/thumb/9999',
-        width: 200,
-        height: 200,
-      );
-      expect(url, contains('/photo/:/transcode'));
-      expect(url, contains('width=200'));
-      expect(url, contains('height=200'));
-      expect(
-        url,
-        contains(
-            Uri.encodeQueryComponent('/library/metadata/12345/thumb/9999')),
-      );
-    });
+      test('transcodeUrl builds a deterministic transcoded image URL', () {
+        final url = plex.images.transcodeUrl(
+          sourcePath: '/library/metadata/12345/thumb/9999',
+          width: 200,
+          height: 200,
+        );
+        expect(url, contains('/photo/:/transcode'));
+        expect(url, contains('width=200'));
+        expect(url, contains('height=200'));
+        expect(
+          url,
+          contains(
+            Uri.encodeQueryComponent('/library/metadata/12345/thumb/9999'),
+          ),
+        );
+      });
 
-    test('ultraBlur.imageUrl builds a gradient URL', () {
-      final url = plex.ultraBlur.imageUrl(
-        topLeft: 'ff0000',
-        topRight: '00ff00',
-        bottomLeft: '0000ff',
-        bottomRight: 'ffffff',
-        width: 1920,
-        height: 1080,
-      );
-      expect(url, contains('/services/ultrablur/image'));
-      expect(url, contains('topLeft=ff0000'));
-      expect(url, contains('width=1920'));
-    });
-  }, skip: bootstrapSkipReason);
+      test('ultraBlur.imageUrl builds a gradient URL', () {
+        final url = plex.ultraBlur.imageUrl(
+          topLeft: 'ff0000',
+          topRight: '00ff00',
+          bottomLeft: '0000ff',
+          bottomRight: 'ffffff',
+          width: 1920,
+          height: 1080,
+        );
+        expect(url, contains('/services/ultrablur/image'));
+        expect(url, contains('topLeft=ff0000'));
+        expect(url, contains('width=1920'));
+      });
+    },
+    skip: bootstrapSkipReason,
+  );
 }

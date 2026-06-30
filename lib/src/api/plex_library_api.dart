@@ -37,10 +37,8 @@ class PlexLibraryApi {
 
   /// Paged list of items inside a section, filtered by [type].
   ///
-  /// `type` integers:
-  /// - 8 artist, 9 album, 10 track (music)
-  /// - 1 movie, 2 show, 3 season, 4 episode (video)
-  /// - 13 photoAlbum, 14 photo
+  /// Pass a [PlexMetadataType]; see its members for the wire integers
+  /// the server expects (the single source of truth for those values).
   ///
   /// `sort` examples: `'titleSort:asc'`, `'addedAt:desc'`,
   /// `'lastViewedAt:desc'`, `'originallyAvailableAt:desc'`.
@@ -104,6 +102,37 @@ class PlexLibraryApi {
     return 0;
   }
 
+  /// `PUT /library/sections/{sectionId}/all` — bulk-edit the fields
+  /// and tags of every item matching a filter, in a single call
+  /// (cheaper than N per-item [editItem] calls for batch tagging or
+  /// curation).
+  ///
+  /// All mutations travel as query parameters (the endpoint has no
+  /// request body). [type] is the item type integer and [filters] is
+  /// the filter expression selecting the items to mutate.
+  ///
+  /// [changes] holds already-flattened Plex keys, e.g.
+  /// `<field>.value` to set a value and `<field>.locked` (`1`/`0`) to
+  /// lock it. Tags are added with `<tagtype>[<idx>].tag.tag` and
+  /// removed with a trailing `-` on the key
+  /// (`<tagtype>[<idx>].tag.tag-`); the `<idx>` must increment per tag.
+  Future<void> updateSectionItems({
+    required String sectionId,
+    int? type,
+    String? filters,
+    required Map<String, dynamic> changes,
+  }) async {
+    final qp = <String, dynamic>{};
+    if (type != null) qp['type'] = type;
+    if (filters != null) qp['filters'] = filters;
+    qp.addAll(changes);
+    await _http.request<void>(
+      '/library/sections/$sectionId/all',
+      method: 'PUT',
+      queryParameters: qp,
+    );
+  }
+
   /// Browse the genres index of a section (`/library/sections/{id}/genre`).
   Future<List<PlexMetadata>> genres({
     required String sectionId,
@@ -136,6 +165,48 @@ class PlexLibraryApi {
       PlexMetadata.fromJson,
     );
     return c.items.isEmpty ? null : c.items.first;
+  }
+
+  /// `PUT /library/metadata/{ids}` — edit metadata fields on one item
+  /// (or a comma-joined list of `ids`). Admin-token only.
+  ///
+  /// [args] holds already-flattened Plex query keys. Each field is set
+  /// with `<field>.value` and optionally locked against agent
+  /// overwrites with `<field>.locked` (`1`/`0`), e.g.
+  /// `{'title.value': 'New title', 'title.locked': 1}`. Pass [type]
+  /// (the item's [PlexMetadataType]) when the server needs the type
+  /// discriminator, mirroring plexapi's `Movie.edit`.
+  Future<void> editItem({
+    required String ids,
+    required Map<String, dynamic> args,
+    PlexMetadataType? type,
+  }) async {
+    await _http.request<void>(
+      '/library/metadata/$ids',
+      method: 'PUT',
+      queryParameters: {
+        if (type != null) 'type': type.value,
+        ...args,
+      },
+    );
+  }
+
+  /// `DELETE /library/metadata/{ids}` — delete a metadata item from
+  /// the library, removing its underlying media as well. Distinct from
+  /// [deleteMediaItem], which only removes one media version.
+  ///
+  /// Set [proxy] to also delete proxy items associated with the item.
+  Future<void> deleteMetadataItem({
+    required String ids,
+    bool? proxy,
+  }) async {
+    final qp = <String, dynamic>{};
+    if (proxy != null) qp['proxy'] = proxy ? 1 : 0;
+    await _http.request<void>(
+      '/library/metadata/$ids',
+      method: 'DELETE',
+      queryParameters: qp.isEmpty ? null : qp,
+    );
   }
 
   /// Children of an item — album tracks, artist albums, season episodes.
@@ -260,7 +331,9 @@ class PlexLibraryApi {
 
   /// `/library/sections/{sectionId}/location` — folder roots
   /// configured for the section (one entry per scanned directory).
-  Future<List<PlexMetadata>> folderLocations({required String sectionId}) async {
+  Future<List<PlexMetadata>> folderLocations({
+    required String sectionId,
+  }) async {
     final res = await _http.request<Map<String, dynamic>>(
       '/library/sections/$sectionId/location',
     );
@@ -286,7 +359,9 @@ class PlexLibraryApi {
 
   /// `/library/sections/{sectionId}/allLeaves` — every leaf-level
   /// item in a section (e.g. every episode of every show).
-  Future<List<PlexMetadata>> sectionAllLeaves({required String sectionId}) async {
+  Future<List<PlexMetadata>> sectionAllLeaves({
+    required String sectionId,
+  }) async {
     final res = await _http.request<Map<String, dynamic>>(
       '/library/sections/$sectionId/allLeaves',
     );
@@ -312,7 +387,9 @@ class PlexLibraryApi {
 
   /// `/library/sections/{sectionId}/cluster` — clusters used to
   /// group photo libraries (proximity / similarity buckets).
-  Future<List<PlexMetadata>> sectionClusters({required String sectionId}) async {
+  Future<List<PlexMetadata>> sectionClusters({
+    required String sectionId,
+  }) async {
     final res = await _http.request<Map<String, dynamic>>(
       '/library/sections/$sectionId/cluster',
     );
@@ -368,6 +445,10 @@ class PlexLibraryApi {
   /// The spec lists this as `/library/sections/all`, but in practice
   /// the server only accepts POST at `/library/sections` (the `/all`
   /// suffix is for GET reads). Verified against PMS 1.43.x.
+  ///
+  /// Pass [prefs] using bare preference names (e.g.
+  /// `{'enableCinemaTrailers': 0}`); they are auto-wrapped into the
+  /// `prefs[<name>]=<value>` form the server requires.
   Future<void> addSection({
     required String name,
     required String type,
@@ -395,7 +476,7 @@ class PlexLibraryApi {
     if (importFromiTunes != null) {
       qp['importFromiTunes'] = importFromiTunes ? 1 : 0;
     }
-    if (prefs != null) qp.addAll(prefs);
+    prefs?.forEach((k, v) => qp['prefs[$k]'] = v);
     await _http.request<void>(
       '/library/sections',
       method: 'POST',
@@ -528,6 +609,10 @@ class PlexLibraryApi {
   }
 
   /// `PUT /library/sections/{sectionId}` — edit a section.
+  ///
+  /// Pass [prefs] using bare preference names (e.g.
+  /// `{'enableCinemaTrailers': 0}`); they are auto-wrapped into the
+  /// `prefs[<name>]=<value>` form the server requires.
   Future<void> editSection({
     required String sectionId,
     String? name,
@@ -547,7 +632,7 @@ class PlexLibraryApi {
     }
     if (language != null) qp['language'] = language;
     if (locations != null) qp['location'] = locations;
-    if (prefs != null) qp.addAll(prefs);
+    prefs?.forEach((k, v) => qp['prefs[$k]'] = v);
     await _http.request<void>(
       '/library/sections/$sectionId',
       method: 'PUT',
@@ -1075,6 +1160,30 @@ class PlexLibraryApi {
     final base = _http.baseUrl;
     final token = _http.token ?? '';
     return '$base/library/metadata/$ids/$element/$timestamp?X-Plex-Token=$token';
+  }
+
+  /// `POST|PUT /library/metadata/{ids}/{element}?url={url}` — set a
+  /// custom artwork/theme asset on an item (e.g. change its poster).
+  /// Generally admin-only, except for playlists owned by the user.
+  ///
+  /// [element] is one of `thumb`, `art`, `clearLogo`, `banner`,
+  /// `poster`, `theme`. Provide [url] to pull the asset from a remote
+  /// URL, or [data] to upload the asset binary in the request body
+  /// (supply exactly one). Uses POST when [update] is false (the
+  /// default) and PUT when true; both map to the same server action.
+  Future<void> setItemArtwork({
+    required String ids,
+    required String element,
+    String? url,
+    List<int>? data,
+    bool update = false,
+  }) async {
+    await _http.request<void>(
+      '/library/metadata/$ids/$element',
+      method: update ? 'PUT' : 'POST',
+      queryParameters: url != null ? {'url': url} : null,
+      data: data,
+    );
   }
 
   // -------------------------------------------------------------------------

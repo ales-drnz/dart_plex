@@ -26,8 +26,10 @@ void main() {
       expect(h['X-Plex-Device-Name'], "Alex's iPhone");
       expect(h['X-Plex-Platform'], 'iOS');
       expect(h['X-Plex-Platform-Version'], '17.4');
-      expect(h['X-Plex-Client-Profile-Extra'],
-          'add-transcode-target(type=musicProfile)');
+      expect(
+        h['X-Plex-Client-Profile-Extra'],
+        'add-transcode-target(type=musicProfile)',
+      );
       expect(h['Accept'], 'application/json');
     });
 
@@ -167,6 +169,20 @@ void main() {
     });
   });
 
+  group('PlexStream.fromJson', () {
+    test('default flag does not imply selected', () {
+      final s = PlexStream.fromJson({'default': true});
+      expect(s.selected, isFalse);
+      expect(s.isDefault, isTrue);
+    });
+
+    test('selected flag does not imply default', () {
+      final s = PlexStream.fromJson({'selected': true});
+      expect(s.selected, isTrue);
+      expect(s.isDefault, isFalse);
+    });
+  });
+
   group('PlexResource.bestConnection', () {
     test('prefers local non-relay first', () {
       final r = PlexResource.fromJson({
@@ -198,8 +214,10 @@ void main() {
         ],
       });
       expect(r.isServer, isTrue);
-      expect(r.bestConnection()!.uri,
-          'https://192-168-0-10.plex.direct:32400');
+      expect(
+        r.bestConnection()!.uri,
+        'https://192-168-0-10.plex.direct:32400',
+      );
     });
   });
 

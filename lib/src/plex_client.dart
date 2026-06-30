@@ -5,32 +5,32 @@
 import 'package:dio/dio.dart';
 
 import 'api/plex_account_api.dart';
+import 'api/plex_activities_api.dart';
+import 'api/plex_butler_api.dart';
 import 'api/plex_collections_api.dart';
 import 'api/plex_devices_api.dart';
 import 'api/plex_download_queue_api.dart';
 import 'api/plex_dvrs_api.dart';
 import 'api/plex_epg_api.dart';
-import 'api/plex_activities_api.dart';
-import 'api/plex_butler_api.dart';
-import 'api/plex_log_api.dart';
-import 'api/plex_notifications_api.dart';
-import 'api/plex_preferences_api.dart';
-import 'api/plex_providers_api.dart';
-import 'api/plex_subscriptions_api.dart';
-import 'api/plex_transcoder_api.dart';
-import 'api/plex_updater_api.dart';
 import 'api/plex_hubs_api.dart';
 import 'api/plex_images_api.dart';
 import 'api/plex_library_api.dart';
 import 'api/plex_live_tv_api.dart';
+import 'api/plex_log_api.dart';
+import 'api/plex_notifications_api.dart';
 import 'api/plex_play_queues_api.dart';
 import 'api/plex_playback_api.dart';
 import 'api/plex_playlists_api.dart';
+import 'api/plex_preferences_api.dart';
+import 'api/plex_providers_api.dart';
 import 'api/plex_search_api.dart';
 import 'api/plex_server_api.dart';
 import 'api/plex_sessions_api.dart';
 import 'api/plex_streaming_api.dart';
+import 'api/plex_subscriptions_api.dart';
+import 'api/plex_transcoder_api.dart';
 import 'api/plex_ultra_blur_api.dart';
+import 'api/plex_updater_api.dart';
 import 'plex_connection.dart';
 import 'plex_credentials.dart';
 
@@ -202,7 +202,8 @@ class PlexClient {
   ///
   /// [baseUrl] should be one of the URIs returned by
   /// `PlexAccountApi.fetchResources` (use
-  /// `resource.bestConnection().uri`). The optional [accessToken]
+  /// `resource.bestConnection()!.uri` — `bestConnection()` returns null
+  /// when the resource has no connections). The optional [accessToken]
   /// overrides the current token — useful when switching to a
   /// shared server which has its own per-server token.
   void connect(String baseUrl, {String? accessToken}) {
@@ -210,10 +211,19 @@ class PlexClient {
     if (accessToken != null) _http.token = accessToken;
   }
 
+  /// Clear the active token while keeping the base URL, so the client
+  /// stays pointed at the same PMS but unauthenticated.
+  ///
+  /// Mirrors `JellyfinClient.clearSession()`; equivalent to
+  /// `setToken(null)`.
+  void clearSession() {
+    _http.token = null;
+  }
+
   /// Drop the active token and base URL.
   void disconnect() {
+    clearSession();
     _http.baseUrl = null;
-    _http.token = null;
   }
 
   /// Escape hatch: issue an arbitrary request through the same Dio
@@ -233,6 +243,7 @@ class PlexClient {
     Map<String, String>? extraHeaders,
     bool absoluteUrl = false,
     ResponseType? responseType,
+    CancelToken? cancelToken,
   }) =>
       _http.request<T>(
         path,
@@ -242,18 +253,24 @@ class PlexClient {
         extraHeaders: extraHeaders,
         absoluteUrl: absoluteUrl,
         responseType: responseType,
+        cancelToken: cancelToken,
       );
 
   /// Convenience for byte-stream GETs (artwork, downloads).
+  ///
+  /// Pass a [cancelToken] to abort an in-flight download — useful for large
+  /// artwork or media transfers the caller may need to cancel.
   Future<Response<List<int>>> requestBytes(
     String url, {
     Map<String, dynamic>? queryParameters,
     bool absoluteUrl = true,
+    CancelToken? cancelToken,
   }) =>
       _http.requestBytes(
         url,
         queryParameters: queryParameters,
         absoluteUrl: absoluteUrl,
+        cancelToken: cancelToken,
       );
 
   // ─── Lightweight method aliases ────────────────────────────────────
@@ -319,6 +336,8 @@ class PlexClient {
 
   /// Alias for [requestBytes] — kept so the calling code can read like
   /// the original Dio-based wrapper it replaced.
-  Future<Response<List<int>>> fetchBytes(String url) =>
-      requestBytes(url, absoluteUrl: true);
+  @Deprecated(
+    'Use requestBytes; this alias will be removed in a future release.',
+  )
+  Future<Response<List<int>>> fetchBytes(String url) => requestBytes(url);
 }

@@ -32,8 +32,8 @@ Future<void> main() async {
     );
     exit(1);
   }
-  final cache = jsonDecode(File(_cachePath).readAsStringSync())
-      as Map<String, dynamic>;
+  final cache =
+      jsonDecode(File(_cachePath).readAsStringSync()) as Map<String, dynamic>;
   final baseUrl = cache['baseUrl'] as String;
   final token = cache['token'] as String;
 
@@ -43,8 +43,11 @@ Future<void> main() async {
 
   Directory(_outDir).createSync(recursive: true);
 
-  Future<void> get(String name, String path,
-      [Map<String, dynamic>? qp]) async {
+  Future<void> get(
+    String name,
+    String path, [
+    Map<String, dynamic>? qp,
+  ]) async {
     try {
       final res = await dio.get<dynamic>('$baseUrl$path', queryParameters: qp);
       _save(name, res.data);
@@ -54,16 +57,20 @@ Future<void> main() async {
   }
 
   await get('sections.json', '/library/sections');
-  await get('section_music_all.json', '/library/sections/1/all',
-      {'type': 10, 'X-Plex-Container-Size': 3});
+  await get(
+    'section_music_all.json',
+    '/library/sections/1/all',
+    {'type': 10, 'X-Plex-Container-Size': 3},
+  );
   // Section 1 is Music (we just created it in bootstrap). type=10 = track.
 
   final tracksRes = await dio.get<Map<String, dynamic>>(
     '$baseUrl/library/sections/1/all',
     queryParameters: {'type': 10, 'X-Plex-Container-Size': 1},
   );
-  final firstTrack = ((tracksRes.data?['MediaContainer'] as Map?)?['Metadata']
-      as List?)?.first as Map<String, dynamic>?;
+  final firstTrack =
+      ((tracksRes.data?['MediaContainer'] as Map?)?['Metadata'] as List?)?.first
+          as Map<String, dynamic>?;
   if (firstTrack != null) {
     final rk = firstTrack['ratingKey'] as String;
     await get('metadata_track.json', '/library/metadata/$rk');
@@ -72,8 +79,11 @@ Future<void> main() async {
 
   await get('sessions.json', '/status/sessions');
   await get('hubs_global.json', '/hubs', {'count': 3});
-  await get('hubs_search.json', '/hubs/search',
-      {'query': 'Track', 'limit': 3});
+  await get(
+    'hubs_search.json',
+    '/hubs/search',
+    {'query': 'Track', 'limit': 3},
+  );
   await get('preferences.json', '/:/prefs');
   await get('account.json', '/myplex/account');
   await get('butler_tasks.json', '/butler');

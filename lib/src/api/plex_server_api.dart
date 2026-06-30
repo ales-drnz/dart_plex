@@ -46,33 +46,43 @@ class PlexServerApi {
 
   /// `GET /security/resources?source={s}` — fetch connection info
   /// for a source (used during cross-server playback negotiation).
+  ///
+  /// [source] is required by the server: omitting it (or passing an empty
+  /// string) always yields a 400. [refresh] is sent as the BoolInt `1`/`0`
+  /// the API expects.
   Future<Map<String, dynamic>> securityResources({
-    String? source,
+    required String source,
     bool? refresh,
   }) async {
-    final qp = <String, dynamic>{};
-    if (source != null) qp['source'] = source;
+    assert(source.isNotEmpty, 'source must not be empty');
+    final qp = <String, dynamic>{'source': source};
     if (refresh != null) qp['refresh'] = refresh ? 1 : 0;
     final res = await _http.request<Map<String, dynamic>>(
       '/security/resources',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: qp,
     );
     return res.data ?? const {};
   }
 
-  /// `POST /security/token?type={t}&scope={s}` — request a transient
-  /// access token (used to delegate playback to a Chromecast or
-  /// to embed a viewer link in a webhook).
-  Future<Map<String, dynamic>> transientToken({
-    required String type,
-    required String scope,
-  }) async {
+  /// `POST /security/token?type=delegation&scope=all` — request a transient
+  /// access token (used to delegate playback to a Chromecast or to embed a
+  /// viewer link in a webhook).
+  ///
+  /// The server only accepts `type=delegation` and `scope=all`, so both are
+  /// hardcoded; any other value is rejected with a 400. Returns the
+  /// transient token string from `MediaContainer.token` (the token is valid
+  /// for up to 48 hours), or `null` if the response carries no token.
+  Future<String?> transientToken() async {
     final res = await _http.request<Map<String, dynamic>>(
       '/security/token',
       method: 'POST',
-      queryParameters: {'type': type, 'scope': scope},
+      queryParameters: const {'type': 'delegation', 'scope': 'all'},
     );
-    return res.data ?? const {};
+    final data = res.data ?? const <String, dynamic>{};
+    final container = data['MediaContainer'];
+    final token =
+        container is Map<String, dynamic> ? container['token'] : data['token'];
+    return token is String ? token : null;
   }
 
   /// `GET /status/sessions/background` — list background tasks

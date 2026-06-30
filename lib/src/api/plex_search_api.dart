@@ -59,13 +59,20 @@ class PlexSearchApi {
   /// Same response shape as `hubs()`; the server treats the query
   /// as a free-form natural-language phrase rather than a token
   /// match.
+  ///
+  /// Because this endpoint uses a slow Levenshtein-distance heuristic,
+  /// the server recommends scoping the search to a single media [type]
+  /// (e.g. [PlexMetadataType.track]) whenever possible.
   Future<List<PlexHub>> voice({
     required String query,
+    PlexMetadataType? type,
     int limit = 10,
   }) async {
+    final qp = <String, dynamic>{'query': query, 'limit': limit};
+    if (type != null) qp['type'] = type.value;
     final res = await _http.request<Map<String, dynamic>>(
       '/hubs/search/voice',
-      queryParameters: {'query': query, 'limit': limit},
+      queryParameters: qp,
     );
     return PlexMediaContainer.fromJson(
       res.data ?? const {},

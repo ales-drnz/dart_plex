@@ -45,20 +45,26 @@ class PlexNotificationsApi {
   /// `GET /:/websockets/notifications` — open a WebSocket and emit
   /// every notification as a [PlexNotification].
   ///
+  /// Awaits the socket handshake before returning, so the returned stream is
+  /// live and [isWebSocketConnected] is only `true` once the connection is
+  /// actually open. Throws a [PlexException] of type
+  /// [PlexErrorType.connection] if the connection cannot be established.
+  ///
   /// [filter] (optional) restricts to one notification type (e.g.
   /// `'playing'`, `'progress'`, `'activity'`, `'transcodeSession.update'`).
-  Stream<PlexNotification> connectWebSocket({String? filter}) {
+  Future<Stream<PlexNotification>> connectWebSocket({String? filter}) async {
     if (_wsChannel != null) {
       throw const PlexException(
         'WebSocket already connected. Call closeWebSocket() first.',
         type: PlexErrorType.state,
       );
     }
+    _http.requireConnected();
     final base = _http.baseUrl;
     final token = _http.token;
-    if (base == null || token == null) {
+    if (token == null) {
       throw const PlexException(
-        'No PMS connection or token. Call connect() / setToken() first.',
+        'No PMS token. Call connect() / setToken() first.',
         type: PlexErrorType.state,
       );
     }
@@ -69,7 +75,18 @@ class PlexNotificationsApi {
         .join('&');
     final wsUrl = _toWs('$base/:/websockets/notifications?$query');
 
-    final channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+    final WebSocketChannel channel;
+    try {
+      channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      await channel.ready;
+    } catch (e, st) {
+      throw PlexException(
+        'WebSocket connection failed: $e',
+        type: PlexErrorType.connection,
+        cause: e,
+        stackTrace: st,
+      );
+    }
     final controller = StreamController<PlexNotification>.broadcast(
       onCancel: () {
         if (!(_wsController?.hasListener ?? false)) {
@@ -122,11 +139,11 @@ class PlexNotificationsApi {
         type: PlexErrorType.state,
       );
     }
-    final base = _http.baseUrl;
+    _http.requireConnected();
     final token = _http.token;
-    if (base == null || token == null) {
+    if (token == null) {
       throw const PlexException(
-        'No PMS connection or token. Call connect() / setToken() first.',
+        'No PMS token. Call connect() / setToken() first.',
         type: PlexErrorType.state,
       );
     }
@@ -152,7 +169,7 @@ class PlexNotificationsApi {
         );
         final body = res.data;
         if (body == null) {
-          controller.close();
+          unawaited(controller.close());
           _cleanupSse();
           return;
         }
@@ -198,7 +215,7 @@ class PlexNotificationsApi {
           ),
           stackTrace,
         );
-        controller.close();
+        unawaited(controller.close());
         _cleanupSse();
       }
     }();

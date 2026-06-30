@@ -30,6 +30,15 @@ class PlexDVRsApi {
   }
 
   /// `PUT /livetv/dvrs/{dvrId}/prefs` — update DVR preferences.
+  ///
+  /// Only `name` is formally declared by the Plex OpenAPI spec
+  /// (operation `setDVRPreferences`). The optional [prefs] map is an
+  /// unvalidated passthrough: each entry is flattened into the query
+  /// string as a `key=value` parameter. PMS accepts additional DVR
+  /// preference keys this way, but they are not enumerated or
+  /// validated by the spec or this client. Because [name] is applied
+  /// first and then [prefs] is merged in, a `name` key inside [prefs]
+  /// would override the explicit [name] argument.
   Future<void> setPreferences({
     required String dvrId,
     Map<String, dynamic>? prefs,

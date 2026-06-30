@@ -68,6 +68,17 @@ class PlexConnection {
     }
   }
 
+  /// Throw a [PlexErrorType.state] [PlexException] if no PMS base URL has
+  /// been configured yet.
+  void requireConnected() {
+    if (_baseUrl == null) {
+      throw const PlexException(
+        'No PMS connection — call PlexClient.connect() first.',
+        type: PlexErrorType.state,
+      );
+    }
+  }
+
   /// Make a request against [path] on the active PMS base URL.
   ///
   /// Pass [absoluteUrl] = true and a full URL in [path] to target a host
@@ -80,6 +91,7 @@ class PlexConnection {
     Map<String, String>? extraHeaders,
     bool absoluteUrl = false,
     ResponseType? responseType,
+    CancelToken? cancelToken,
   }) async {
     final url = absoluteUrl ? path : _resolve(path);
     try {
@@ -87,6 +99,7 @@ class PlexConnection {
         url,
         data: data,
         queryParameters: queryParameters,
+        cancelToken: cancelToken,
         options: Options(
           method: method,
           headers: extraHeaders,
@@ -103,12 +116,14 @@ class PlexConnection {
     String url, {
     Map<String, dynamic>? queryParameters,
     bool absoluteUrl = true,
+    CancelToken? cancelToken,
   }) async {
     return request<List<int>>(
       url,
       queryParameters: queryParameters,
       absoluteUrl: absoluteUrl,
       responseType: ResponseType.bytes,
+      cancelToken: cancelToken,
     );
   }
 
@@ -121,12 +136,14 @@ class PlexConnection {
     Map<String, dynamic>? queryParameters,
     Map<String, String>? extraHeaders,
     bool absoluteUrl = false,
+    CancelToken? cancelToken,
   }) async {
     final url = absoluteUrl ? path : _resolve(path);
     try {
       return await _dio.get<ResponseBody>(
         url,
         queryParameters: queryParameters,
+        cancelToken: cancelToken,
         options: Options(
           responseType: ResponseType.stream,
           headers: extraHeaders,
