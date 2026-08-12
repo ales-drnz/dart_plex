@@ -33,7 +33,7 @@
 /// final albums = await plex.library.allByType(
 ///   sectionId: musicLib.id,
 ///   type: PlexMetadataType.album,
-///   limit: 50,
+///   size: 50,
 /// );
 /// ```
 ///
@@ -73,4 +73,5 @@ export 'src/plex_client.dart';
 export 'src/plex_credentials.dart';
 export 'src/plex_error_type.dart';
 export 'src/plex_exception.dart';
+export 'src/plex_filter.dart';
 export 'src/plex_models.dart';

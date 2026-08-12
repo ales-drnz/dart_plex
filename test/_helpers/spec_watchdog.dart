@@ -18,6 +18,22 @@ import 'package:yaml/yaml.dart';
 
 const String _upstreamUrl =
     'https://raw.githubusercontent.com/LukeHagar/plex-api-spec/main/plex-api-spec.yaml';
+
+/// Upstream commit the pinned copy was taken from (196 paths, the
+/// baseline `plexLocalCoverageFloor` is calibrated against).
+///
+/// `docs/` is gitignored, so the pinned file does not travel with the
+/// repo — restore it with:
+///
+/// ```sh
+/// mkdir -p docs && curl -sSL -o docs/plex-api-spec.yaml \
+///   https://raw.githubusercontent.com/LukeHagar/plex-api-spec/$pinnedSpecCommit/plex-api-spec.yaml
+/// ```
+///
+/// Fetching `main` instead pulls a much larger spec (343 paths as of
+/// 2026-08) and drops measured coverage below the floor — the drop is
+/// upstream growth, not deleted wrappers.
+const String pinnedSpecCommit = '6af6b1af6f82';
 const String _pinnedPath = 'docs/plex-api-spec.yaml';
 const String _cacheDir = 'test/.spec_cache';
 const Duration _cacheTtl = Duration(hours: 24);

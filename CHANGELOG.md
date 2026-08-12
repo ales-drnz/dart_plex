@@ -1,3 +1,22 @@
+## [0.1.1] - 11-08-2026
+
+### Breaking
+- `library.allByType()` and `library.countByType()`: the `filter` argument is gone, replaced by `filters` — a list of `PlexFilter`. The old argument was sent as a query parameter literally named `filter`, which Plex has no such thing as, so every filtered call quietly came back unfiltered. Instead of `filter: 'genre=6'` write `filters: [PlexFilter.genre(6)]`; instead of `filter: 'userRating>>=8'` write `filters: [PlexFilter.ratingAbove(8)]`. Several filters in the list are ANDed.
+- `library.allByType()` lost its `title` argument. It was a filter wearing a different hat, and two ways to filter one call is how the bug above happened. Write `filters: [PlexFilter.titleContains('abbey')]` for the old behaviour, or `PlexFilter.titleIs('Abbey Road')` for a whole-title match.
+- `library.genres()` now returns `List<PlexTag>` instead of `List<PlexMetadata>`. A `PlexTag` has the numeric `id` you filter by as a typed field; getting it used to mean digging through `raw['fastKey']` or `raw['key']` and knowing that `key` is a bare id on current servers but a path on older ones. Pass the tag straight to `PlexFilter.of(tag)`; use `tag.title` where you used `metadata.title`.
+- `library.filters()` now returns `List<PlexLibraryFilter>` instead of `List<PlexMetadata>`. These entries were never metadata items. Use `f.field` for the query parameter to filter on (it was `raw['filter']`), `f.valueType` for `raw['filterType']`, and `f.valuesKey` for the endpoint listing the values (it was `f.key`). The `Pivot` array is still in `raw`.
+- `library.updateSectionItems()`: the `filters` argument is now called `filterExpression`. Its wire form is unchanged — it is still sent as the PUT route's own `filters` parameter, which really does take one whole expression as a string. Only the Dart name changed, so that it can no longer be mistaken for `allByType`'s list of `PlexFilter`.
+
+### Added
+- `PlexFilter`, a typed library filter you compose instead of writing query fragments by hand: `PlexFilter.genre()`, `.tag()`, `.year()`, `.yearAfter()`, `.yearBefore()`, `.ratingAbove()`, `.rated()`, `.unplayed()`, `.played()`, `.titleContains()`, `.titleIs()`, `.firstCharacter()`, `.studio()`, `.contentRating()`, `.resolution()`, plus `.number()`, `.text()`, `.flag()` and a plain constructor for fields the named ones do not cover. Every operator these produce was checked against a live PMS 1.43.2.
+- `PlexFilter.of(tag)` builds the filter for a genre, mood or style row you got back from the server, reading both the field name and the id off the tag so neither is spelled by hand.
+- `library.filterValues()`: the values a facet can take (the moods, styles or decades behind a `PlexLibraryFilter`), fetched by following the endpoint the server itself nominates for them.
+- `PlexTag` and `PlexLibraryFilter` DTOs, and `PlexFilterValueType` for a facet's `string` / `integer` / `boolean` value kind.
+
+### Fixed
+- Filtering a library section works. `library.allByType(filter: ...)` and `countByType(filter: ...)` sent `?filter=genre%3D6`; Plex ignores query parameters it does not recognise and answers 200 with the whole section, so every genre showed the same albums and a "favourites" view returned the entire library. Filters now travel the way the server states them in its own `fastKey` — one query parameter per condition, named after the field, with the operator in the name: `?genre=6`, `?year>>=2009`, `?unwatched=1`.
+- `library.countByType()` now runs the identical request to `allByType()` with `X-Plex-Container-Size=0` rather than a second hand-rolled copy of it, so a count can no longer disagree with the page it counts, and it takes the same filters.
+
 ## [0.1.0] - 30-06-2026
 
 ### Deprecated

@@ -3,6 +3,9 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import '../plex_connection.dart';
+import '../plex_error_type.dart';
+import '../plex_exception.dart';
+import '../plex_filter.dart';
 import '../plex_models.dart';
 
 /// Browse `/library/sections` and `/library/metadata/{id}`.
@@ -43,16 +46,22 @@ class PlexLibraryApi {
   /// `sort` examples: `'titleSort:asc'`, `'addedAt:desc'`,
   /// `'lastViewedAt:desc'`, `'originallyAvailableAt:desc'`.
   ///
-  /// [filter] gives you the raw filter expression Plex expects, e.g.
-  /// `'genre=Rock'`, `'year>=2010'`. Pass as already-encoded value.
+  /// [filters] narrows the result set. Each [PlexFilter] travels as its
+  /// own query parameter — `[PlexFilter.genre(6), PlexFilter.yearAfter(2009)]`
+  /// sends `?genre=6&year>>=2009` — and the server ANDs them. To match
+  /// any of several values of one field, put them in a single filter
+  /// (see [PlexFilter.tag]).
+  ///
+  /// Throws a [PlexException] of type [PlexErrorType.state] when two
+  /// filters collide on the same query parameter, since only one of the
+  /// two could survive into the request.
   Future<PlexMediaContainer<PlexMetadata>> allByType({
     required String sectionId,
     required PlexMetadataType type,
     int start = 0,
     int size = 50,
     String? sort,
-    String? title,
-    String? filter,
+    List<PlexFilter> filters = const [],
   }) async {
     final qp = <String, dynamic>{
       'type': type.value,
@@ -60,8 +69,7 @@ class PlexLibraryApi {
       'X-Plex-Container-Size': size,
     };
     if (sort != null) qp['sort'] = sort;
-    if (title != null) qp['title'] = title;
-    if (filter != null) qp['filter'] = filter;
+    _applyFilters(qp, filters);
     final res = await _http.request<Map<String, dynamic>>(
       '/library/sections/$sectionId/all',
       queryParameters: qp,
@@ -76,30 +84,41 @@ class PlexLibraryApi {
   /// Count-only variant of [allByType] — returns the section's
   /// `totalSize` without paying the cost of streaming the items down.
   ///
-  /// Implemented with `X-Plex-Container-Size=0` which Plex honours.
+  /// Runs the very same request as [allByType] with
+  /// `X-Plex-Container-Size=0`, which Plex honours, so a count can never
+  /// disagree with the page it counts. [filters] means exactly what it
+  /// means there.
   Future<int> countByType({
     required String sectionId,
     required PlexMetadataType type,
-    String? filter,
+    List<PlexFilter> filters = const [],
   }) async {
-    final qp = <String, dynamic>{
-      'type': type.value,
-      'X-Plex-Container-Start': 0,
-      'X-Plex-Container-Size': 0,
-    };
-    if (filter != null) qp['filter'] = filter;
-    final res = await _http.request<Map<String, dynamic>>(
-      '/library/sections/$sectionId/all',
-      queryParameters: qp,
+    final page = await allByType(
+      sectionId: sectionId,
+      type: type,
+      size: 0,
+      filters: filters,
     );
-    final raw = res.data ?? const <String, dynamic>{};
-    final container = raw['MediaContainer'];
-    if (container is Map<String, dynamic>) {
-      final v = container['totalSize'] ?? container['size'];
-      if (v is int) return v;
-      if (v is String) return int.tryParse(v) ?? 0;
+    return page.totalSize;
+  }
+
+  /// Fold [filters] into [qp], one query parameter per condition.
+  ///
+  /// Two conditions on the same field *and* operator cannot both be
+  /// expressed — one would overwrite the other and the call would come
+  /// back wider than asked for — so that is refused loudly instead.
+  void _applyFilters(Map<String, dynamic> qp, List<PlexFilter> filters) {
+    for (final filter in filters) {
+      final name = filter.parameterName;
+      if (qp.containsKey(name)) {
+        throw PlexException(
+          'Two filters both send the "$name" query parameter; only one '
+          'would survive. Combine their values into a single PlexFilter.',
+          type: PlexErrorType.state,
+        );
+      }
+      qp[name] = filter.parameterValue;
     }
-    return 0;
   }
 
   /// `PUT /library/sections/{sectionId}/all` — bulk-edit the fields
@@ -108,8 +127,14 @@ class PlexLibraryApi {
   /// curation).
   ///
   /// All mutations travel as query parameters (the endpoint has no
-  /// request body). [type] is the item type integer and [filters] is
-  /// the filter expression selecting the items to mutate.
+  /// request body). [type] is the item type integer.
+  ///
+  /// [filterExpression] selects the items to mutate and is sent under
+  /// the PUT route's own `filters` parameter, which takes one whole
+  /// expression as a string (e.g. `'genre=6'`). It is a different
+  /// mechanism from the per-parameter [PlexFilter] list that
+  /// [allByType] takes — the read and write routes genuinely disagree
+  /// here.
   ///
   /// [changes] holds already-flattened Plex keys, e.g.
   /// `<field>.value` to set a value and `<field>.locked` (`1`/`0`) to
@@ -119,12 +144,12 @@ class PlexLibraryApi {
   Future<void> updateSectionItems({
     required String sectionId,
     int? type,
-    String? filters,
+    String? filterExpression,
     required Map<String, dynamic> changes,
   }) async {
     final qp = <String, dynamic>{};
     if (type != null) qp['type'] = type;
-    if (filters != null) qp['filters'] = filters;
+    if (filterExpression != null) qp['filters'] = filterExpression;
     qp.addAll(changes);
     await _http.request<void>(
       '/library/sections/$sectionId/all',
@@ -134,20 +159,76 @@ class PlexLibraryApi {
   }
 
   /// Browse the genres index of a section (`/library/sections/{id}/genre`).
-  Future<List<PlexMetadata>> genres({
+  ///
+  /// Each [PlexTag] carries the numeric [PlexTag.id] the server filters
+  /// by, so a genre can go straight back into a query:
+  ///
+  /// ```dart
+  /// final rock = genres.firstWhere((g) => g.title == 'Rock');
+  /// final albums = await plex.library.allByType(
+  ///   sectionId: sectionId,
+  ///   type: PlexMetadataType.album,
+  ///   filters: [PlexFilter.of(rock)],
+  /// );
+  /// ```
+  Future<List<PlexTag>> genres({
     required String sectionId,
     required PlexMetadataType type,
+  }) =>
+      _tagIndex(
+        path: '/library/sections/$sectionId/genre',
+        field: 'genre',
+        queryParameters: {'type': type.value},
+      );
+
+  /// Values a facet can take — the moods, styles, decades or labels
+  /// behind a [PlexLibraryFilter] returned by [filters].
+  ///
+  /// Follows [PlexLibraryFilter.valuesKey], the endpoint the server
+  /// itself nominates for the facet's values, so no path is spelled by
+  /// hand. Narrow to one item kind with [type].
+  ///
+  /// Throws a [PlexException] of type [PlexErrorType.state] when the
+  /// facet has no values endpoint (`unwatched` and friends have none —
+  /// they are flags, not lists).
+  Future<List<PlexTag>> filterValues({
+    required PlexLibraryFilter filter,
+    PlexMetadataType? type,
+  }) async {
+    final key = filter.valuesKey;
+    if (key == null) {
+      throw PlexException(
+        'Filter "${filter.field}" lists no values endpoint; there is '
+        'nothing to enumerate for it.',
+        type: PlexErrorType.state,
+      );
+    }
+    final uri = Uri.parse(key);
+    final qp = <String, dynamic>{...uri.queryParameters};
+    if (type != null) qp['type'] = type.value;
+    return _tagIndex(
+      path: uri.path,
+      field: filter.field,
+      queryParameters: qp,
+    );
+  }
+
+  /// Fetch a tag index (`/library/sections/{id}/genre`, `/mood`, …) and
+  /// decode its `Directory` entries as [PlexTag]s belonging to [field].
+  Future<List<PlexTag>> _tagIndex({
+    required String path,
+    required String field,
+    required Map<String, dynamic> queryParameters,
   }) async {
     final res = await _http.request<Map<String, dynamic>>(
-      '/library/sections/$sectionId/genre',
-      queryParameters: {'type': type.value},
+      path,
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
-    final c = PlexMediaContainer.fromJson(
+    return PlexMediaContainer.fromJson(
       res.data ?? const {},
       'Directory',
-      PlexMetadata.fromJson,
-    );
-    return c.items;
+      (json) => PlexTag.fromJson(json, field: field),
+    ).items;
   }
 
   // -------------------------------------------------------------------------
@@ -290,19 +371,23 @@ class PlexLibraryApi {
   // Section facets and sub-buckets
   // -------------------------------------------------------------------------
 
-  /// `/library/sections/{sectionId}/filters` — list of facets the
-  /// server can filter on (genre, year, decade, etc.). Each entry
-  /// carries a `Pivot` array with pre-built sub-views, e.g.
+  /// `/library/sections/{sectionId}/filters` — the facets this section
+  /// can be filtered on (genre, year, decade, …).
+  ///
+  /// This is the authoritative list of filterable fields for a section:
+  /// [PlexLibraryFilter.field] is the query parameter to use, and
+  /// [filterValues] enumerates what it accepts. The raw entry also
+  /// carries a `Pivot` array of pre-built sub-views, e.g.
   /// "firstCharacter" for an A-Z index or "folder" for the file-tree
   /// view.
-  Future<List<PlexMetadata>> filters({required String sectionId}) async {
+  Future<List<PlexLibraryFilter>> filters({required String sectionId}) async {
     final res = await _http.request<Map<String, dynamic>>(
       '/library/sections/$sectionId/filters',
     );
     return PlexMediaContainer.fromJson(
       res.data ?? const {},
       'Directory',
-      PlexMetadata.fromJson,
+      PlexLibraryFilter.fromJson,
     ).items;
   }
 

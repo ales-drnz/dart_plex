@@ -25,7 +25,7 @@ Add `dart_plex` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_plex: ^0.1.0
+  dart_plex: ^0.1.1
 ```
 
 ---
@@ -556,8 +556,50 @@ Sort examples: `'titleSort:asc'`, `'addedAt:desc'`,
 `'lastViewedAt:desc'`, `'originallyAvailableAt:desc'`,
 `'random:<seed>'`.
 
-`filter` accepts the raw Plex filter expression
-(`'genre=Rock'`, `'year>=2010'`, `'userRating>>=8'`).
+`filters` narrows the result set. Each condition is a `PlexFilter`;
+they travel as separate query parameters and the server ANDs them:
+
+```dart
+final page = await plex.library.allByType(
+  sectionId: musicLib.id,
+  type: PlexMetadataType.album,
+  filters: [PlexFilter.genre(6), PlexFilter.yearAfter(2009)],
+);
+// GET /library/sections/3/all?type=9&genre=6&year>>=2009
+```
+
+Plex has no `filter` parameter. A filter *is* a query parameter named
+after the field, with the comparison operator baked into the name —
+which is why the operator belongs to the constructor you pick and not
+to a string you write:
+
+| Constructor | Sends |
+| :--- | :--- |
+| `PlexFilter.genre(6)` | `genre=6` |
+| `PlexFilter.genre(6, exclude: true)` | `genre!=6` |
+| `PlexFilter.tag('mood', [3, 7])` | `mood=3,7` (any of) |
+| `PlexFilter.year(1994)` | `year=1994` |
+| `PlexFilter.yearAfter(2009)` | `year>>=2009` |
+| `PlexFilter.yearBefore(2000)` | `year<<=2000` |
+| `PlexFilter.ratingAbove(9)` | `userRating>>=9` |
+| `PlexFilter.rated()` | `userRating>>=0` |
+| `PlexFilter.unplayed()` | `unwatched=1` |
+| `PlexFilter.played()` | `unwatched=0` |
+| `PlexFilter.titleContains('abbey')` | `title=abbey` |
+| `PlexFilter.titleIs('Abbey Road')` | `title==Abbey Road` |
+| `PlexFilter.firstCharacter('A')` | `firstCharacter=A` |
+
+Tag fields (genre, mood, style, …) filter by numeric tag id, never by
+display name — see [5.6](#56-genres) for where the ids come from.
+Conditions in the list are ANDed; several values inside one condition
+are ORed. Two conditions that would collide on the same query
+parameter throw a `PlexException` rather than let one silently
+overwrite the other.
+
+Which fields a section accepts is a property of that section — ask the
+server with `filters()` ([5.7](#57-filters-albums-folders-categories))
+and use `PlexFilter(field: ..., values: [...])` for anything the named
+constructors do not cover.
 
 #### 5.3 Counting items
 
@@ -565,11 +607,14 @@ Sort examples: `'titleSort:asc'`, `'addedAt:desc'`,
 final count = await plex.library.countByType(
   sectionId: musicLib.id,
   type: PlexMetadataType.album,
+  filters: [PlexFilter.genre(6)],
 );
 ```
 
-Issues a request with `X-Plex-Container-Size=0` so the server answers
-with `totalSize` without streaming items.
+Runs the same request as `allByType` with `X-Plex-Container-Size=0`, so
+the server answers with `totalSize` without streaming items and a count
+can never disagree with the page it counts. `filters` means exactly
+what it means there.
 
 #### 5.4 Single item metadata
 
@@ -602,22 +647,50 @@ final genres = await plex.library.genres(
   sectionId: musicLib.id,
   type: PlexMetadataType.album,
 );
+
+final rock = genres.firstWhere((g) => g.title == 'Rock');
+final rockAlbums = await plex.library.allByType(
+  sectionId: musicLib.id,
+  type: PlexMetadataType.album,
+  filters: [PlexFilter.of(rock)],
+);
 ```
 
-Each entry is a `PlexMetadata` whose `key` is the genre id; pass it
-back as `filter: 'genre=<id>'` to filter `allByType`.
+Each entry is a `PlexTag` carrying the numeric `id` the server filters
+by, so a genre goes straight back into a query via `PlexFilter.of()` —
+which reads both the field name and the id off the tag. Servers report
+that id in different shapes (`key` is a bare id on current versions, a
+path on older ones, and `fastKey` is a ready-made query); `PlexTag`
+resolves all of them. `id` is null when a server sends nothing usable,
+and `PlexFilter.of()` throws rather than issue a query that would come
+back unfiltered.
 
 #### 5.7 Filters, albums, folders, categories
 
-`filters()` returns the list of facets the server can sort or filter
-on. Each `Directory` carries a `Pivot` array (in its `raw` map) with
-pre-built sub-views like the A-Z index and folder view.
+`filters()` returns the facets a section can be filtered on — the
+authoritative list of filterable fields for *that* section.
+`PlexLibraryFilter.field` is the query parameter to use, and
+`filterValues()` enumerates what it accepts by following the values
+endpoint the server nominates. The raw entry still carries the `Pivot`
+array of pre-built sub-views like the A-Z index and folder view.
 
 ```dart
 final facets = await plex.library.filters(sectionId: musicLib.id);
 for (final f in facets) {
-  print('${f.title} key=${f.key} type=${f.type}');
+  print('${f.title}: field=${f.field} type=${f.valueType}');
 }
+
+final moodFacet = facets.firstWhere((f) => f.field == 'mood');
+final moods = await plex.library.filterValues(
+  filter: moodFacet,
+  type: PlexMetadataType.track,
+);
+final mellow = moods.firstWhere((m) => m.title == 'Mellow');
+final mellowTracks = await plex.library.allByType(
+  sectionId: musicLib.id,
+  type: PlexMetadataType.track,
+  filters: [PlexFilter.of(mellow)],
+);
 ```
 
 `albums()`, `folderLocations()`, and `categories()` are cheap
@@ -769,6 +842,8 @@ await plex.playback.setFavorite(ratingKey: ratingKey, isFavorite: true);
 
 Plex does not have a separate "is favourite" flag; favourites are
 encoded as `userRating == 10`. `setFavorite` is sugar around `rate`.
+To list them, filter a section with `PlexFilter.ratingAbove(9)`
+([5.2](#52-items-by-type)) — there is no favourites endpoint.
 
 ---
 
