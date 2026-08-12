@@ -1,4 +1,4 @@
-## [0.1.1] - 11-08-2026
+## [0.1.1] - 12-08-2026
 
 ### Breaking
 - `library.allByType()` and `library.countByType()`: the `filter` argument is gone, replaced by `filters` — a list of `PlexFilter`. The old argument was sent as a query parameter literally named `filter`, which Plex has no such thing as, so every filtered call quietly came back unfiltered. Instead of `filter: 'genre=6'` write `filters: [PlexFilter.genre(6)]`; instead of `filter: 'userRating>>=8'` write `filters: [PlexFilter.ratingAbove(8)]`. Several filters in the list are ANDed.
