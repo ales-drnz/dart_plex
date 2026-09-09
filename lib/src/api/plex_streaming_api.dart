@@ -2,7 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-import 'package:dio/dio.dart' show ResponseType;
+import 'dart:convert';
+
+import 'package:dio/dio.dart' show Headers, ResponseType;
 
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
@@ -225,6 +227,35 @@ class PlexStreamingApi {
   /// stream of type 4 under the track's metadata; `streamKey` is the
   /// stream's `key` field (e.g. `/library/streams/12345`).
   ///
+  /// The body is fetched as bytes and decoded here, because a `.lrc` is
+  /// a file on disk that the server hands back verbatim and its encoding
+  /// is not fixed. The codec is chosen in this order:
+  ///
+  ///  1. A byte-order mark — UTF-8 (`EF BB BF`), UTF-16 LE (`FF FE`) or
+  ///     UTF-16 BE (`FE FF`). The mark is evidence carried inside the
+  ///     file, so it outranks the response header, and it is consumed
+  ///     rather than returned: a leading U+FEFF would push the first
+  ///     `[mm:ss.xx]` off the start of the line, and every LRC parser
+  ///     that anchors the timestamp there drops that line.
+  ///  2. The `charset` of the response's `Content-Type`, when Plex sends
+  ///     one naming a codec we can honour. It ranks below the BOM but
+  ///     above sniffing: it is the only signal that can separate a
+  ///     genuinely Latin-1 file from a UTF-8 one when the bytes are
+  ///     valid as both. A charset we do not recognise — or none at all,
+  ///     which is what these usually come back with — falls through to
+  ///     the next step rather than guessing on the server's behalf.
+  ///  3. A *strict* UTF-8 decode, falling back to Latin-1 when it throws.
+  ///     Strict on purpose: `allowMalformed` would hide a genuinely
+  ///     Latin-1 file behind a row of U+FFFD instead of reading it,
+  ///     while a Latin-1 read of UTF-8 bytes is what used to corrupt
+  ///     every accented character — asymmetrically, since `È` (`C3 88`)
+  ///     became `Ã` plus an invisible C1 control while `è` (`C3 A8`)
+  ///     became two visible characters.
+  ///
+  /// A declared `charset=utf-8` the bytes contradict still degrades to
+  /// Latin-1 rather than throwing, so a mislabelled file stays readable
+  /// whichever way round it is mislabelled.
+  ///
   /// Returns null if the stream key is empty or the server has no
   /// lyrics for the item. Throws [PlexException] for transport errors.
   Future<String?> lyrics({required String streamKey}) async {
@@ -236,7 +267,10 @@ class PlexStreamingApi {
     );
     final data = res.data;
     if (data == null || data.isEmpty) return null;
-    return String.fromCharCodes(data);
+    return _decodeTextBody(
+      data,
+      contentType: res.headers.value(Headers.contentTypeHeader),
+    );
   }
 
   void _requireConnected() {
@@ -251,6 +285,84 @@ class PlexStreamingApi {
   String _encode(Map<String, String> qp) => qp.entries
       .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
       .join('&');
+}
+
+/// Decode a whole text body Plex streamed off disk, picking the codec the
+/// bytes — and, failing that, the response header — actually call for.
+///
+/// See [PlexStreamingApi.lyrics] for why the order is BOM, then declared
+/// charset, then a strict UTF-8 attempt with a Latin-1 fallback.
+String _decodeTextBody(List<int> bytes, {String? contentType}) {
+  if (bytes.length >= 3 &&
+      bytes[0] == 0xEF &&
+      bytes[1] == 0xBB &&
+      bytes[2] == 0xBF) {
+    return _utf8OrLatin1(bytes.sublist(3));
+  }
+  if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) {
+    return _decodeUtf16(bytes.sublist(2), littleEndian: true);
+  }
+  if (bytes.length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF) {
+    return _decodeUtf16(bytes.sublist(2), littleEndian: false);
+  }
+
+  switch (_charsetOf(contentType)) {
+    case 'utf-8' || 'utf8' || 'us-ascii' || 'ascii':
+      return _utf8OrLatin1(bytes);
+    case 'iso-8859-1' || 'iso8859-1' || 'iso_8859-1' || 'latin1' || 'latin-1':
+      return latin1.decode(bytes);
+    // No BOM to say otherwise, so RFC 2781's big-endian default applies
+    // to a bare `utf-16`.
+    case 'utf-16' || 'utf-16be' || 'utf16be':
+      return _decodeUtf16(bytes, littleEndian: false);
+    case 'utf-16le' || 'utf16le':
+      return _decodeUtf16(bytes, littleEndian: true);
+  }
+
+  return _utf8OrLatin1(bytes);
+}
+
+/// The lowercased `charset` parameter of a `Content-Type`, or null when
+/// the header is absent, carries no charset, or leaves it empty.
+String? _charsetOf(String? contentType) {
+  if (contentType == null) return null;
+  for (final parameter in contentType.split(';').skip(1)) {
+    final equals = parameter.indexOf('=');
+    if (equals < 0) continue;
+    if (parameter.substring(0, equals).trim().toLowerCase() != 'charset') {
+      continue;
+    }
+    var value = parameter.substring(equals + 1).trim().toLowerCase();
+    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+      value = value.substring(1, value.length - 1);
+    }
+    return value.isEmpty ? null : value;
+  }
+  return null;
+}
+
+/// Strict UTF-8, falling back to Latin-1 on the bytes that refuse it.
+/// Latin-1 accepts every byte, so this always yields a string.
+String _utf8OrLatin1(List<int> bytes) {
+  try {
+    return utf8.decode(bytes);
+  } on FormatException {
+    return latin1.decode(bytes);
+  }
+}
+
+/// Decode UTF-16 code units, [littleEndian] or not, from [bytes] that
+/// have already had their BOM removed. A trailing odd byte is dropped.
+String _decodeUtf16(List<int> bytes, {required bool littleEndian}) {
+  final units = <int>[];
+  for (var i = 0; i + 1 < bytes.length; i += 2) {
+    final first = bytes[i];
+    final second = bytes[i + 1];
+    units.add(littleEndian ? first | (second << 8) : (first << 8) | second);
+  }
+  // Surrogate pairs survive: values at or below 0xFFFF are taken as UTF-16
+  // code units, so a pair recombines into the one character it encodes.
+  return String.fromCharCodes(units);
 }
 
 /// Outcome of [PlexStreamingApi.decisionUniversal].

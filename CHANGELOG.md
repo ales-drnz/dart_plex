@@ -1,3 +1,9 @@
+## [0.1.2] - 09-09-2026
+
+### Fixed
+- `streaming.lyrics()` returns readable text whatever the file's encoding. Each byte was read as one code unit, so accented characters in a UTF-8 `.lrc` came back mangled and a UTF-16 one came back full of NUL.
+- `notifications.connectEventSource()` decodes the event stream as a whole instead of one network chunk at a time, which turned any multi-byte character split across a chunk boundary into U+FFFD.
+
 ## [0.1.1] - 12-08-2026
 
 ### Breaking

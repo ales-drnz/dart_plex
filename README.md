@@ -25,7 +25,7 @@ Add `dart_plex` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_plex: ^0.1.1
+  dart_plex: ^0.1.2
 ```
 
 ---
@@ -902,8 +902,15 @@ while a player is paused but the session must stay warm.
 final lyrics = await plex.streaming.lyrics(streamKey: streamKey);
 ```
 
-Returns the raw lyrics body (LRC or plain text) or `null` if not
+Returns the lyrics body (LRC or plain text) or `null` if not
 available. Parsing into typed `LyricLine` is left to the consumer.
+
+The body is fetched as bytes and decoded here, since a `.lrc` is a file
+on disk whose encoding is not fixed: a UTF-8 or UTF-16 byte-order mark
+wins if the file carries one (and is stripped, so the first
+`[mm:ss.xx]` still starts the line), then the response's `charset` if
+Plex sends one, then a strict UTF-8 attempt that falls back to Latin-1.
+So the string you get back is already text, whatever the file was.
 
 ---
 

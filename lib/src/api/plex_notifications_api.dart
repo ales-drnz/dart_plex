@@ -31,7 +31,7 @@ class PlexNotificationsApi {
   StreamSubscription<dynamic>? _wsSub;
 
   StreamController<PlexNotification>? _sseController;
-  StreamSubscription<List<int>>? _sseSub;
+  StreamSubscription<String>? _sseSub;
 
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.notifications].
   PlexNotificationsApi(this._http);
@@ -174,9 +174,20 @@ class PlexNotificationsApi {
           return;
         }
         final buffer = StringBuffer();
-        _sseSub = body.stream.listen(
-          (chunk) {
-            buffer.write(utf8.decode(chunk, allowMalformed: true));
+        // Decode the body as one continuous stream, not chunk by chunk: a
+        // multi-byte character can straddle a network chunk boundary, and
+        // decoding each chunk on its own turns both of its halves into
+        // U+FFFD. The chunked converter holds the incomplete sequence back
+        // until the bytes that finish it arrive. `allowMalformed` still
+        // covers bytes that are invalid however they are joined, so one
+        // corrupt frame degrades instead of erroring the subscription and
+        // taking every later notification with it.
+        _sseSub = body.stream
+            .cast<List<int>>()
+            .transform(const Utf8Decoder(allowMalformed: true))
+            .listen(
+          (text) {
+            buffer.write(text);
             // SSE frames are separated by a blank line.
             while (true) {
               final raw = buffer.toString();
