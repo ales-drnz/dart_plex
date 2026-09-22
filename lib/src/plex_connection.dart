@@ -3,6 +3,7 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import 'package:dio/dio.dart';
+import 'package:meta/meta.dart';
 
 import 'plex_credentials.dart';
 import 'plex_error_type.dart';
@@ -24,18 +25,41 @@ class PlexConnection {
   String? _baseUrl;
   String? _token;
 
+  /// Responses at least this large are JSON-decoded on a background
+  /// isolate instead of the caller's.
+  ///
+  /// Dio's default [FusedTransformer] never uses an isolate
+  /// (`contentLengthIsolateThreshold: -1`), so every response was decoded on
+  /// the isolate that awaited it — in a Flutter app, the UI thread. A
+  /// playlist's full item list is hundreds of KB of JSON; decoding one
+  /// measured a ~130–150 ms stall of the UI thread in Flumael. Below the
+  /// threshold the isolate hop costs more than the decode it saves, which
+  /// is why this is a threshold and not "always".
+  static const jsonIsolateThreshold = 50 * 1024;
+
   /// Build the transport with [credentials]; optionally inject a custom [dio]
   /// and override the default timeouts.
+  ///
+  /// A [dio] you inject keeps its own transformer; the default one decodes
+  /// large responses off-isolate (see [jsonIsolateThreshold]).
   PlexConnection({
     required this.credentials,
     Dio? dio,
     Duration connectTimeout = const Duration(seconds: 15),
     Duration receiveTimeout = const Duration(seconds: 30),
-  }) : _dio = dio ?? Dio() {
+  }) : _dio = dio ??
+            (Dio()
+              ..transformer = FusedTransformer(
+                contentLengthIsolateThreshold: jsonIsolateThreshold,
+              )) {
     _dio.options.connectTimeout = connectTimeout;
     _dio.options.receiveTimeout = receiveTimeout;
     _dio.options.headers.addAll(credentials.toHeaders());
   }
+
+  /// The response transformer in use. For tests.
+  @visibleForTesting
+  Transformer get transformer => _dio.transformer;
 
   /// Currently configured PMS base URL, or null if not yet connected.
   String? get baseUrl => _baseUrl;

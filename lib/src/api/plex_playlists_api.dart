@@ -62,9 +62,21 @@ class PlexPlaylistsApi {
   }
 
   /// Items inside a playlist (`/playlists/{id}/items`).
-  Future<List<PlexMetadata>> items(String playlistId) async {
+  ///
+  /// Without [start] / [size] the whole playlist comes back, which for a
+  /// long one is hundreds of KB. Pass them to read a page — for example
+  /// the first few rows, when all you need is some cover art.
+  Future<List<PlexMetadata>> items(
+    String playlistId, {
+    int? start,
+    int? size,
+  }) async {
     final res = await _http.request<Map<String, dynamic>>(
       '/playlists/$playlistId/items',
+      queryParameters: {
+        if (start != null) 'X-Plex-Container-Start': start,
+        if (size != null) 'X-Plex-Container-Size': size,
+      },
     );
     return PlexMediaContainer.fromJson(
       res.data ?? const {},

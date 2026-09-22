@@ -1,3 +1,11 @@
+## [0.1.3] - 22-09-2026
+
+### Added
+- `playlists.items()` takes optional `start` and `size` for paging. Without them it still returns the whole playlist.
+
+### Changed
+- The default transport decodes JSON responses of 50 KB or more on a background isolate (`PlexConnection.jsonIsolateThreshold`), so large responses no longer block the caller's isolate. A `Dio` you inject keeps its own transformer.
+
 ## [0.1.2] - 09-09-2026
 
 ### Fixed
