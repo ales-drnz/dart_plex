@@ -4,6 +4,7 @@
 
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// Search endpoints.
 class PlexSearchApi {
@@ -28,15 +29,11 @@ class PlexSearchApi {
       'includeCollections': includeCollections ? 1 : 0,
     };
     if (sectionId != null) qp['sectionId'] = sectionId;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/search',
       queryParameters: qp,
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// Legacy flat search (`/search?query=…`).
@@ -44,15 +41,11 @@ class PlexSearchApi {
     required String query,
     int limit = 30,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/search',
       queryParameters: {'query': query, 'limit': limit},
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `GET /hubs/search/voice` — voice-search variant of [hubs].
@@ -70,14 +63,10 @@ class PlexSearchApi {
   }) async {
     final qp = <String, dynamic>{'query': query, 'limit': limit};
     if (type != null) qp['type'] = type.value;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/search/voice',
       queryParameters: qp,
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 }

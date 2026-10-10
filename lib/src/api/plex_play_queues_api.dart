@@ -4,6 +4,7 @@
 
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/playQueues/*` — Plex's canonical playback queue model.
 ///
@@ -88,15 +89,11 @@ class PlexPlayQueuesApi {
     };
     if (center != null) qp['center'] = center;
     if (window != null) qp['window'] = window;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/playQueues/$playQueueId',
       queryParameters: qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `PUT /playQueues/{id}?uri=...` (or `?playlistID=...`) — append

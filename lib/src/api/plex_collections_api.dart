@@ -4,6 +4,7 @@
 
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/library/collections/*` — hand-curated groupings of metadata
 /// items.
@@ -70,14 +71,10 @@ class PlexCollectionsApi {
   /// `GET /library/collections/{collectionId}/items` — items in a
   /// collection.
   Future<List<PlexMetadata>> items(String collectionId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/collections/$collectionId/items',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `PUT /library/collections/{collectionId}/items?uri={uri}` —

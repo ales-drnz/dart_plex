@@ -73,6 +73,9 @@ PlexClient plexFromCache() {
       deviceName: 'dart_plex integration tests',
       platform: 'Test',
     ),
+    // Every response goes through the isolate path, so real payloads prove
+    // that each typed parser can be sent there.
+    jsonIsolateThreshold: 0,
   );
   if (!File(_cacheFile).existsSync()) return client;
   final cache = PlexBootstrapCache.load();

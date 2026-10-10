@@ -7,6 +7,7 @@ import '../plex_error_type.dart';
 import '../plex_exception.dart';
 import '../plex_filter.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// Browse `/library/sections` and `/library/metadata/{id}`.
 class PlexLibraryApi {
@@ -70,14 +71,10 @@ class PlexLibraryApi {
     };
     if (sort != null) qp['sort'] = sort;
     _applyFilters(qp, filters);
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/all',
       queryParameters: qp,
-    );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
+      containerOf('Metadata', PlexMetadata.fromJson),
     );
   }
 
@@ -220,15 +217,11 @@ class PlexLibraryApi {
     required String field,
     required Map<String, dynamic> queryParameters,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       path,
       queryParameters: queryParameters.isEmpty ? null : queryParameters,
+      itemsOf('Directory', (json) => PlexTag.fromJson(json, field: field)),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      (json) => PlexTag.fromJson(json, field: field),
-    ).items;
   }
 
   // -------------------------------------------------------------------------
@@ -292,27 +285,19 @@ class PlexLibraryApi {
 
   /// Children of an item — album tracks, artist albums, season episodes.
   Future<List<PlexMetadata>> children(String ratingKey) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/metadata/$ratingKey/children',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// All leaves under an item — every track under an artist, every
   /// episode under a show. Useful for "play artist" / "play show".
   Future<List<PlexMetadata>> allLeaves(String ratingKey) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/metadata/$ratingKey/allLeaves',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   // -------------------------------------------------------------------------
@@ -328,15 +313,11 @@ class PlexLibraryApi {
   }) async {
     final qp = <String, dynamic>{};
     if (count != null) qp['count'] = count;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/metadata/$ratingKey/similar',
       queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/metadata/{ratingKey}/nearest` — sonically nearest
@@ -356,15 +337,11 @@ class PlexLibraryApi {
     if (excludeGrandparentID != null) {
       qp['excludeGrandparentID'] = excludeGrandparentID;
     }
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/metadata/$ratingKey/nearest',
       queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   // -------------------------------------------------------------------------
@@ -381,14 +358,10 @@ class PlexLibraryApi {
   /// "firstCharacter" for an A-Z index or "folder" for the file-tree
   /// view.
   Future<List<PlexLibraryFilter>> filters({required String sectionId}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/filters',
+      itemsOf('Directory', PlexLibraryFilter.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexLibraryFilter.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/albums` — every album in a music
@@ -403,14 +376,10 @@ class PlexLibraryApi {
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size,
     };
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/albums',
       queryParameters: qp,
-    );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
+      containerOf('Metadata', PlexMetadata.fromJson),
     );
   }
 
@@ -419,27 +388,19 @@ class PlexLibraryApi {
   Future<List<PlexMetadata>> folderLocations({
     required String sectionId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/location',
+      itemsOf('Directory', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/categories` — server-defined
   /// categories for the section (mostly used by photo libraries).
   Future<List<PlexMetadata>> categories({required String sectionId}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/categories',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/allLeaves` — every leaf-level
@@ -447,27 +408,19 @@ class PlexLibraryApi {
   Future<List<PlexMetadata>> sectionAllLeaves({
     required String sectionId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/allLeaves',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/arts` — backdrop artwork
   /// (Directory entries with `art` paths).
   Future<List<PlexMetadata>> sectionArts({required String sectionId}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/arts',
+      itemsOf('Directory', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/cluster` — clusters used to
@@ -475,27 +428,19 @@ class PlexLibraryApi {
   Future<List<PlexMetadata>> sectionClusters({
     required String sectionId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/cluster',
+      itemsOf('Directory', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/moment` — moments index for a
   /// photo library (notable moments grouped by date/place).
   Future<List<PlexMetadata>> sectionMoments({required String sectionId}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/moment',
+      itemsOf('Directory', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   // -------------------------------------------------------------------------
@@ -505,12 +450,10 @@ class PlexLibraryApi {
   /// `GET /library/all` — every item across every section. Heavy
   /// query; use sections / `allByType` for normal browsing.
   Future<List<PlexMetadata>> all() async {
-    final res = await _http.request<Map<String, dynamic>>('/library/all');
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
+    return _http.requestJson(
+      '/library/all',
+      itemsOf('Metadata', PlexMetadata.fromJson),
+    );
   }
 
   /// `GET /library/sections/all` — every section's metadata (Media
@@ -853,28 +796,20 @@ class PlexLibraryApi {
     final qp = <String, dynamic>{};
     if (type != null) qp['type'] = type;
     if (sort != null) qp['sort'] = sort;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/firstCharacters',
       queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Directory', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `GET /library/sections/{sectionId}/sorts` — sorts available
   /// on the section.
   Future<List<PlexMetadata>> sectionSorts({required String sectionId}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/sorts',
+      itemsOf('Directory', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `GET /library/sections/{sectionId}/collections` — collections
@@ -882,14 +817,10 @@ class PlexLibraryApi {
   Future<List<PlexMetadata>> sectionCollections({
     required String sectionId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/collections',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `GET /library/sections/{sectionId}/common?type=...` — common
@@ -1143,27 +1074,19 @@ class PlexLibraryApi {
   /// `GET /library/metadata/{ids}/related` — related-items hub for
   /// a metadata item.
   Future<List<PlexHub>> relatedItems({required String ids}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/metadata/$ids/related',
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// `GET /library/metadata/{ids}/extras` — bonus content
   /// (interviews, trailers) attached to an item.
   Future<List<PlexMetadata>> extras({required String ids}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/metadata/$ids/extras',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `POST /library/metadata/{ids}/extras?extraType=...&url=...` —
@@ -1520,14 +1443,10 @@ class PlexLibraryApi {
   /// `GET /library/people/{personId}/media` — items credited to
   /// a person.
   Future<List<PlexMetadata>> personMedia(String personId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/people/$personId/media',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/computePath?startID=...&endID=...&maxDistance=...`
@@ -1544,15 +1463,11 @@ class PlexLibraryApi {
       'endID': endId,
     };
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/computePath',
       queryParameters: qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/library/sections/{sectionId}/nearest` — sonically nearest
@@ -1576,14 +1491,10 @@ class PlexLibraryApi {
     };
     if (limit != null) qp['limit'] = limit;
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/nearest',
       queryParameters: qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 }

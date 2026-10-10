@@ -4,6 +4,7 @@
 
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/status/sessions` and `/status/sessions/history/*` — "what's
 /// playing on the server right now" and "what was played in the past".
@@ -22,14 +23,10 @@ class PlexSessionsApi {
 
   /// All active playback sessions on the server.
   Future<List<PlexSession>> active() async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/status/sessions',
+      itemsOf('Metadata', PlexSession.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexSession.fromJson,
-    ).items;
   }
 
   /// Past sessions (scrobble history).

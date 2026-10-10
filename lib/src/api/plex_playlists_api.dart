@@ -4,6 +4,7 @@
 
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// Playlist endpoints — `/playlists` and `/playlists/{id}/items`.
 class PlexPlaylistsApi {
@@ -28,15 +29,11 @@ class PlexPlaylistsApi {
     if (type != null) qp['playlistType'] = type;
     if (smart != null) qp['smart'] = smart ? 1 : 0;
     if (sort != null) qp['sort'] = sort;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/playlists',
       queryParameters: qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// Count playlists matching the same filters as [list], without
@@ -71,18 +68,14 @@ class PlexPlaylistsApi {
     int? start,
     int? size,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/playlists/$playlistId/items',
       queryParameters: {
         if (start != null) 'X-Plex-Container-Start': start,
         if (size != null) 'X-Plex-Container-Size': size,
       },
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// Create a new playlist.
@@ -210,14 +203,10 @@ class PlexPlaylistsApi {
     required String playlistId,
     required String generatorId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/playlists/$playlistId/items/$generatorId/items',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `PUT /playlists/{playlistId}/items/{generatorId}/{metadataId}/{action}`
@@ -251,18 +240,14 @@ class PlexPlaylistsApi {
     required String path,
     bool force = true,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/playlists/upload',
       method: 'POST',
       queryParameters: {
         'path': path,
         'force': force ? 1 : 0,
       },
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 }

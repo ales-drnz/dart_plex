@@ -4,6 +4,7 @@
 
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/livetv/*` — Plex Live TV and DVR.
 ///
@@ -46,14 +47,10 @@ class PlexLiveTvApi {
   /// Helper to drill into the EPG inside a Live TV DVR. The id comes
   /// from [dvrs] → entry's `key` field. Returns the channel listing.
   Future<List<PlexMetadata>> dvrChannels(String dvrKey) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '$dvrKey/channels',
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   // ---------------------------------------------------------------------------

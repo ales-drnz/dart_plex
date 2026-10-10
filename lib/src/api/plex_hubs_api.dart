@@ -4,6 +4,7 @@
 
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/hubs/*` — global and per-section discovery rails.
 ///
@@ -25,19 +26,15 @@ class PlexHubsApi {
     bool onlyTransient = false,
     bool includeMeta = true,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs',
       queryParameters: {
         'count': count,
         'onlyTransient': onlyTransient ? 1 : 0,
         'includeMeta': includeMeta ? 1 : 0,
       },
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// Hubs scoped to a single library section (`/hubs/sections/{id}`).
@@ -50,47 +47,35 @@ class PlexHubsApi {
     bool onlyTransient = false,
     bool includeMeta = true,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/sections/$sectionId',
       queryParameters: {
         'count': count,
         'onlyTransient': onlyTransient ? 1 : 0,
         'includeMeta': includeMeta ? 1 : 0,
       },
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// `/hubs/promoted` — the small set the server flags as "feature me
   /// prominently".
   Future<List<PlexHub>> promoted({int count = 16}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/promoted',
       queryParameters: {'count': count},
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// `/hubs/continueWatching` — Plex's "On Deck" / "Continue Listening"
   /// rail merged across libraries.
   Future<List<PlexMetadata>> continueWatching({int count = 16}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/continueWatching',
       queryParameters: {'count': count},
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/hubs/sections/{id}/onDeck` — per-library "Up Next".
@@ -98,18 +83,14 @@ class PlexHubsApi {
     required String sectionId,
     int count = 16,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/library/sections/$sectionId/onDeck',
       queryParameters: {
         'X-Plex-Container-Start': 0,
         'X-Plex-Container-Size': count,
       },
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/hubs/items?identifier={id}` — drill into a hub by its
@@ -119,19 +100,15 @@ class PlexHubsApi {
     int start = 0,
     int size = 50,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/items',
       queryParameters: {
         'identifier': identifier,
         'X-Plex-Container-Start': start,
         'X-Plex-Container-Size': size,
       },
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 
   /// `/hubs/metadata/{metadataId}/postplay` — hubs to display after
@@ -142,15 +119,11 @@ class PlexHubsApi {
   }) async {
     final qp = <String, dynamic>{};
     if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/metadata/$metadataId/postplay',
       queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// `/hubs/metadata/{metadataId}/related` — hubs related to a
@@ -161,15 +134,11 @@ class PlexHubsApi {
   }) async {
     final qp = <String, dynamic>{};
     if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/metadata/$metadataId/related',
       queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// `/hubs/metadata/{metadataId}` — discovery hubs rooted at a single
@@ -187,15 +156,11 @@ class PlexHubsApi {
     final qp = <String, dynamic>{};
     if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
     if (count != null) qp['count'] = count;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/metadata/$metadataId',
       queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   // ---------------------------------------------------------------------------
@@ -211,15 +176,11 @@ class PlexHubsApi {
   }) async {
     final qp = <String, dynamic>{};
     if (metadataItemId != null) qp['metadataItemId'] = metadataItemId;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/hubs/sections/$sectionId/manage',
       queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Hub', PlexHub.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Hub',
-      PlexHub.fromJson,
-    ).items;
   }
 
   /// `POST /hubs/sections/{sectionId}/manage` — create a custom hub
@@ -325,17 +286,13 @@ class PlexHubsApi {
     final path = hubKeyOrIdentifier.startsWith('/')
         ? hubKeyOrIdentifier
         : '/hubs/$hubKeyOrIdentifier/items';
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       path,
       queryParameters: {
         'X-Plex-Container-Start': start,
         'X-Plex-Container-Size': size,
       },
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    ).items;
   }
 }
