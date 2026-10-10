@@ -9,6 +9,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 
 import 'package:dart_plex/dart_plex.dart';
@@ -454,6 +455,70 @@ void main() {
               .having((e) => e.type, 'type', PlexErrorType.notFound),
         ),
       );
+    });
+  });
+
+  group('the default client (real sockets)', () {
+    late HttpServer server;
+    var gzipped = 0;
+    late PlexConnection conn;
+
+    setUp(() async {
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((req) async {
+        final gz =
+            (req.headers.value('accept-encoding') ?? '').contains('gzip');
+        final body = utf8.encode(
+          jsonEncode({
+            'Items': [
+              for (var i = 0; i < 200; i++) {'Name': 'Track $i'},
+            ],
+          }),
+        );
+        req.response.headers.contentType = ContentType.json;
+        if (gz && req.uri.path != '/plain') {
+          gzipped++;
+          req.response.headers.set('content-encoding', 'gzip');
+          req.response.add(gzip.encode(body));
+        } else {
+          req.response.add(body);
+        }
+        await req.response.close();
+      });
+      conn = PlexConnection(
+        credentials: _credentials,
+        jsonIsolateThreshold: 1024,
+      )..baseUrl = 'http://127.0.0.1:${server.port}';
+    });
+
+    tearDown(() async {
+      conn.close();
+      await server.close(force: true);
+    });
+
+    test('asks for gzip and inflates it off the caller', () async {
+      final res = await conn.request<Map<String, dynamic>>('/gz');
+      expect((res.data!['Items'] as List).length, 200);
+      final here = Isolate.current.debugName;
+      final where = await conn.requestJson<String?>(
+        '/gz',
+        (json) =>
+            (json! as Map)['Items'] is List ? Isolate.current.debugName : null,
+      );
+      expect(where, isNot(here));
+      expect(gzipped, 2, reason: 'both answers really travelled gzipped');
+    });
+
+    test('an uncompressed answer is read as-is', () async {
+      final res = await conn.request<Map<String, dynamic>>('/plain');
+      expect((res.data!['Items'] as List).length, 200);
+    });
+
+    test('requestStream inflates as it goes', () async {
+      final res = await conn.requestStream('/gz', absoluteUrl: false);
+      expect(res.contentLength, isNull);
+      final text = await utf8.decodeStream(res.stream);
+      expect((jsonDecode(text) as Map)['Items'], hasLength(200));
     });
   });
 

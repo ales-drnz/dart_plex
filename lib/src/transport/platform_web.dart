@@ -2,12 +2,25 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import 'dart:typed_data';
+
 import 'package:http/browser_client.dart';
 import 'package:http/http.dart' as http;
 
 /// The client used when none is injected. The browser owns the handshake,
 /// so the connect timeout cannot be applied here.
 http.Client createDefaultClient(Duration connectTimeout) => BrowserClient();
+
+/// The browser always decompresses bodies itself.
+const bool defaultClientLeavesGzip = false;
+
+/// Never called on the web: the browser hands over decompressed bodies.
+Uint8List gunzip(Uint8List bytes) =>
+    throw UnsupportedError('gzip is handled by the browser');
+
+/// Never called on the web: the browser hands over decompressed bodies.
+Stream<List<int>> gunzipStream(Stream<List<int>> body) =>
+    throw UnsupportedError('gzip is handled by the browser');
 
 /// Whether [runOffIsolate] really leaves the calling isolate.
 const bool canUseIsolates = false;
