@@ -869,6 +869,16 @@ class PlexMetadata {
   /// Style tags (typically music-only).
   final List<String> styles;
 
+  /// The entry id inside a regular playlist (`playlistItemID`), present
+  /// only on items read from `/playlists/{id}/items`.
+  ///
+  /// It names one *entry*, not the track: pass it to
+  /// [PlexPlaylistsApi.removeItem] / [PlexPlaylistsApi.moveItem], so a
+  /// track that is in the playlist twice loses or moves only the entry you
+  /// mean. Kept as a `String` like [ratingKey] and the ids those methods
+  /// take.
+  final String? playlistItemId;
+
   /// Full raw map — keep around for fields not lifted onto strongly
   /// typed properties yet.
   final Map<String, dynamic> raw;
@@ -910,6 +920,7 @@ class PlexMetadata {
     this.lastViewedAt,
     this.addedAt,
     this.updatedAt,
+    this.playlistItemId,
   });
 
   /// Parses one `<Video>` / `<Track>` / `<Directory>` metadata entry. The
@@ -954,8 +965,45 @@ class PlexMetadata {
       genres: _tagList(json['Genre']),
       moods: _tagList(json['Mood']),
       styles: _tagList(json['Style']),
+      playlistItemId: _str(json['playlistItemID']),
       raw: json,
     );
+  }
+
+  /// Version of [thumb] — the timestamp PMS appends to it
+  /// (`/library/metadata/123/thumb/1791659974`), or `null` when there is
+  /// no thumb.
+  ///
+  /// It changes whenever the artwork does (verified on PMS 1.43.2: each
+  /// new poster upload gets a new one), so put it in an artwork cache key
+  /// and a cover replaced on the server is fetched again. A track without
+  /// art of its own carries its album's thumb, version included.
+  String? get thumbVersion => PlexArtwork.versionOf(thumb);
+
+  /// Version of [art] (the backdrop); see [thumbVersion].
+  String? get artVersion => PlexArtwork.versionOf(art);
+
+  /// Version of [parentThumb] (a track's album cover); see [thumbVersion].
+  String? get parentThumbVersion => PlexArtwork.versionOf(parentThumb);
+
+  /// Version of [grandparentThumb] (a track's artist image); see
+  /// [thumbVersion].
+  String? get grandparentThumbVersion =>
+      PlexArtwork.versionOf(grandparentThumb);
+
+  /// The first selected audio stream of the first media part, or the first
+  /// audio stream when none is flagged. Streams (and so [PlexStream.gain]
+  /// and the other loudness fields) are in the full item from
+  /// [PlexLibraryApi.item]; list responses usually leave them out.
+  PlexStream? get audioStream {
+    for (final m in media) {
+      for (final part in m.parts) {
+        final audio = part.streams.where((s) => s.isAudio);
+        if (audio.isEmpty) continue;
+        return audio.firstWhere((s) => s.selected, orElse: () => audio.first);
+      }
+    }
+    return null;
   }
 
   /// True when [userRating] indicates a favourite (>= 10 on Plex's 0..10
@@ -1143,6 +1191,30 @@ class PlexStream {
   /// being the one currently selected for playback.
   final bool isDefault;
 
+  /// Track gain in dB (`gain`) — what to apply for track-level
+  /// normalisation. Present on analysed audio streams.
+  ///
+  /// These loudness fields come from the server's own analysis of the
+  /// file, so they survive a transcode that drops the file's ReplayGain
+  /// tags: read them from the original stream and apply the gain to the
+  /// transcoded audio.
+  final double? gain;
+
+  /// Album gain in dB (`albumGain`), for album-level normalisation.
+  final double? albumGain;
+
+  /// Track peak amplitude, linear (`peak`; 1.0 is full scale).
+  final double? peak;
+
+  /// Album peak amplitude, linear (`albumPeak`).
+  final double? albumPeak;
+
+  /// Integrated loudness in LUFS (`loudness`).
+  final double? loudness;
+
+  /// Loudness range in LU (`lra`).
+  final double? lra;
+
   /// Full raw JSON for fields not lifted above.
   final Map<String, dynamic> raw;
 
@@ -1162,6 +1234,12 @@ class PlexStream {
     this.key,
     this.selected = false,
     this.isDefault = false,
+    this.gain,
+    this.albumGain,
+    this.peak,
+    this.albumPeak,
+    this.loudness,
+    this.lra,
   });
 
   /// Parses one `<Stream>` node from a [PlexPart].
@@ -1179,8 +1257,18 @@ class PlexStream {
         key: _str(json['key']),
         selected: json['selected'] == true,
         isDefault: json['default'] == true,
+        gain: _double(json['gain']),
+        albumGain: _double(json['albumGain']),
+        peak: _double(json['peak']),
+        albumPeak: _double(json['albumPeak']),
+        loudness: _double(json['loudness']),
+        lra: _double(json['lra']),
         raw: json,
       );
+
+  /// True when [gain] or [albumGain] is known — the stream has been
+  /// through the server's loudness analysis.
+  bool get hasLoudness => gain != null || albumGain != null;
 
   /// True when this is an audio stream (`streamType == 2`).
   bool get isAudio => streamType == 2;
@@ -1534,6 +1622,35 @@ class PlexUltraBlurColors {
         bottomRight: _str(json['bottomRight']),
         raw: json,
       );
+}
+
+// ---------------------------------------------------------------------------
+// Artwork
+// ---------------------------------------------------------------------------
+
+/// Helpers for PMS artwork paths.
+abstract final class PlexArtwork {
+  /// The version PMS appends to an artwork path —
+  /// `/library/metadata/123/thumb/1791659974` → `'1791659974'` — or
+  /// `null` when [path] is null or carries none.
+  ///
+  /// The version is a Unix timestamp that changes with the image, so it
+  /// belongs in any cache key for that image. Paths that are not
+  /// `…/thumb/{n}`, `…/art/{n}`, `…/banner/{n}` or `…/theme/{n}` (an
+  /// absolute URL from an agent, a `composite` path) give `null`.
+  static String? versionOf(String? path) {
+    if (path == null) return null;
+    final uri = Uri.tryParse(path);
+    if (uri == null) return null;
+    final segments = uri.pathSegments;
+    if (segments.length < 2) return null;
+    final kind = segments[segments.length - 2];
+    final version = segments.last;
+    const kinds = {'thumb', 'art', 'banner', 'theme', 'clearLogo'};
+    if (!kinds.contains(kind)) return null;
+    if (version.isEmpty || int.tryParse(version) == null) return null;
+    return version;
+  }
 }
 
 // ---------------------------------------------------------------------------
