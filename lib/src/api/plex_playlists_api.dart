@@ -3,8 +3,10 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import '../plex_connection.dart';
+import '../plex_filter.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_query.dart';
 
 /// Playlist endpoints — `/playlists` and `/playlists/{id}/items`.
 class PlexPlaylistsApi {
@@ -13,56 +15,83 @@ class PlexPlaylistsApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.playlists].
   PlexPlaylistsApi(this._http);
 
-  /// List playlists (optionally filtered by [type] — `'audio' | 'video' |
-  /// 'photo'`).
+  /// List playlists (`/playlists`).
+  ///
+  /// [type] narrows to `'audio' | 'video' | 'photo'` playlists, [smart] to
+  /// smart (`true`) or regular (`false`) ones. [filters] narrows on the
+  /// server, like [PlexLibraryApi.allByType]: verified on PMS 1.43.2,
+  /// `/playlists` takes the general filter syntax, so
+  /// `[PlexFilter.titleContains('mix'), PlexFilter.rated()]` sends
+  /// `?title=mix&userRating>>=0` and comes back already narrowed (title
+  /// matching is a case-insensitive "contains"). There is no need to scan
+  /// pages and filter on the client.
+  ///
+  /// [sort] takes the section sort syntax (`'titleSort'`,
+  /// `'addedAt:desc'`, `'lastViewedAt:desc'`).
   Future<List<PlexMetadata>> list({
     String? type,
     bool? smart,
     String? sort,
+    List<PlexFilter> filters = const [],
     int start = 0,
     int size = 50,
+  }) =>
+      _http.requestJson(
+        '/playlists',
+        queryParameters: _query(
+          type: type,
+          smart: smart,
+          sort: sort,
+          filters: filters,
+          start: start,
+          size: size,
+        ),
+        itemsOf('Metadata', PlexMetadata.fromJson),
+      );
+
+  /// Count playlists matching the same narrowing as [list], without
+  /// transferring them.
+  Future<int> count({
+    String? type,
+    bool? smart,
+    List<PlexFilter> filters = const [],
   }) async {
-    final qp = <String, dynamic>{
-      'X-Plex-Container-Start': start,
-      'X-Plex-Container-Size': size,
-    };
+    final page = await _http.requestJson(
+      '/playlists',
+      queryParameters: _query(
+        type: type,
+        smart: smart,
+        filters: filters,
+        start: 0,
+        size: 0,
+      ),
+      containerOf('Metadata', PlexMetadata.fromJson),
+    );
+    return page.totalSize;
+  }
+
+  Map<String, dynamic> _query({
+    required String? type,
+    required bool? smart,
+    String? sort,
+    required List<PlexFilter> filters,
+    required int start,
+    required int size,
+  }) {
+    final qp = containerPage(start: start, size: size);
     if (type != null) qp['playlistType'] = type;
     if (smart != null) qp['smart'] = smart ? 1 : 0;
     if (sort != null) qp['sort'] = sort;
-    return _http.requestJson(
-      '/playlists',
-      queryParameters: qp,
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
-
-  /// Count playlists matching the same filters as [list], without
-  /// transferring the items.
-  Future<int> count({String? type}) async {
-    final qp = <String, dynamic>{
-      'X-Plex-Container-Start': 0,
-      'X-Plex-Container-Size': 0,
-    };
-    if (type != null) qp['playlistType'] = type;
-    final res = await _http.request<Map<String, dynamic>>(
-      '/playlists',
-      queryParameters: qp,
-    );
-    final raw = res.data ?? const <String, dynamic>{};
-    final container = raw['MediaContainer'];
-    if (container is Map<String, dynamic>) {
-      final v = container['totalSize'] ?? container['size'];
-      if (v is int) return v;
-      if (v is String) return int.tryParse(v) ?? 0;
-    }
-    return 0;
+    applyFilters(qp, filters);
+    return qp;
   }
 
   /// Items inside a playlist (`/playlists/{id}/items`).
   ///
-  /// Without [start] / [size] the whole playlist comes back, which for a
-  /// long one is hundreds of KB. Pass them to read a page — for example
-  /// the first few rows, when all you need is some cover art.
+  /// Without [size] the whole playlist comes back, which for a long one is
+  /// hundreds of KB. Pass it (and [start], default 0) to read a page — for
+  /// example the first few rows, when all you need is some cover art. Each
+  /// entry carries its [PlexMetadata.playlistItemId].
   Future<List<PlexMetadata>> items(
     String playlistId, {
     int? start,
@@ -70,10 +99,7 @@ class PlexPlaylistsApi {
   }) async {
     return _http.requestJson(
       '/playlists/$playlistId/items',
-      queryParameters: {
-        if (start != null) 'X-Plex-Container-Start': start,
-        if (size != null) 'X-Plex-Container-Size': size,
-      },
+      queryParameters: containerPage(start: start, size: size),
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -133,10 +159,9 @@ class PlexPlaylistsApi {
     );
   }
 
-  /// Remove a single item by its `playlistItemID` (NOT by ratingKey).
-  ///
-  /// To find the playlistItemID, list [items] first and read
-  /// `raw['playlistItemID']` on each entry.
+  /// Remove one entry by its [PlexMetadata.playlistItemId] — not by the
+  /// track's ratingKey, so a track that appears twice loses only the entry
+  /// you name.
   Future<void> removeItem({
     required String playlistId,
     required String playlistItemId,
@@ -165,8 +190,9 @@ class PlexPlaylistsApi {
   }
 
   /// `PUT /playlists/{playlistId}/items/{playlistItemId}/move` —
-  /// reorder an item. Omit [afterPlaylistItemId] (leave it null) to
-  /// move the item to the very start.
+  /// reorder one entry. Both ids are [PlexMetadata.playlistItemId]s. Omit
+  /// [afterPlaylistItemId] (leave it null) to move the entry to the very
+  /// start.
   Future<void> moveItem({
     required String playlistId,
     required String playlistItemId,
