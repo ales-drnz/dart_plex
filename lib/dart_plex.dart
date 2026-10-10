@@ -75,3 +75,5 @@ export 'src/plex_error_type.dart';
 export 'src/plex_exception.dart';
 export 'src/plex_filter.dart';
 export 'src/plex_models.dart';
+export 'src/transport/plex_cancel_token.dart';
+export 'src/transport/plex_response.dart';

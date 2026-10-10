@@ -2,55 +2,15 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-import 'dart:convert';
-
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_connection.dart';
-import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
-/// A [HttpClientAdapter] that records the last request it saw and replies
-/// with a canned JSON body. Lets unit tests assert on the path / query
-/// params a sub-API issues without touching the network.
-class _CapturingAdapter implements HttpClientAdapter {
-  RequestOptions? lastRequest;
-  final Map<String, dynamic> responseBody;
+import '_helpers/capturing_client.dart';
 
-  _CapturingAdapter(this.responseBody);
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<List<int>>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    lastRequest = options;
-    return ResponseBody.fromString(
-      jsonEncode(responseBody),
-      200,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
-}
-
-const _credentials = PlexCredentials(
-  clientIdentifier: 'test-uuid',
-  product: 'TestApp',
-  version: '1.0.0',
-  device: 'TestDevice',
-  deviceName: 'Test Device',
-  platform: 'Test',
-);
-
-/// Builds a [PlexHubsApi] wired to a [_CapturingAdapter] that returns a
+/// Builds a [PlexHubsApi] wired to a [CapturingAdapter] that returns a
 /// `Hub` MediaContainer with a single hub holding one metadata item.
-({PlexHubsApi api, _CapturingAdapter adapter}) _makeApi() {
-  final adapter = _CapturingAdapter({
+({PlexHubsApi api, CapturingAdapter adapter}) _makeApi() {
+  final adapter = CapturingAdapter({
     'MediaContainer': {
       'size': 1,
       'Hub': [
@@ -73,9 +33,7 @@ const _credentials = PlexCredentials(
       ],
     },
   });
-  final dio = Dio()..httpClientAdapter = adapter;
-  final conn = PlexConnection(credentials: _credentials, dio: dio)
-    ..baseUrl = 'http://192.168.1.10:32400';
+  final conn = testConnection(adapter);
   return (api: PlexHubsApi(conn), adapter: adapter);
 }
 
@@ -118,7 +76,7 @@ void main() {
       await ctx.api.forMetadata(metadataId: '12345', onlyTransient: true);
 
       final qp = ctx.adapter.lastRequest!.queryParameters;
-      expect(qp['onlyTransient'], 1);
+      expect(qp['onlyTransient'], '1');
       expect(qp.containsKey('count'), isFalse);
     });
 
@@ -127,7 +85,7 @@ void main() {
       await ctx.api.forMetadata(metadataId: '12345', onlyTransient: false);
 
       final qp = ctx.adapter.lastRequest!.queryParameters;
-      expect(qp['onlyTransient'], 0);
+      expect(qp['onlyTransient'], '0');
     });
 
     test('adds count when provided', () async {
@@ -135,7 +93,7 @@ void main() {
       await ctx.api.forMetadata(metadataId: '12345', count: 8);
 
       final qp = ctx.adapter.lastRequest!.queryParameters;
-      expect(qp['count'], 8);
+      expect(qp['count'], '8');
       expect(qp.containsKey('onlyTransient'), isFalse);
     });
 
@@ -145,8 +103,8 @@ void main() {
           .forMetadata(metadataId: '12345', onlyTransient: true, count: 12);
 
       final qp = ctx.adapter.lastRequest!.queryParameters;
-      expect(qp['onlyTransient'], 1);
-      expect(qp['count'], 12);
+      expect(qp['onlyTransient'], '1');
+      expect(qp['count'], '12');
     });
   });
 }

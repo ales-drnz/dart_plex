@@ -162,17 +162,14 @@ class PlexNotificationsApi {
     // Use the connection's streaming GET to consume the SSE body.
     () async {
       try {
-        final res = await _http.streamGet(
+        final res = await _http.requestStream(
           '/:/eventsource/notifications',
           queryParameters: qp,
           extraHeaders: const {'Accept': 'text/event-stream'},
+          absoluteUrl: false,
+          // An event stream can stay quiet for minutes; that is not a stall.
+          stallTimeout: false,
         );
-        final body = res.data;
-        if (body == null) {
-          unawaited(controller.close());
-          _cleanupSse();
-          return;
-        }
         final buffer = StringBuffer();
         // Decode the body as one continuous stream, not chunk by chunk: a
         // multi-byte character can straddle a network chunk boundary, and
@@ -182,8 +179,7 @@ class PlexNotificationsApi {
         // covers bytes that are invalid however they are joined, so one
         // corrupt frame degrades instead of erroring the subscription and
         // taking every later notification with it.
-        _sseSub = body.stream
-            .cast<List<int>>()
+        _sseSub = res.stream
             .transform(const Utf8Decoder(allowMalformed: true))
             .listen(
           (text) {

@@ -2,60 +2,21 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-import 'dart:convert';
-
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_connection.dart';
-import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
-class _CapturingAdapter implements HttpClientAdapter {
-  RequestOptions? lastRequest;
+import '_helpers/capturing_client.dart';
 
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<List<int>>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    lastRequest = options;
-    return ResponseBody.fromString(
-      jsonEncode({
-        'MediaContainer': {
-          'size': 1,
-          'Metadata': [
-            {'ratingKey': '1', 'type': 'track', 'title': 'One'},
-          ],
-        },
-      }),
-      200,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
-}
-
-const _credentials = PlexCredentials(
-  clientIdentifier: 'test-uuid',
-  product: 'TestApp',
-  version: '1.0.0',
-  device: 'TestDevice',
-  deviceName: 'Test Device',
-  platform: 'Test',
-);
-
-(PlexClient, _CapturingAdapter) _client() {
-  final adapter = _CapturingAdapter();
-  final client = PlexClient(
-    credentials: _credentials,
-    dio: Dio()..httpClientAdapter = adapter,
-  )
-    ..setToken('t')
-    ..connect('http://pms.test:32400');
+(PlexClient, CapturingAdapter) _client() {
+  final adapter = CapturingAdapter({
+    'MediaContainer': {
+      'size': 1,
+      'Metadata': [
+        {'ratingKey': '1', 'type': 'track', 'title': 'One'},
+      ],
+    },
+  });
+  final client = testClient(adapter);
   return (client, adapter);
 }
 
@@ -79,28 +40,6 @@ void main() {
       final q = adapter.lastRequest!.uri.queryParameters;
       expect(q['X-Plex-Container-Start'], '0');
       expect(q['X-Plex-Container-Size'], '20');
-    });
-  });
-
-  group('response decoding', () {
-    test('the default transport decodes large bodies off-isolate', () {
-      final connection = PlexConnection(credentials: _credentials);
-      final transformer = connection.transformer;
-
-      expect(transformer, isA<FusedTransformer>());
-      expect(
-        (transformer as FusedTransformer).contentLengthIsolateThreshold,
-        PlexConnection.jsonIsolateThreshold,
-      );
-      expect(PlexConnection.jsonIsolateThreshold, greaterThan(0));
-    });
-
-    test('an injected Dio keeps its own transformer', () {
-      final dio = Dio();
-      final mine = dio.transformer;
-      final connection = PlexConnection(credentials: _credentials, dio: dio);
-
-      expect(identical(connection.transformer, mine), isTrue);
     });
   });
 }

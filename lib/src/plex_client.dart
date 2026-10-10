@@ -2,7 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-import 'package:dio/dio.dart';
+import 'dart:typed_data';
+
+import 'package:http/http.dart' as http;
 
 import 'api/plex_account_api.dart';
 import 'api/plex_activities_api.dart';
@@ -33,6 +35,8 @@ import 'api/plex_ultra_blur_api.dart';
 import 'api/plex_updater_api.dart';
 import 'plex_connection.dart';
 import 'plex_credentials.dart';
+import 'transport/plex_cancel_token.dart';
+import 'transport/plex_response.dart';
 
 /// Stateful façade over the Plex API.
 ///
@@ -139,19 +143,66 @@ class PlexClient {
   /// `/:/websockets/notifications` and `/:/eventsource/notifications` — server-push events.
   late final PlexNotificationsApi notifications;
 
-  /// Build a client carrying [credentials]; optionally inject a custom [dio]
-  /// and override the default timeouts.
+  /// Build a client carrying [credentials].
+  ///
+  /// Pass an [httpClient] to choose the HTTP stack — for example a
+  /// `CupertinoClient` (`package:cupertino_http`) or a `CronetClient`
+  /// (`package:cronet_http`) for HTTP/2 and the system proxy, or a
+  /// `MockClient` in tests. An injected client is yours to close; the one
+  /// created when you pass none is closed by [close].
+  ///
+  /// [connectTimeout] bounds the handshake (on the default client) and,
+  /// together with [receiveTimeout], the wait for the response headers.
+  /// [receiveTimeout] also bounds every pause in a response body.
+  ///
+  /// Responses of [jsonIsolateThreshold] bytes or more are decoded, and
+  /// for the typed calls parsed into models, on a background isolate.
   PlexClient({
     required PlexCredentials credentials,
-    Dio? dio,
+    http.Client? httpClient,
     Duration connectTimeout = const Duration(seconds: 15),
     Duration receiveTimeout = const Duration(seconds: 30),
+    int jsonIsolateThreshold = PlexConnection.defaultJsonIsolateThreshold,
   }) : _http = PlexConnection(
           credentials: credentials,
-          dio: dio,
+          httpClient: httpClient,
           connectTimeout: connectTimeout,
           receiveTimeout: receiveTimeout,
+          jsonIsolateThreshold: jsonIsolateThreshold,
         ) {
+    _wire(PlexNotificationsApi(_http));
+  }
+
+  PlexClient._scoped(PlexClient parent, PlexCancelToken token)
+      : _http = PlexConnection.scoped(parent._http, token) {
+    _wire(parent.notifications);
+  }
+
+  /// A view of this client whose every request is cancelled by
+  /// [cancelToken].
+  ///
+  /// The view shares this client's HTTP connection pool, server and token
+  /// — `connect`, `setToken` and `close` on either affect both — and costs
+  /// nothing to create, so make one per page, filter or search term and
+  /// cancel it when that is abandoned:
+  ///
+  /// ```dart
+  /// _pageToken?.cancel();
+  /// final token = _pageToken = PlexCancelToken();
+  /// final page = await plex.withCancelToken(token).library.allByType(
+  ///       sectionId: sectionId,
+  ///       type: PlexMetadataType.album,
+  ///     );
+  /// ```
+  ///
+  /// A cancelled call throws a [PlexException] of type
+  /// [PlexErrorType.cancelled]. [notifications] is the same object as on
+  /// this client: a WebSocket or event stream is not a request and is not
+  /// cancelled.
+  PlexClient withCancelToken(PlexCancelToken cancelToken) =>
+      PlexClient._scoped(this, cancelToken);
+
+  void _wire(PlexNotificationsApi notifications) {
     account = PlexAccountApi(_http);
     server = PlexServerApi(_http);
     library = PlexLibraryApi(_http);
@@ -178,7 +229,7 @@ class PlexClient {
     log = PlexLogApi(_http);
     updater = PlexUpdaterApi(_http);
     activities = PlexActivitiesApi(_http);
-    notifications = PlexNotificationsApi(_http);
+    this.notifications = notifications;
   }
 
   /// The credentials this client was created with.
@@ -226,8 +277,13 @@ class PlexClient {
     _http.baseUrl = null;
   }
 
-  /// Escape hatch: issue an arbitrary request through the same Dio
-  /// instance + headers as the sub-APIs.
+  /// Closes the HTTP client this client created. Requests made afterwards
+  /// — through this client or any [withCancelToken] view — fail with
+  /// [PlexErrorType.state]. Does nothing to an injected `httpClient`.
+  void close() => _http.close();
+
+  /// Escape hatch: issue an arbitrary request through the same HTTP client
+  /// and headers as the sub-APIs.
   ///
   /// Use this for endpoints not yet covered by the typed sub-APIs (e.g.
   /// `/music/:/transcode/universal/decision`, custom HLS variants, …).
@@ -235,15 +291,15 @@ class PlexClient {
   ///
   /// Prefer the typed sub-APIs when one fits — they handle envelope
   /// unwrapping and DTO parsing for you.
-  Future<Response<T>> request<T>(
+  Future<PlexResponse<T>> request<T>(
     String path, {
     String method = 'GET',
     Map<String, dynamic>? queryParameters,
     Object? data,
     Map<String, String>? extraHeaders,
     bool absoluteUrl = false,
-    ResponseType? responseType,
-    CancelToken? cancelToken,
+    PlexResponseType? responseType,
+    PlexCancelToken? cancelToken,
   }) =>
       _http.request<T>(
         path,
@@ -256,15 +312,13 @@ class PlexClient {
         cancelToken: cancelToken,
       );
 
-  /// Convenience for byte-stream GETs (artwork, downloads).
-  ///
-  /// Pass a [cancelToken] to abort an in-flight download — useful for large
-  /// artwork or media transfers the caller may need to cancel.
-  Future<Response<List<int>>> requestBytes(
+  /// Convenience for byte GETs (artwork, small files). The whole body is
+  /// held in memory; use [requestStream] for media downloads.
+  Future<PlexResponse<Uint8List>> requestBytes(
     String url, {
     Map<String, dynamic>? queryParameters,
     bool absoluteUrl = true,
-    CancelToken? cancelToken,
+    PlexCancelToken? cancelToken,
   }) =>
       _http.requestBytes(
         url,
@@ -273,30 +327,55 @@ class PlexClient {
         cancelToken: cancelToken,
       );
 
+  /// Streams a GET body as it arrives — for downloads, so a whole track
+  /// never sits in memory. Write [PlexStreamedResponse.stream] to a file
+  /// sink; cancelling the subscription closes the connection.
+  ///
+  /// A pause in the body longer than the receive timeout fails the stream
+  /// unless [stallTimeout] is `false`.
+  Future<PlexStreamedResponse> requestStream(
+    String url, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? extraHeaders,
+    bool absoluteUrl = true,
+    bool stallTimeout = true,
+    PlexCancelToken? cancelToken,
+  }) =>
+      _http.requestStream(
+        url,
+        queryParameters: queryParameters,
+        extraHeaders: extraHeaders,
+        absoluteUrl: absoluteUrl,
+        stallTimeout: stallTimeout,
+        cancelToken: cancelToken,
+      );
+
   // ─── Lightweight method aliases ────────────────────────────────────
   //
-  // These exist so calling code reads the same as a raw Dio call.
-  // Prefer the typed sub-APIs (account, library, …) when possible —
-  // these are the escape hatch for endpoints not yet covered.
+  // Prefer the typed sub-APIs (account, library, …) when possible — these
+  // are the escape hatch for endpoints not yet covered.
 
   /// Issue a `GET` via [request].
-  Future<Response<T>> get<T>(
+  Future<PlexResponse<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
     Map<String, String>? extraHeaders,
+    PlexCancelToken? cancelToken,
   }) =>
       request<T>(
         path,
         queryParameters: queryParameters,
         extraHeaders: extraHeaders,
+        cancelToken: cancelToken,
       );
 
   /// Issue a `POST` via [request].
-  Future<Response<T>> post<T>(
+  Future<PlexResponse<T>> post<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Map<String, String>? extraHeaders,
+    PlexCancelToken? cancelToken,
   }) =>
       request<T>(
         path,
@@ -304,14 +383,16 @@ class PlexClient {
         data: data,
         queryParameters: queryParameters,
         extraHeaders: extraHeaders,
+        cancelToken: cancelToken,
       );
 
   /// Issue a `PUT` via [request].
-  Future<Response<T>> put<T>(
+  Future<PlexResponse<T>> put<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Map<String, String>? extraHeaders,
+    PlexCancelToken? cancelToken,
   }) =>
       request<T>(
         path,
@@ -319,25 +400,21 @@ class PlexClient {
         data: data,
         queryParameters: queryParameters,
         extraHeaders: extraHeaders,
+        cancelToken: cancelToken,
       );
 
   /// Issue a `DELETE` via [request].
-  Future<Response<T>> delete<T>(
+  Future<PlexResponse<T>> delete<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
     Map<String, String>? extraHeaders,
+    PlexCancelToken? cancelToken,
   }) =>
       request<T>(
         path,
         method: 'DELETE',
         queryParameters: queryParameters,
         extraHeaders: extraHeaders,
+        cancelToken: cancelToken,
       );
-
-  /// Alias for [requestBytes] — kept so the calling code can read like
-  /// the original Dio-based wrapper it replaced.
-  @Deprecated(
-    'Use requestBytes; this alias will be removed in a future release.',
-  )
-  Future<Response<List<int>>> fetchBytes(String url) => requestBytes(url);
 }

@@ -6,62 +6,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_connection.dart';
-import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
-/// A [HttpClientAdapter] that records the last request it saw and replies
-/// with a canned *byte* body plus a chosen `Content-Type`.
-///
-/// Lyrics come back as an `.lrc` file the server streams off disk, so the
-/// interesting part is the bytes, not a JSON shape. These tests assert on
-/// what those bytes decode to: a `.lrc` is text, and text that has been
-/// through the wrong codec is still a 200 carrying a plausible-looking body.
-class _BytesAdapter implements HttpClientAdapter {
-  RequestOptions? lastRequest;
-  List<int> responseBytes;
-  String? contentType;
+import '_helpers/capturing_client.dart';
 
-  _BytesAdapter(this.responseBytes, {this.contentType});
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<List<int>>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    lastRequest = options;
-    return ResponseBody.fromBytes(
-      responseBytes,
-      200,
-      headers: {
-        if (contentType != null) Headers.contentTypeHeader: [contentType!],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
-}
-
-const _credentials = PlexCredentials(
-  clientIdentifier: 'test-uuid',
-  product: 'TestApp',
-  version: '1.0.0',
-  device: 'TestDevice',
-  deviceName: 'Test Device',
-  platform: 'Test',
-);
-
-({PlexStreamingApi api, _BytesAdapter adapter}) _makeApi(
+({PlexStreamingApi api, BytesAdapter adapter}) _makeApi(
   List<int> bytes, {
   String? contentType,
 }) {
-  final adapter = _BytesAdapter(bytes, contentType: contentType);
-  final dio = Dio()..httpClientAdapter = adapter;
-  final conn = PlexConnection(credentials: _credentials, dio: dio)
-    ..baseUrl = 'http://192.168.1.10:32400'
-    ..token = 'tok';
+  final adapter = BytesAdapter(bytes, contentType: contentType);
+  final conn = testConnection(adapter)..token = 'tok';
   return (api: PlexStreamingApi(conn), adapter: adapter);
 }
 
@@ -246,7 +200,6 @@ void main() {
         req.uri.toString(),
         'http://192.168.1.10:32400/library/streams/12345',
       );
-      expect(req.responseType, ResponseType.bytes);
       expect(req.headers['Accept'], '*/*');
     });
   });

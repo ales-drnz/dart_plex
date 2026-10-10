@@ -2,54 +2,10 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-import 'dart:convert';
-
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_connection.dart';
-import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
-/// A [HttpClientAdapter] that records the last request it saw and replies
-/// with a canned JSON body.
-///
-/// These tests assert on the *outgoing query string*, not on the entities
-/// that come back: Plex answers 200 to a filtered and an unfiltered query
-/// alike, so a wrongly-named filter parameter is invisible from the
-/// response side. The wire is the contract.
-class _CapturingAdapter implements HttpClientAdapter {
-  RequestOptions? lastRequest;
-  Map<String, dynamic> responseBody;
-
-  _CapturingAdapter(this.responseBody);
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<List<int>>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    lastRequest = options;
-    return ResponseBody.fromString(
-      jsonEncode(responseBody),
-      200,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
-}
-
-const _credentials = PlexCredentials(
-  clientIdentifier: 'test-uuid',
-  product: 'TestApp',
-  version: '1.0.0',
-  device: 'TestDevice',
-  deviceName: 'Test Device',
-  platform: 'Test',
-);
+import '_helpers/capturing_client.dart';
 
 /// An empty `Metadata` container — enough for [PlexLibraryApi.allByType]
 /// to decode, with a `totalSize` for the count path.
@@ -61,19 +17,17 @@ Map<String, dynamic> _metadataBody({int totalSize = 42}) => {
       },
     };
 
-({PlexLibraryApi api, _CapturingAdapter adapter}) _makeApi([
+({PlexLibraryApi api, CapturingAdapter adapter}) _makeApi([
   Map<String, dynamic>? body,
 ]) {
-  final adapter = _CapturingAdapter(body ?? _metadataBody());
-  final dio = Dio()..httpClientAdapter = adapter;
-  final conn = PlexConnection(credentials: _credentials, dio: dio)
-    ..baseUrl = 'http://192.168.1.10:32400';
+  final adapter = CapturingAdapter(body ?? _metadataBody());
+  final conn = testConnection(adapter);
   return (api: PlexLibraryApi(conn), adapter: adapter);
 }
 
 /// Decoded query parameters of the last request — operators come back
 /// unescaped here, so `year>>` reads as `year>>`.
-Map<String, String> _query(_CapturingAdapter adapter) =>
+Map<String, String> _query(CapturingAdapter adapter) =>
     adapter.lastRequest!.uri.queryParameters;
 
 void main() {

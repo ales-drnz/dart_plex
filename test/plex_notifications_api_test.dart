@@ -4,61 +4,15 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_connection.dart';
-import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
-/// A [HttpClientAdapter] that hands back a body whose byte stream the test
-/// drives by hand, so the chunk boundaries are chosen rather than left to
-/// wherever the network happened to split the response.
-class _StreamingAdapter implements HttpClientAdapter {
-  final _controller = StreamController<Uint8List>();
-  final fetched = Completer<void>();
-  RequestOptions? lastRequest;
+import '_helpers/capturing_client.dart';
 
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<List<int>>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    lastRequest = options;
-    if (!fetched.isCompleted) fetched.complete();
-    return ResponseBody(
-      _controller.stream,
-      200,
-      headers: {
-        Headers.contentTypeHeader: ['text/event-stream'],
-      },
-    );
-  }
-
-  void emit(List<int> bytes) => _controller.add(Uint8List.fromList(bytes));
-
-  Future<void> finish() => _controller.close();
-
-  @override
-  void close({bool force = false}) {}
-}
-
-const _credentials = PlexCredentials(
-  clientIdentifier: 'test-uuid',
-  product: 'TestApp',
-  version: '1.0.0',
-  device: 'TestDevice',
-  deviceName: 'Test Device',
-  platform: 'Test',
-);
-
-({PlexNotificationsApi api, _StreamingAdapter adapter}) _makeApi() {
-  final adapter = _StreamingAdapter();
-  final dio = Dio()..httpClientAdapter = adapter;
-  final conn = PlexConnection(credentials: _credentials, dio: dio)
-    ..baseUrl = 'http://192.168.1.10:32400'
-    ..token = 'tok';
+({PlexNotificationsApi api, StreamingAdapter adapter}) _makeApi() {
+  final adapter = StreamingAdapter();
+  final conn = testConnection(adapter)..token = 'tok';
   return (api: PlexNotificationsApi(conn), adapter: adapter);
 }
 
@@ -93,7 +47,7 @@ int _splitInsideChar(String text, String needle) {
 /// Open the SSE stream, feed it [chunks] in order, and collect whatever
 /// notifications come out.
 Future<List<PlexNotification>> _pump(
-  ({PlexNotificationsApi api, _StreamingAdapter adapter}) ctx,
+  ({PlexNotificationsApi api, StreamingAdapter adapter}) ctx,
   List<List<int>> chunks, {
   int expected = 1,
 }) async {
@@ -231,7 +185,6 @@ void main() {
       expect(req.uri.path, '/:/eventsource/notifications');
       expect(req.uri.queryParameters['X-Plex-Token'], 'tok');
       expect(req.headers['Accept'], 'text/event-stream');
-      expect(req.responseType, ResponseType.stream);
     });
   });
 }

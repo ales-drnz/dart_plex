@@ -4,11 +4,10 @@
 
 import 'dart:convert';
 
-import 'package:dio/dio.dart' show Headers, ResponseType;
-
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../transport/plex_response.dart';
 
 /// Audio (and video) streaming URL builders.
 ///
@@ -262,14 +261,14 @@ class PlexStreamingApi {
     if (streamKey.isEmpty) return null;
     final res = await _http.request<List<int>>(
       streamKey,
-      responseType: ResponseType.bytes,
+      responseType: PlexResponseType.bytes,
       extraHeaders: const {'Accept': '*/*'},
     );
     final data = res.data;
     if (data == null || data.isEmpty) return null;
     return _decodeTextBody(
       data,
-      contentType: res.headers.value(Headers.contentTypeHeader),
+      contentType: res.contentType,
     );
   }
 

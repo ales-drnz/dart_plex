@@ -20,7 +20,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 
 const _cachePath = 'test/integration/.bootstrap-cache.json';
 const _outDir = 'test/fixtures/captured';
@@ -37,9 +37,14 @@ Future<void> main() async {
   final baseUrl = cache['baseUrl'] as String;
   final token = cache['token'] as String;
 
-  final dio = Dio()
-    ..options.headers['Accept'] = 'application/json'
-    ..options.headers['X-Plex-Token'] = token;
+  final headers = {'Accept': 'application/json', 'X-Plex-Token': token};
+  Future<http.Response> fetch(String path, Map<String, dynamic>? qp) =>
+      http.get(
+        Uri.parse('$baseUrl$path').replace(
+          queryParameters: qp?.map((k, v) => MapEntry(k, '$v')),
+        ),
+        headers: headers,
+      );
 
   Directory(_outDir).createSync(recursive: true);
 
@@ -48,12 +53,12 @@ Future<void> main() async {
     String path, [
     Map<String, dynamic>? qp,
   ]) async {
-    try {
-      final res = await dio.get<dynamic>('$baseUrl$path', queryParameters: qp);
-      _save(name, res.data);
-    } on DioException catch (e) {
-      stderr.writeln('  ✗ $name ($path) — ${e.response?.statusCode}');
+    final res = await fetch(path, qp);
+    if (res.statusCode != 200) {
+      stderr.writeln('  ✗ $name ($path) — ${res.statusCode}');
+      return;
     }
+    _save(name, jsonDecode(res.body));
   }
 
   await get('sections.json', '/library/sections');
@@ -64,12 +69,15 @@ Future<void> main() async {
   );
   // Section 1 is Music (we just created it in bootstrap). type=10 = track.
 
-  final tracksRes = await dio.get<Map<String, dynamic>>(
-    '$baseUrl/library/sections/1/all',
-    queryParameters: {'type': 10, 'X-Plex-Container-Size': 1},
-  );
+  final tracksRes = jsonDecode(
+    (await fetch(
+      '/library/sections/1/all',
+      {'type': 10, 'X-Plex-Container-Size': 1},
+    ))
+        .body,
+  ) as Map<String, dynamic>;
   final firstTrack =
-      ((tracksRes.data?['MediaContainer'] as Map?)?['Metadata'] as List?)?.first
+      ((tracksRes['MediaContainer'] as Map?)?['Metadata'] as List?)?.first
           as Map<String, dynamic>?;
   if (firstTrack != null) {
     final rk = firstTrack['ratingKey'] as String;

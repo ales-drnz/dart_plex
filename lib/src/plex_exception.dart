@@ -2,8 +2,6 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-import 'package:dio/dio.dart';
-
 import 'plex_error_type.dart';
 
 /// Exception thrown by [PlexClient] for any failed operation.
@@ -49,35 +47,6 @@ class PlexException implements Exception {
     this.cause,
     this.stackTrace,
   });
-
-  /// Build a [PlexException] from a [DioException] — maps timeouts /
-  /// connection errors / status codes onto [PlexErrorType]. A response-body
-  /// decode failure (Dio surfaces a [FormatException] under
-  /// [DioExceptionType.unknown]) maps to [PlexErrorType.parse].
-  factory PlexException.fromDio(DioException e, {String? path}) {
-    final code = e.response?.statusCode;
-    final type = switch (e.type) {
-      DioExceptionType.connectionTimeout ||
-      DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        PlexErrorType.timeout,
-      DioExceptionType.connectionError => PlexErrorType.connection,
-      DioExceptionType.badResponse when code != null =>
-        PlexErrorType.fromHttpStatus(code),
-      DioExceptionType.cancel => PlexErrorType.cancelled,
-      DioExceptionType.unknown when e.error is FormatException =>
-        PlexErrorType.parse,
-      _ => PlexErrorType.unknown,
-    };
-    return PlexException(
-      e.message ?? 'Plex request failed',
-      type: type,
-      statusCode: code,
-      path: path ?? e.requestOptions.path,
-      cause: e,
-      stackTrace: e.stackTrace,
-    );
-  }
 
   /// Shorthand for [PlexErrorType.isAuthError] on [type] — token expired / invalid.
   bool get isAuthError => type.isAuthError;

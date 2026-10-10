@@ -2,60 +2,18 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-import 'dart:convert';
-
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_connection.dart';
-import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 
-/// A [HttpClientAdapter] that records the last request it saw and replies
-/// with a canned JSON body. Lets unit tests assert on the path / query
-/// params a sub-API issues without touching the network.
-class _CapturingAdapter implements HttpClientAdapter {
-  RequestOptions? lastRequest;
-  final Map<String, dynamic> responseBody;
+import '_helpers/capturing_client.dart';
 
-  _CapturingAdapter(this.responseBody);
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<List<int>>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    lastRequest = options;
-    return ResponseBody.fromString(
-      jsonEncode(responseBody),
-      200,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
-}
-
-const _credentials = PlexCredentials(
-  clientIdentifier: 'test-uuid',
-  product: 'TestApp',
-  version: '1.0.0',
-  device: 'TestDevice',
-  deviceName: 'Test Device',
-  platform: 'Test',
-);
-
-/// Builds a [PlexSessionsApi] wired to a [_CapturingAdapter] that returns
+/// Builds a [PlexSessionsApi] wired to a [CapturingAdapter] that returns
 /// [responseBody] for every request.
-({PlexSessionsApi api, _CapturingAdapter adapter}) _makeApi(
+({PlexSessionsApi api, CapturingAdapter adapter}) _makeApi(
   Map<String, dynamic> responseBody,
 ) {
-  final adapter = _CapturingAdapter(responseBody);
-  final dio = Dio()..httpClientAdapter = adapter;
-  final conn = PlexConnection(credentials: _credentials, dio: dio)
-    ..baseUrl = 'http://192.168.1.10:32400';
+  final adapter = CapturingAdapter(responseBody);
+  final conn = testConnection(adapter);
   return (api: PlexSessionsApi(conn), adapter: adapter);
 }
 
@@ -127,8 +85,8 @@ void main() {
       await ctx.api.history(mindate: 1000, maxdate: 2000);
 
       final qp = ctx.adapter.lastRequest!.queryParameters;
-      expect(qp['viewedAt>='], 1000);
-      expect(qp['viewedAt<='], 2000);
+      expect(qp['viewedAt>='], '1000');
+      expect(qp['viewedAt<='], '2000');
       // The exclusive variants must not be emitted.
       expect(qp.containsKey('viewedAt>'), isFalse);
       expect(qp.containsKey('viewedAt<'), isFalse);
