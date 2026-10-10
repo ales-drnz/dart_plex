@@ -8,6 +8,7 @@ import '../plex_exception.dart';
 import '../plex_filter.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_query.dart';
 
 /// Browse `/library/sections` and `/library/metadata/{id}`.
 class PlexLibraryApi {
@@ -70,7 +71,7 @@ class PlexLibraryApi {
       'X-Plex-Container-Size': size,
     };
     if (sort != null) qp['sort'] = sort;
-    _applyFilters(qp, filters);
+    applyFilters(qp, filters);
     return _http.requestJson(
       '/library/sections/$sectionId/all',
       queryParameters: qp,
@@ -97,25 +98,6 @@ class PlexLibraryApi {
       filters: filters,
     );
     return page.totalSize;
-  }
-
-  /// Fold [filters] into [qp], one query parameter per condition.
-  ///
-  /// Two conditions on the same field *and* operator cannot both be
-  /// expressed — one would overwrite the other and the call would come
-  /// back wider than asked for — so that is refused loudly instead.
-  void _applyFilters(Map<String, dynamic> qp, List<PlexFilter> filters) {
-    for (final filter in filters) {
-      final name = filter.parameterName;
-      if (qp.containsKey(name)) {
-        throw PlexException(
-          'Two filters both send the "$name" query parameter; only one '
-          'would survive. Combine their values into a single PlexFilter.',
-          type: PlexErrorType.state,
-        );
-      }
-      qp[name] = filter.parameterValue;
-    }
   }
 
   /// `PUT /library/sections/{sectionId}/all` — bulk-edit the fields
@@ -283,19 +265,55 @@ class PlexLibraryApi {
     );
   }
 
-  /// Children of an item — album tracks, artist albums, season episodes.
-  Future<List<PlexMetadata>> children(String ratingKey) async {
+  /// Children of an item — album tracks, artist albums, season episodes
+  /// (`/library/metadata/{ratingKey}/children`).
+  ///
+  /// [size] (with [start], default 0) reads one page; a page shorter than
+  /// [size] is the last. Without it the server answers every child.
+  /// [sort] takes the section sort syntax, e.g. `'year:desc'` or
+  /// `'titleSort'` (verified on PMS 1.43.2). For the number of children
+  /// alone use [countChildren].
+  Future<List<PlexMetadata>> children(
+    String ratingKey, {
+    int? start,
+    int? size,
+    String? sort,
+  }) {
+    final qp = containerPage(start: start, size: size);
+    if (sort != null) qp['sort'] = sort;
     return _http.requestJson(
       '/library/metadata/$ratingKey/children',
+      queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
 
+  /// How many children an item has (an artist's albums, an album's
+  /// tracks), read from `totalSize` of an empty page — no rows travel.
+  Future<int> countChildren(String ratingKey) async {
+    final page = await _http.requestJson(
+      '/library/metadata/$ratingKey/children',
+      queryParameters: containerPage(start: 0, size: 0),
+      containerOf('Metadata', PlexMetadata.fromJson),
+    );
+    return page.totalSize;
+  }
+
   /// All leaves under an item — every track under an artist, every
   /// episode under a show. Useful for "play artist" / "play show".
-  Future<List<PlexMetadata>> allLeaves(String ratingKey) async {
+  ///
+  /// [size] (with [start], default 0) reads one page. There is no `sort`:
+  /// PMS 1.43.2 ignores it on this endpoint (verified) and answers in
+  /// library order.
+  Future<List<PlexMetadata>> allLeaves(
+    String ratingKey, {
+    int? start,
+    int? size,
+  }) {
+    final qp = containerPage(start: start, size: size);
     return _http.requestJson(
       '/library/metadata/$ratingKey/allLeaves',
+      queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -323,20 +341,37 @@ class PlexLibraryApi {
   /// `/library/metadata/{ratingKey}/nearest` — sonically nearest
   /// tracks to a seed track (requires music sonic analysis on the
   /// server). Used to build "sonic radio".
+  ///
+  /// [excludeParentRatingKey] / [excludeGrandparentRatingKey] leave out the
+  /// tracks of one album / artist — pass the ratingKey as you have it
+  /// (e.g. `track.parentRatingKey`). The `int` forms are deprecated.
   Future<List<PlexMetadata>> nearestToTrack({
     required String ratingKey,
     int? limit,
     double? maxDistance,
-    int? excludeParentID,
-    int? excludeGrandparentID,
-  }) async {
+    String? excludeParentRatingKey,
+    String? excludeGrandparentRatingKey,
+    @Deprecated('Use excludeParentRatingKey') int? excludeParentID,
+    @Deprecated('Use excludeGrandparentRatingKey') int? excludeGrandparentID,
+  }) {
+    if (excludeParentRatingKey != null && excludeParentID != null) {
+      throw ArgumentError(
+        'Pass excludeParentRatingKey or excludeParentID, not both.',
+      );
+    }
+    if (excludeGrandparentRatingKey != null && excludeGrandparentID != null) {
+      throw ArgumentError(
+        'Pass excludeGrandparentRatingKey or excludeGrandparentID, not both.',
+      );
+    }
+    final parent = excludeParentRatingKey ?? excludeParentID?.toString();
+    final grandparent =
+        excludeGrandparentRatingKey ?? excludeGrandparentID?.toString();
     final qp = <String, dynamic>{};
     if (limit != null) qp['limit'] = limit;
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
-    if (excludeParentID != null) qp['excludeParentID'] = excludeParentID;
-    if (excludeGrandparentID != null) {
-      qp['excludeGrandparentID'] = excludeGrandparentID;
-    }
+    if (parent != null) qp['excludeParentID'] = parent;
+    if (grandparent != null) qp['excludeGrandparentID'] = grandparent;
     return _http.requestJson(
       '/library/metadata/$ratingKey/nearest',
       queryParameters: qp.isEmpty ? null : qp,
