@@ -9,6 +9,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
+import '../plex_events.dart';
 import '../plex_exception.dart';
 
 /// `/:/websockets/notifications` and `/:/eventsource/notifications`
@@ -21,8 +22,10 @@ import '../plex_exception.dart';
 ///
 /// The notification frames carry server state changes: playback
 /// progress, library scan progress, transcoder sessions, settings
-/// updates, etc. Each frame is exposed as a [PlexNotification] map
-/// with a `type` discriminator.
+/// updates, etc. Each frame is exposed as a [PlexNotification] with a
+/// `type` discriminator; [PlexNotification.events] and the
+/// [PlexNotificationEvents.events] stream extension decode them into
+/// typed [PlexEvent]s.
 class PlexNotificationsApi {
   final PlexConnection _http;
 
@@ -327,6 +330,20 @@ class PlexNotification {
     );
   }
 
+  /// The frame's entries as typed events — usually one, sometimes
+  /// several. Frame types without a typed event give one
+  /// [PlexUnknownEvent].
+  List<PlexEvent> get events => PlexEvent.fromFrame(type, raw);
+
   @override
   String toString() => 'PlexNotification($type)';
+}
+
+/// Typed events from a notification stream.
+extension PlexNotificationEvents on Stream<PlexNotification> {
+  /// Every entry of every frame as a [PlexEvent]: play state changes
+  /// ([PlexPlaySessionEvent]), library item changes
+  /// ([PlexLibraryItemEvent]), activities such as scans
+  /// ([PlexActivityEvent]) and status messages ([PlexStatusEvent]).
+  Stream<PlexEvent> events() => expand((n) => n.events);
 }

@@ -72,6 +72,7 @@ export 'src/api/plex_updater_api.dart';
 export 'src/plex_client.dart';
 export 'src/plex_credentials.dart';
 export 'src/plex_error_type.dart';
+export 'src/plex_events.dart';
 export 'src/plex_exception.dart';
 export 'src/plex_filter.dart';
 export 'src/plex_models.dart';

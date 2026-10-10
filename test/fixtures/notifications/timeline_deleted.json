@@ -1,0 +1,18 @@
+{
+  "type": "timeline",
+  "size": 1,
+  "TimelineEntry": [
+    {
+      "identifier": "com.plexapp.plugins.library",
+      "sectionID": "1",
+      "itemID": "547",
+      "parentItemID": "540",
+      "rootItemID": "539",
+      "type": 10,
+      "title": "Probe Artist / Probe Album (track 4)",
+      "state": 9,
+      "metadataState": "deleted",
+      "updatedAt": 1791660190
+    }
+  ]
+}

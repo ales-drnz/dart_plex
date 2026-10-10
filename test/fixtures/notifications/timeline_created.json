@@ -1,0 +1,18 @@
+{
+  "type": "timeline",
+  "size": 1,
+  "TimelineEntry": [
+    {
+      "identifier": "com.plexapp.plugins.library",
+      "sectionID": "1",
+      "itemID": "547",
+      "parentItemID": "540",
+      "rootItemID": "539",
+      "type": 10,
+      "title": "",
+      "state": 0,
+      "metadataState": "created",
+      "updatedAt": 1791660180
+    }
+  ]
+}

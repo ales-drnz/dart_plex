@@ -1,0 +1,19 @@
+{
+  "type": "activity",
+  "size": 1,
+  "ActivityNotification": [
+    {
+      "event": "updated",
+      "uuid": "f98d9148-0f97-41cc-be85-bc0facad4769",
+      "Activity": {
+        "uuid": "f98d9148-0f97-41cc-be85-bc0facad4769",
+        "type": "library.update.section",
+        "cancellable": false,
+        "userID": 1,
+        "title": "Scanning Music",
+        "subtitle": "",
+        "progress": 0
+      }
+    }
+  ]
+}

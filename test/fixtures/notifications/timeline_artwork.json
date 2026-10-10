@@ -1,0 +1,15 @@
+{
+  "type": "timeline",
+  "size": 1,
+  "TimelineEntry": [
+    {
+      "identifier": "com.plexapp.plugins.library",
+      "sectionID": "1",
+      "itemID": "2",
+      "type": 9,
+      "title": "Test Artist / Test Album",
+      "state": 5,
+      "updatedAt": 1791660175
+    }
+  ]
+}

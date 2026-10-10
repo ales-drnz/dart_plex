@@ -1,0 +1,9 @@
+{
+  "type": "progress",
+  "size": 1,
+  "ProgressNotification": [
+    {
+      "message": "Scanning Probe Artist"
+    }
+  ]
+}

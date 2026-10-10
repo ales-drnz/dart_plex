@@ -1,0 +1,16 @@
+{
+  "type": "playing",
+  "size": 1,
+  "PlaySessionStateNotification": [
+    {
+      "sessionKey": "23",
+      "clientIdentifier": "ws-player",
+      "guid": "",
+      "ratingKey": "541",
+      "url": "",
+      "key": "/library/metadata/541",
+      "viewOffset": 2000,
+      "state": "paused"
+    }
+  ]
+}

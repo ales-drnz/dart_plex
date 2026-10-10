@@ -1,0 +1,16 @@
+{
+  "type": "timeline",
+  "size": 1,
+  "TimelineEntry": [
+    {
+      "identifier": "com.plexapp.plugins.library",
+      "sectionID": "1",
+      "itemID": "541",
+      "type": 10,
+      "title": "Probe Artist / Probe Album (track 1)",
+      "state": 5,
+      "mediaState": "analyzing",
+      "updatedAt": 1791660180
+    }
+  ]
+}

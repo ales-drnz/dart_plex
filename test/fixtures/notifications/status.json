@@ -1,0 +1,11 @@
+{
+  "type": "status",
+  "size": 1,
+  "StatusNotification": [
+    {
+      "title": "Scanning the \"Music\" section",
+      "description": "",
+      "notificationName": "LIBRARY_UPDATE"
+    }
+  ]
+}
