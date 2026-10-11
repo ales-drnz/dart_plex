@@ -35,6 +35,8 @@ class PlexSubscriptionsApi {
   ///
   /// [type] is the Plex metadata type to subscribe to (e.g. `2` for
   /// show/season), matching the spec's integer `type` parameter.
+  /// [hints], [prefs] and [params] travel as `hints[key]=value` (and so
+  /// on), the form PMS reads.
   Future<Map<String, Object?>> create({
     required int targetLibrarySectionID,
     int? targetSectionLocationID,
@@ -106,7 +108,7 @@ class PlexSubscriptionsApi {
     return res.data ?? const {};
   }
 
-  /// `PUT /media/subscriptions/{subscriptionId}?prefs={...}` — edit
+  /// `PUT /media/subscriptions/{subscriptionId}?prefs[key]=value` — edit
   /// a subscription's preferences.
   Future<void> editPreferences({
     required String subscriptionId,

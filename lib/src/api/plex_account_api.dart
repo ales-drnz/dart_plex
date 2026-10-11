@@ -31,9 +31,10 @@ class PlexAccountApi {
   /// credentials, but Plex officially recommends the PIN flow for new
   /// integrations — accounts with 2FA enabled cannot use this path.
   ///
-  /// On success the returned [PlexUser] contains `authToken`; the
-  /// underlying [PlexConnection] is also updated so subsequent PMS
-  /// requests reuse the same token.
+  /// On success the returned [PlexUser] contains `authToken`. The token is
+  /// not applied to the client: call [PlexClient.setToken] with it before
+  /// the next plex.tv call. The credentials travel as a form body
+  /// (`user[login]=…&user[password]=…`), the shape the endpoint reads.
   Future<PlexUser> signInWithPassword({
     required String username,
     required String password,

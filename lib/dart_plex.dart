@@ -21,6 +21,7 @@
 ///
 /// // 1. Authenticate against plex.tv
 /// final user = await plex.account.signInWithPassword(username: 'alex', password: 'hunter2');
+/// plex.setToken(user.authToken);
 ///
 /// // 2. Discover the user's servers and connect to one
 /// final resources = await plex.account.fetchResources();
