@@ -27,3 +27,6 @@ CLAUDE.md
 test/
 dart_test.yaml
 .env.test
+
+# Dev tools that read the sibling repository
+tool/
