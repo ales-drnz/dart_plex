@@ -3,6 +3,8 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import '../plex_connection.dart';
+import '../plex_error_type.dart';
+import '../plex_exception.dart';
 import '../plex_filter.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
@@ -138,7 +140,10 @@ class PlexPlaylistsApi {
       PlexMetadata.fromJson,
     );
     if (c.items.isEmpty) {
-      throw Exception('Plex returned no playlist after create');
+      throw const PlexException(
+        'Plex returned no playlist after create',
+        type: PlexErrorType.parse,
+      );
     }
     return c.items.first;
   }

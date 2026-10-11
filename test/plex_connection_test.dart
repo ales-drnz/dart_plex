@@ -522,6 +522,34 @@ void main() {
     });
   });
 
+  group('classification getters (same in both libraries)', () {
+    PlexException e(PlexErrorType type, [int? status]) =>
+        PlexException('x', type: type, statusCode: status);
+
+    test('network failure, transient, not found, cancelled', () {
+      // (exception, networkFailure, transient, notFound, cancelled)
+      final table = [
+        (e(PlexErrorType.connection), true, true, false, false),
+        (e(PlexErrorType.timeout), true, true, false, false),
+        (e(PlexErrorType.serverError, 503), false, true, false, false),
+        (e(PlexErrorType.badRequest, 429), false, true, false, false),
+        (e(PlexErrorType.badRequest, 400), false, false, false, false),
+        (e(PlexErrorType.auth, 401), false, false, false, false),
+        (e(PlexErrorType.notFound, 404), false, false, true, false),
+        (e(PlexErrorType.parse), false, false, false, false),
+        (e(PlexErrorType.state), false, false, false, false),
+        (e(PlexErrorType.cancelled), false, false, false, true),
+      ];
+      for (final (ex, network, transient, notFound, cancelled) in table) {
+        expect(ex.isNetworkFailure, network, reason: '$ex');
+        expect(ex.isTransient, transient, reason: '$ex');
+        expect(ex.isNotFound, notFound, reason: '$ex');
+        expect(ex.isCancelled, cancelled, reason: '$ex');
+        expect(ex.isRetriable, network, reason: '$ex');
+      }
+    });
+  });
+
   group('client ownership', () {
     test('an injected client is not closed', () {
       final client = _FnClient((_) => throw UnimplementedError());
