@@ -75,18 +75,18 @@ final class PlexConnection {
   /// the `jsonIsolateThreshold` argument.
   static const int defaultJsonIsolateThreshold = 50 * 1024;
 
-  /// The default threshold. Kept under its 0.2 name.
-  static const int jsonIsolateThreshold = defaultJsonIsolateThreshold;
-
   /// Creates a connection bound to [credentials].
   ///
   /// Without an [httpClient], one is created (and closed by [close]) with
   /// [connectTimeout] applied to the handshake. An injected client is never
   /// closed by this connection.
   ///
-  /// [receiveTimeout] bounds the wait for the response headers and every
-  /// pause between two chunks of the body — not the whole transfer, so a
-  /// long download that keeps flowing never times out.
+  /// [receiveTimeout] bounds every pause between two chunks of the body —
+  /// not the whole transfer, so a long download that keeps flowing never
+  /// times out. The wait for the response headers is bounded by
+  /// [connectTimeout] + [receiveTimeout] together: `package:http` does not
+  /// say when the connection is up, so the two cannot be told apart there.
+  /// An injected [httpClient] brings its own connect timeout, if any.
   PlexConnection({
     required this.credentials,
     http.Client? httpClient,
@@ -107,8 +107,8 @@ final class PlexConnection {
 
   /// A view of [parent] whose requests are cancelled by [cancelToken].
   ///
-  /// The view shares [parent]'s client, credentials, base URL and session:
-  /// a later `setSession` or `connect` on either is seen by both. A token
+  /// The view shares [parent]'s client, credentials, base URL and token:
+  /// a later `setToken` or `connect` on either is seen by both. A token
   /// passed to an individual [request] still wins.
   PlexConnection.scoped(
     PlexConnection parent,
@@ -207,6 +207,7 @@ final class PlexConnection {
     } on FormatException catch (e, st) {
       throw _parseError(e, st, exchange.uri);
     }
+    _throwIfCancelled(cancelToken, exchange.uri);
     if (decoded != null && decoded is! T) {
       throw PlexException(
         'Expected a $T body, got ${decoded.runtimeType}',
@@ -252,23 +253,24 @@ final class PlexConnection {
     );
     final bytes = exchange.bytes;
     final gzipped = exchange.gzipped;
+    final R result;
     try {
-      if (_offIsolate(exchange)) {
-        return await platform.runOffIsolate(
-          () => parse(_jsonOf(gzipped ? platform.gunzip(bytes) : bytes)),
-        );
-      }
-      return parse(_jsonOf(gzipped ? platform.gunzip(bytes) : bytes));
+      result = _offIsolate(exchange)
+          ? await platform.runOffIsolate(
+              () => parse(_jsonOf(gzipped ? platform.gunzip(bytes) : bytes)),
+            )
+          : parse(_jsonOf(gzipped ? platform.gunzip(bytes) : bytes));
     } on PlexException {
       rethrow;
-    } on FormatException catch (e, st) {
-      throw _parseError(e, st, exchange.uri);
-      // A parser meeting a body of the wrong shape fails with a TypeError
-      // (`as Map` on a list): that is a malformed response, not a bug here.
+      // Whatever else a parser throws — a FormatException, a TypeError from
+      // `as Map` on a list, a RangeError — means the body was not what the
+      // parser expects: a malformed response, reported as one.
       // ignore: avoid_catching_errors
-    } on TypeError catch (e, st) {
+    } catch (e, st) {
       throw _parseError(e, st, exchange.uri);
     }
+    _throwIfCancelled(cancelToken, exchange.uri);
+    return result;
   }
 
   /// Convenience for byte GETs (artwork, small files). The whole body is
@@ -293,7 +295,13 @@ final class PlexConnection {
   /// like [request]. The returned stream fails with a [PlexException]
   /// on cancellation and, unless [stallTimeout] is `false`, on a pause in
   /// the body longer than the receive timeout. Turn it off for event
-  /// streams that may stay quiet for minutes.
+  /// streams that may stay quiet for minutes. Time the listener spends
+  /// paused does not count as a stall.
+  ///
+  /// The connection stays open until the stream is listened to and
+  /// drained or cancelled: listen to it, or cancel the subscription, even
+  /// when the body is not wanted. A cancellation through the token closes
+  /// it either way.
   Future<PlexStreamedResponse> requestStream(
     String url, {
     Map<String, Object?>? queryParameters,
@@ -322,7 +330,7 @@ final class PlexConnection {
           res.statusCode,
           res.reasonPhrase,
           opened.uri,
-          gzipped ? platform.gunzip(body) : body,
+          gzipped ? _tryGunzip(body) : body,
           res.headers,
         );
       }
@@ -332,7 +340,13 @@ final class PlexConnection {
     final gzipped = _isGzipped(res.headers);
     final body = _guard(opened);
     return PlexStreamedResponse(
-      stream: gzipped ? platform.gunzipStream(body) : body,
+      stream: gzipped
+          ? platform.gunzipStream(body).handleError(
+                (Object e, StackTrace st) =>
+                    throw _parseError(e, st, opened.uri),
+                test: (e) => e is FormatException,
+              )
+          : body,
       statusCode: res.statusCode,
       headers: res.headers,
       contentLength: gzipped ? null : res.contentLength,
@@ -382,15 +396,17 @@ final class PlexConnection {
           method: method,
         );
         if (wait == null) rethrow;
-        final timer = Completer<void>();
-        final t = Timer(wait, timer.complete);
-        await Future.any([
-          timer.future,
-          if (token != null) token.whenCancelled,
-        ]);
-        t.cancel();
+        if (token != null && token.isCancelled) rethrow;
+        final waited = Completer<void>();
+        final timer = Timer(wait, waited.complete);
+        final unregister = token?.register(() {
+          timer.cancel();
+          if (!waited.isCompleted) waited.complete();
+        });
+        await waited.future;
+        unregister?.call();
         if (token != null && token.isCancelled) {
-          throw _cancelled(Uri.parse(e.path ?? ''));
+          throw _cancelled(Uri.tryParse(e.path ?? '') ?? Uri());
         }
       }
     }
@@ -422,7 +438,7 @@ final class PlexConnection {
         res.statusCode,
         res.reasonPhrase,
         opened.uri,
-        gzipped ? platform.gunzip(bytes) : bytes,
+        gzipped ? _tryGunzip(bytes) : bytes,
         res.headers,
       );
     }
@@ -445,10 +461,18 @@ final class PlexConnection {
         type: PlexErrorType.state,
       );
     }
-    final uri = buildUri(
-      absoluteUrl ? path : _resolve(path),
-      queryParameters,
-    );
+    final Uri uri;
+    try {
+      uri = buildUri(absoluteUrl ? path : _resolve(path), queryParameters);
+    } on FormatException catch (e, st) {
+      throw PlexException(
+        'Invalid request URL: ${e.message}',
+        type: PlexErrorType.state,
+        path: path,
+        cause: e,
+        stackTrace: st,
+      );
+    }
     final token = cancelToken ?? scopeToken;
     if (token != null && token.isCancelled) throw _cancelled(uri);
 
@@ -460,8 +484,8 @@ final class PlexConnection {
     );
     request.headers.addAll(_baseHeaders);
     if (_shared.inflates) request.headers['Accept-Encoding'] = 'gzip';
-    _encodeBody(request, data);
     if (extraHeaders != null) request.headers.addAll(extraHeaders);
+    _encodeBody(request, data);
 
     final opened = _Opened(uri, abort, token, _shared.receiveTimeout);
     final headers = Completer<http.StreamedResponse>();
@@ -475,9 +499,7 @@ final class PlexConnection {
       _shared.connectTimeout + _shared.receiveTimeout,
       () => lose(_timeout('No response within the timeout', uri)),
     );
-    if (token != null) {
-      unawaited(token.whenCancelled.then((_) => lose(_cancelled(uri))));
-    }
+    final unregister = token?.register(() => lose(_cancelled(uri)));
     try {
       final sent = _shared.client.send(request).then(
         (res) {
@@ -500,6 +522,7 @@ final class PlexConnection {
       return opened;
     } finally {
       timer.cancel();
+      unregister?.call();
     }
   }
 
@@ -521,14 +544,26 @@ final class PlexConnection {
     late final StreamController<List<int>> out;
     StreamSubscription<List<int>>? sub;
     Timer? stall;
+    void Function()? unregister;
+    var done = false;
     // One timer per body, not one per chunk: a chunk only stamps the time,
-    // and the timer checks the stamp when it fires.
+    // and the timer checks the stamp when it fires. The clock stops while
+    // the listener is paused — a slow consumer is not a stalled server.
     final sinceChunk = Stopwatch();
 
-    void fail(PlexException e) {
+    void finish() {
+      done = true;
       stall?.cancel();
+      unregister?.call();
+    }
+
+    void fail(PlexException e) {
+      if (done) return;
+      finish();
       opened.abort();
-      unawaited(sub?.cancel());
+      // An aborted `IOClient` response closes its socket only once it is
+      // listened to: drain it here when nobody has yet.
+      unawaited(sub?.cancel() ?? opened.response.stream.listen(null).cancel());
       if (!out.isClosed) {
         out.addError(e, e.stackTrace);
         unawaited(out.close());
@@ -537,7 +572,7 @@ final class PlexConnection {
 
     void arm() {
       final timeout = opened.receiveTimeout;
-      if (timeout == null) return;
+      if (timeout == null || done) return;
       sinceChunk.start();
       void check() {
         final idle = timeout - sinceChunk.elapsed;
@@ -548,15 +583,12 @@ final class PlexConnection {
         }
       }
 
-      stall = Timer(timeout, check);
+      stall = Timer(timeout - sinceChunk.elapsed, check);
     }
 
     out = StreamController<List<int>>(
       onListen: () {
-        if (token != null) {
-          if (token.isCancelled) return fail(_cancelled(uri));
-          unawaited(token.whenCancelled.then((_) => fail(_cancelled(uri))));
-        }
+        if (done) return;
         arm();
         sub = opened.response.stream.listen(
           (chunk) {
@@ -566,30 +598,61 @@ final class PlexConnection {
           onError: (Object e, StackTrace st) =>
               fail(_transportError(e, st, uri, token)),
           onDone: () {
-            stall?.cancel();
+            finish();
             unawaited(out.close());
           },
         );
       },
-      onPause: () => sub?.pause(),
-      onResume: () => sub?.resume(),
-      onCancel: () {
+      onPause: () {
         stall?.cancel();
+        sinceChunk.stop();
+        sub?.pause();
+      },
+      onResume: () {
+        sub?.resume();
+        arm();
+      },
+      onCancel: () {
+        finish();
         opened.abort();
         return sub?.cancel();
       },
     );
+    // Wired now, not on listen: a cancellation must also close a body that
+    // nobody has listened to yet.
+    if (token != null) {
+      if (token.isCancelled) {
+        fail(_cancelled(uri));
+      } else {
+        unregister = token.register(() => fail(_cancelled(uri)));
+      }
+    }
     return out.stream;
   }
 
+  /// Encodes [data] into [request]: raw bytes for a `List<int>`, a form
+  /// body for a `Map` when the caller set a form `Content-Type`, JSON
+  /// otherwise.
   void _encodeBody(http.Request request, Object? data) {
     if (data == null) return;
     if (data is List<int>) {
       request.bodyBytes = data;
       return;
     }
+    final contentType = request.headers.entries
+        .where((h) => h.key.toLowerCase() == 'content-type')
+        .map((h) => h.value.toLowerCase())
+        .firstOrNull;
+    if (data is Map &&
+        contentType != null &&
+        contentType.startsWith('application/x-www-form-urlencoded')) {
+      request.bodyBytes = utf8.encode(_formEncode(data));
+      return;
+    }
     if (data is Map || data is List || data is String) {
-      request.headers['Content-Type'] = 'application/json';
+      if (contentType == null) {
+        request.headers['Content-Type'] = 'application/json';
+      }
       request.bodyBytes = utf8.encode(data is String ? data : jsonEncode(data));
       return;
     }
@@ -654,37 +717,54 @@ final class PlexConnection {
     return '$base$path';
   }
 
-  /// Appends [queryParameters] to [url] the way the 0.2 transport did, so
-  /// the wire shape is unchanged: keys and string values are
-  /// form-encoded (`encodeQueryComponent`), a list repeats its key once per
-  /// element, and a `null` value sends the bare key.
+  /// Appends [queryParameters] to [url] the way the 0.1 transport (Dio)
+  /// did: keys and values are form-encoded (`encodeQueryComponent`, so a
+  /// space is `+`), a list repeats its key once per element, a `null`
+  /// value sends the bare key, and a map nests as `key[sub]=value` —
+  /// Plex's own form for `prefs`, `hints` and `params`.
   @visibleForTesting
   static Uri buildUri(String url, Map<String, Object?>? queryParameters) {
     final qp = queryParameters;
     if (qp == null || qp.isEmpty) return Uri.parse(url).normalizePath();
+    final query = _encodePairs(qp, repeatLists: true);
+    if (query.isEmpty) return Uri.parse(url).normalizePath();
+    final sep = url.contains('?') ? '&' : '?';
+    return Uri.parse('$url$sep$query').normalizePath();
+  }
+
+  /// A form body (`application/x-www-form-urlencoded`) for [data], with
+  /// the same rules as the query string.
+  static String _formEncode(Map<Object?, Object?> data) =>
+      _encodePairs(data, repeatLists: true);
+
+  /// `k=v&k2=v2`, every key and value form-encoded. A top-level list
+  /// repeats its key when [repeatLists]; a nested map or list is written
+  /// `key[sub]` / `key[index]`.
+  static String _encodePairs(
+    Map<Object?, Object?> map, {
+    required bool repeatLists,
+  }) {
     final parts = <String>[];
-    void add(String key, Object? value) {
-      if (value == null) {
-        parts.add(key);
-      } else if (value is String) {
-        parts.add('$key=${Uri.encodeQueryComponent(value)}');
+    void add(String key, Object? value, {required bool top}) {
+      if (value is Map) {
+        value.forEach((k, v) => add('$key[$k]', v, top: false));
+      } else if (value is Iterable) {
+        var i = 0;
+        for (final e in value) {
+          add(top && repeatLists ? key : '$key[${i++}]', e, top: false);
+        }
+      } else if (value == null) {
+        parts.add(Uri.encodeQueryComponent(key));
       } else {
-        parts.add('$key=$value');
+        parts.add(
+          '${Uri.encodeQueryComponent(key)}='
+          '${Uri.encodeQueryComponent('$value')}',
+        );
       }
     }
 
-    qp.forEach((k, v) {
-      final key = Uri.encodeQueryComponent(k);
-      if (v is Iterable) {
-        for (final e in v) {
-          add(key, e);
-        }
-      } else {
-        add(key, v);
-      }
-    });
-    final sep = url.contains('?') ? '&' : '?';
-    return Uri.parse('$url$sep${parts.join('&')}').normalizePath();
+    map.forEach((k, v) => add('$k', v, top: true));
+    return parts.join('&');
   }
 
   static bool _isJson(String? contentType) {
@@ -715,11 +795,24 @@ final class PlexConnection {
   }
 
   /// `Retry-After` in seconds; `null` when absent or not a number (the
-  /// HTTP-date form is not read — neither server sends it).
+  /// HTTP-date form is not read — neither server sends it). Clamped to
+  /// `[0, 1 day]` so an absurd value cannot overflow [Duration].
   static Duration? _retryAfter(String? value) {
     final seconds = value == null ? null : int.tryParse(value.trim());
     if (seconds == null) return null;
-    return Duration(seconds: seconds < 0 ? 0 : seconds);
+    return Duration(seconds: seconds.clamp(0, _maxRetryAfterSeconds));
+  }
+
+  static const int _maxRetryAfterSeconds = 24 * 60 * 60;
+
+  /// Inflates an error body for its message; the raw bytes when it is not
+  /// really gzip, so a lying header cannot hide the status.
+  static Uint8List _tryGunzip(Uint8List bytes) {
+    try {
+      return platform.gunzip(bytes);
+    } on FormatException {
+      return bytes;
+    }
   }
 
   PlexException _transportError(
@@ -732,13 +825,25 @@ final class PlexConnection {
     if (e is http.RequestAbortedException || (token?.isCancelled ?? false)) {
       return _cancelled(uri);
     }
+    if (_shared.closed) {
+      return PlexException(
+        'PlexClient.close() was called while the request was in flight.',
+        type: PlexErrorType.state,
+        path: uri.toString(),
+        cause: e,
+        stackTrace: st,
+      );
+    }
     if (e is TimeoutException) return _timeout('$e', uri, e, st);
     final text = '$e';
+    // A redirect loop is an answer, not a lost connection: not retried.
     final type = text.contains('timed out')
         ? PlexErrorType.timeout
-        : e is http.ClientException
-            ? PlexErrorType.connection
-            : PlexErrorType.unknown;
+        : e is http.ClientException && text.contains('Redirect')
+            ? PlexErrorType.unknown
+            : e is http.ClientException
+                ? PlexErrorType.connection
+                : PlexErrorType.unknown;
     return PlexException(
       text,
       type: type,
@@ -769,6 +874,13 @@ final class PlexConnection {
         cause: cause,
         stackTrace: st ?? StackTrace.current,
       );
+
+  /// Throws a cancellation when the token for this request was cancelled
+  /// while its body was being decoded.
+  void _throwIfCancelled(PlexCancelToken? cancelToken, Uri uri) {
+    final token = cancelToken ?? scopeToken;
+    if (token != null && token.isCancelled) throw _cancelled(uri);
+  }
 
   static PlexException _cancelled(Uri uri) => PlexException(
         'Request cancelled',

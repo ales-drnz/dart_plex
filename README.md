@@ -1774,7 +1774,7 @@ try {
 
 | Getter | True for |
 | :--- | :--- |
-| `isNetworkFailure` | no answer at all: connection failed or timed out (same as `isRetriable`) |
+| `isNetworkFailure` | no answer at all: connection failed or timed out (`isRetriable` is a deprecated alias) |
 | `isTransient` | may pass if sent again later: a network failure, a 5xx, or `429` |
 | `isNotFound` | the server answered `404` |
 | `isCancelled` | the request was cancelled through a `PlexCancelToken` |

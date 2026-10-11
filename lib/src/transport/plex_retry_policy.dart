@@ -69,7 +69,9 @@ final class PlexRetryPolicy {
     if (!retriable) return null;
     final hinted = error.retryAfter;
     if (hinted != null) return hinted > maxDelay ? maxDelay : hinted;
-    final ceiling = initialDelay * pow(2, attempt - 1).toInt();
+    // Capped exponent: 2^30 × any sane initial delay is past maxDelay, and
+    // a larger power would overflow.
+    final ceiling = initialDelay * pow(2, min(attempt - 1, 30)).toInt();
     final capped = ceiling > maxDelay ? maxDelay : ceiling;
     return Duration(
       microseconds: (_random.nextDouble() * capped.inMicroseconds).round(),

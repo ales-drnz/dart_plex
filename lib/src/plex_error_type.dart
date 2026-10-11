@@ -18,9 +18,9 @@ enum PlexErrorType {
   /// The request did not complete within the configured timeout.
   timeout,
 
-  /// The server replied with `401 Unauthorized` / `403 Forbidden`, or the
-  /// PIN flow returned an authToken-less response past its `expiresAt`.
-  /// Callers should re-run the PIN/sign-in flow.
+  /// The server replied with `401 Unauthorized` / `403 Forbidden`, or a
+  /// sign-in answered without a token. Callers should re-run the PIN or
+  /// sign-in flow.
   auth,
 
   /// The server replied with `404 Not Found` — the resource (rating key,
@@ -49,7 +49,12 @@ enum PlexErrorType {
   /// Anything else.
   unknown;
 
-  /// Whether the error is likely to succeed on retry.
+  /// Whether no answer came back at all (a connection failure or a
+  /// timeout). Same as [PlexException.isNetworkFailure].
+  @Deprecated(
+    'Use PlexException.isNetworkFailure, or isTransient to include 5xx '
+    'and 429. Removed in 0.3.',
+  )
   bool get isRetriable =>
       this == PlexErrorType.connection || this == PlexErrorType.timeout;
 

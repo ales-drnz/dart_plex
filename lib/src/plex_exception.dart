@@ -14,8 +14,8 @@ import 'plex_error_type.dart';
 /// try {
 ///   await plex.library.sections();
 /// } on PlexException catch (e) {
-///   if (e.type.isAuthError) await reAuthenticate();
-///   else if (e.type.isRetriable) scheduleRetry();
+///   if (e.isAuthError) await reAuthenticate();
+///   else if (e.isTransient) scheduleRetry();
 ///   else showError(e.message);
 /// }
 /// ```
@@ -57,7 +57,7 @@ final class PlexException implements Exception {
 
   /// No answer from the server at all: the connection failed or timed out.
   /// The server may be down or unreachable — not the same as an answer that
-  /// says no. Same as [PlexErrorType.isRetriable].
+  /// says no.
   bool get isNetworkFailure =>
       type == PlexErrorType.connection || type == PlexErrorType.timeout;
 
@@ -81,8 +81,12 @@ final class PlexException implements Exception {
   /// Shorthand for [PlexErrorType.isAuthError] on [type] — token expired / invalid.
   bool get isAuthError => type.isAuthError;
 
-  /// Shorthand for [PlexErrorType.isRetriable] on [type] — transient failure worth retrying.
-  bool get isRetriable => type.isRetriable;
+  /// Same as [isNetworkFailure].
+  @Deprecated(
+    'Use isNetworkFailure, or isTransient to include 5xx and 429. '
+    'Removed in 0.3.',
+  )
+  bool get isRetriable => isNetworkFailure;
 
   @override
   String toString() {
