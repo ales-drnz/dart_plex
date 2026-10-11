@@ -845,18 +845,18 @@ class PlexLibraryApi {
   }
 
   /// `GET /library/sections/{sectionId}/autocomplete?type=...&field.query=...`
-  /// — autocomplete suggestions for a search field.
+  /// — autocomplete suggestions for a search field, e.g.
+  /// `fieldQuery: {'title.query': 'Tra'}`.
+  ///
+  /// [type] is required: PMS 1.43.2 answers 400 without it (verified).
   Future<Map<String, Object?>> autocomplete({
     required String sectionId,
-    String? type,
+    required PlexMetadataType type,
     Map<String, Object?>? fieldQuery,
   }) async {
-    final qp = <String, Object?>{};
-    if (type != null) qp['type'] = type;
-    if (fieldQuery != null) qp.addAll(fieldQuery);
     final res = await _http.request<Map<String, Object?>>(
       '/library/sections/$sectionId/autocomplete',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'type': type.value, ...?fieldQuery},
     );
     return res.data ?? const {};
   }

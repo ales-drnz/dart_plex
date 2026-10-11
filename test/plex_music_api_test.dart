@@ -244,6 +244,16 @@ void main() {
       });
     });
 
+    test('timeline sends a playhead past the end as the duration', () async {
+      await plex.playback.timeline(
+        ratingKey: '541',
+        playState: PlexPlayState.stopped,
+        timeMs: 60031,
+        durationMs: 60029,
+      );
+      expect(query()['time'], '60029');
+    });
+
     test('timeline sends no playQueueItemID unless given', () async {
       await plex.playback.timeline(
         ratingKey: '541',

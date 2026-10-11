@@ -324,7 +324,10 @@ void main() {
           await plex.streaming.stopUniversal(hlsId);
           await plex.streaming.stopUniversal(dashId);
         }
-        await Future<void>.delayed(const Duration(seconds: 1));
+        // PMS tears the session down asynchronously after the stop.
+        for (var i = 0; i < 40 && (await sessions()).contains(hlsId); i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
         expect(await sessions(), isNot(contains(hlsId)));
         // Stopping a session that is already gone is not an error.
         await plex.streaming.stopUniversal(hlsId);

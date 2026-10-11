@@ -53,7 +53,9 @@ class PlexPlaybackApi {
   ///
   /// ## What makes PMS count a play
   ///
-  /// Measured on PMS 1.43.2 (music, `viewCount` and the history):
+  /// Measured on PMS 1.43.2 (music, `viewCount` and the history). The
+  /// 50% figures came from a library with full-length tracks; the
+  /// integration seed's 3 s tracks only reproduce the duration rules.
   ///
   /// * The server clocks the session itself. Reports must follow real
   ///   time: a `playing` at 0 and a `stopped` at the end two seconds later
@@ -63,13 +65,18 @@ class PlexPlaybackApi {
   /// * [durationMs] must be the real length. With `duration=0` nothing is
   ///   ever counted, even when the whole track plays in real time — which
   ///   is why this method refuses a non-positive duration.
-  /// * Very short tracks are never counted (a 3 s track played in full was
-  ///   not); the exact floor was not measured.
+  /// * PMS judges the *reported* [durationMs] against real time, not the
+  ///   file: a 3 s track reported with its true length and played in full
+  ///   was not counted, the same file reported as 20 s and played for
+  ///   16 s was. The exact floor was not measured.
   ///
   /// A counted play raises `viewCount`, sets `lastViewedAt` and adds an
   /// entry to `/status/sessions/history/all`. [scrobble] raises `viewCount`
   /// without a history entry — use it for "mark as played", not to report
   /// listening.
+  ///
+  /// A [timeMs] past [durationMs] (a playhead that rounds past the end) is
+  /// sent as [durationMs]: PMS answers 400 to `time > duration`.
   ///
   /// Throws an [ArgumentError] when [durationMs] is not positive or
   /// [timeMs] is negative.
@@ -111,7 +118,7 @@ class PlexPlaybackApi {
       'ratingKey': ratingKey,
       'key': '/library/metadata/$ratingKey',
       'state': wireState,
-      'time': timeMs,
+      'time': timeMs > durationMs ? durationMs : timeMs,
       'duration': durationMs,
       'continuing': continuing ? 1 : 0,
     };

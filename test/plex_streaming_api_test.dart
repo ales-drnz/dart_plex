@@ -53,6 +53,8 @@ Uint8List _utf16be(String s, {bool bom = true}) {
 }
 
 void main() {
+  _stopUniversalTests();
+
   group('PlexStreamingApi.lyrics decoding', () {
     test('UTF-8 bytes round-trip unchanged', () async {
       final ctx = _makeApi(utf8.encode(_lrc));
@@ -201,6 +203,32 @@ void main() {
         'http://192.168.1.10:32400/library/streams/12345',
       );
       expect(req.headers['Accept'], '*/*');
+    });
+  });
+}
+
+void _stopUniversalTests() {
+  group('stopUniversal', () {
+    Future<void> stopWith(int status) {
+      final adapter = CapturingAdapter()
+        ..respond = (_) => CannedResponse(status, const []);
+      return PlexStreamingApi(testConnection(adapter)).stopUniversal('s1');
+    }
+
+    test('a session that is already gone (404) is not an error', () async {
+      await stopWith(404);
+    });
+
+    test('any other failure is still thrown', () async {
+      for (final status in [400, 401, 500, 503]) {
+        await expectLater(
+          stopWith(status),
+          throwsA(
+            isA<PlexException>().having((e) => e.statusCode, 'status', status),
+          ),
+          reason: '$status',
+        );
+      }
     });
   });
 }

@@ -31,8 +31,11 @@ class PlexStreamingApi {
   /// then the `start` URL is built with the very same parameters. What PMS
   /// 1.43.2 was measured to require, and this method does:
   ///
-  /// * **a decision first** — a `start` for a session with no decision is
-  ///   refused with 400 ("session lacking decision");
+  /// * **a decision first** — a client that has never asked for a
+  ///   decision gets 400 ("session lacking decision") on `start`. The
+  ///   requirement is per client, not per session (a client that decided
+  ///   once could start new sessions without one), but asking every time
+  ///   is what makes the URL match the decision returned here;
   /// * **a client profile** — the base profile is picked from
   ///   `X-Plex-Platform`, and there is none for `Linux` or `macOS` (400,
   ///   "Unable to find client profile"); [clientProfileName] (`Generic`

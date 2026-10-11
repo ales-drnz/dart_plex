@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dart_plex/dart_plex.dart';
+import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
 import '_helpers/capturing_client.dart';
@@ -174,6 +175,26 @@ void main() {
     });
   });
 
+  group('PlexNotificationsApi.connectEventSource closing early', () {
+    test('cancelling before the headers arrive aborts the request', () async {
+      final client = _HeldClient();
+      final api = PlexNotificationsApi(testConnection(client)..token = 'tok');
+      final sub = api.connectEventSource().listen((_) {});
+      await client.sent.future;
+      await sub.cancel();
+      expect(api.isEventSourceConnected, isFalse);
+      await expectLater(client.aborted, completes);
+      // The late answer is drained and released, not parsed: no stray
+      // subscription keeping the socket open, no error.
+      client.answer();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(client.released, isTrue);
+      // And a new connection may be opened.
+      final again = api.connectEventSource().listen((_) {});
+      await again.cancel();
+    });
+  });
+
   group('PlexNotificationsApi.connectEventSource request', () {
     test('GETs the eventsource route with the token and Accept header',
         () async {
@@ -194,4 +215,31 @@ String? _titleOf(PlexNotification notification) {
   if (states is! List || states.isEmpty) return null;
   final first = states.first;
   return first is Map ? first['title'] as String? : null;
+}
+
+/// Holds the response until [answer]; records the abort and whether the
+/// body was released (its subscription cancelled).
+class _HeldClient extends http.BaseClient {
+  final sent = Completer<void>();
+  final _response = Completer<http.StreamedResponse>();
+  final _body = StreamController<List<int>>();
+  late Future<void> aborted;
+  bool released = false;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    // Only the first request is held; later ones never answer.
+    if (sent.isCompleted) return Completer<http.StreamedResponse>().future;
+    aborted = (request as http.Abortable).abortTrigger!;
+    sent.complete();
+    return _response.future;
+  }
+
+  void answer() {
+    _body.onCancel = () => released = true;
+    _response.complete(http.StreamedResponse(_body.stream, 200));
+  }
+
+  @override
+  void close() => unawaited(_body.close());
 }

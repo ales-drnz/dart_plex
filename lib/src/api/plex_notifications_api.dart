@@ -12,6 +12,7 @@ import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_events.dart';
 import '../plex_exception.dart';
+import '../transport/plex_cancel_token.dart';
 
 /// `/:/websockets/notifications` and `/:/eventsource/notifications`
 /// — server-push notifications.
@@ -36,6 +37,10 @@ class PlexNotificationsApi {
 
   StreamController<PlexNotification>? _sseController;
   StreamSubscription<String>? _sseSub;
+
+  /// Cancels the EventSource request, including while it is still
+  /// waiting for the response headers.
+  PlexCancelToken? _sseCancel;
 
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.notifications].
   PlexNotificationsApi(this._http);
@@ -162,6 +167,7 @@ class PlexNotificationsApi {
       },
     );
     _sseController = controller;
+    final cancel = _sseCancel = PlexCancelToken();
 
     // Use the connection's streaming GET to consume the SSE body.
     unawaited(() async {
@@ -173,6 +179,7 @@ class PlexNotificationsApi {
           absoluteUrl: false,
           // An event stream can stay quiet for minutes; that is not a stall.
           stallTimeout: false,
+          cancelToken: cancel,
         );
         final buffer = StringBuffer();
         // Decode the body as one continuous stream, not chunk by chunk: a
@@ -204,38 +211,49 @@ class PlexNotificationsApi {
             }
           },
           onError: (Object error, StackTrace stackTrace) {
+            if (cancel.isCancelled) return;
             controller.addError(
-              PlexException(
-                'EventSource error: $error',
-                type: PlexErrorType.connection,
-              ),
+              error is PlexException
+                  ? error
+                  : PlexException(
+                      'EventSource error: $error',
+                      type: PlexErrorType.connection,
+                      cause: error,
+                    ),
               stackTrace,
             );
           },
           onDone: () {
             unawaited(controller.close());
-            _cleanupSse();
+            if (identical(_sseController, controller)) _cleanupSse();
           },
           cancelOnError: false,
         );
       } catch (e, stackTrace) {
+        // Closed before the headers arrived: nothing to report.
+        if (cancel.isCancelled) return;
         controller.addError(
-          PlexException(
-            'EventSource open failed: $e',
-            type: PlexErrorType.connection,
-          ),
+          e is PlexException
+              ? e
+              : PlexException(
+                  'EventSource open failed: $e',
+                  type: PlexErrorType.connection,
+                  cause: e,
+                ),
           stackTrace,
         );
         unawaited(controller.close());
-        _cleanupSse();
+        if (identical(_sseController, controller)) _cleanupSse();
       }
     }());
 
     return controller.stream;
   }
 
-  /// Close the EventSource stream and release resources.
+  /// Close the EventSource stream and release resources — also while it
+  /// is still connecting.
   Future<void> closeEventSource() async {
+    _sseCancel?.cancel();
     await _sseSub?.cancel();
     _cleanupSse();
   }
@@ -252,6 +270,7 @@ class PlexNotificationsApi {
 
   void _cleanupSse() {
     _sseSub = null;
+    _sseCancel = null;
     if (!(_sseController?.isClosed ?? true)) {
       unawaited(_sseController?.close());
     }
