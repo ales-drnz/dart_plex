@@ -196,9 +196,12 @@ def icon_svg():
     chevron = 'M19.142 15.29h-2.39l2.247-3.332-2.247-3.335h2.39l2.248 3.335-2.248 3.332Z'
     x0, y0, x1, y1 = 16.752, 8.623, 21.39, 15.29  # its exact bounding box
     s = 600 / (y1 - y0)  # as tall as mpv_audio_kit's bars
-    # Centred on its box: the chevron's weight is even, its centroid is the
-    # box's centre.
-    tx, ty = 512 - s * (x0 + x1) / 2, 512 - s * (y0 + y1) / 2
+    # The inner vertex (the corner in the middle of its left side) sits on
+    # the disc's centre. Neither geometric centre reads as centred for this
+    # shape: on its box (the centroid) it looked left-heavy, on its
+    # enclosing circle (the thin tip counted like a full corner) right-heavy.
+    vx, vy = 18.999, 11.958  # M19.142,15.29 h-2.39 l2.247,-3.332
+    tx, ty = 512 - s * vx, 512 - s * vy
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" '
             'role="img" aria-label="dart_plex">\n'
             f'<circle cx="512" cy="512" r="512" fill="{NAVY}"/>\n'
