@@ -13,7 +13,7 @@
 <table>
 <tr>
 <td valign="middle" width="90"><img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/dart_plex.png" width="70" alt="logo"></td>
-<td valign="middle"><code>dart_plex</code> is a Dart client for Plex Media Server <code>v1.43.x</code>. It covers libraries, hubs, playlists, audio streaming, playback reporting, search and play queues through typed Dart objects, and handles plex.tv sign-in and server discovery.</td>
+<td valign="middle"><code>dart_plex</code> is a Dart client for Plex Media Server <code>v1.43.x</code>. It covers libraries, hubs, playlists, audio streaming and transcoding, playback reporting, search, play queues and server notifications through typed Dart objects, and handles plex.tv sign-in and server discovery. It runs on <code>package:http</code>, so you choose the HTTP stack, and every call can be cancelled.</td>
 </tr>
 </table>
 
@@ -25,8 +25,15 @@ Add `dart_plex` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_plex: ^0.1.2
+  dart_plex: ^0.2.0
 ```
+
+`package:dart_plex/dart_plex.dart` is the library. File downloads live in a
+separate entrypoint, `package:dart_plex/io.dart`, because they need
+`dart:io` ([22](#22-downloads)).
+
+Coming from 0.1.x? [MIGRATION.md](MIGRATION.md) lists every breaking change
+with what to write instead.
 
 ---
 
@@ -40,7 +47,9 @@ dependencies:
 
     * [1.1 Creating a client](#11-creating-a-client)
     * [1.2 Credentials](#12-credentials)
-    * [1.3 Disposing](#13-disposing)
+    * [1.3 Choosing the HTTP stack](#13-choosing-the-http-stack)
+    * [1.4 Closing](#14-closing)
+    * [1.5 Faking the client in tests](#15-faking-the-client-in-tests)
 
     </details>
 
@@ -70,6 +79,7 @@ dependencies:
     * [4.1 Identity (no auth)](#41-identity-no-auth)
     * [4.2 Full info](#42-full-info)
     * [4.3 Ping](#43-ping)
+    * [4.4 Activities, butler tasks and settings](#44-activities-butler-tasks-and-settings)
 
     </details>
 
@@ -83,6 +93,7 @@ dependencies:
     * [5.5 Children and leaves](#55-children-and-leaves)
     * [5.6 Genres](#56-genres)
     * [5.7 Filters, albums, folders, categories](#57-filters-albums-folders-categories)
+    * [5.8 Recently added and the A-Z index](#58-recently-added-and-the-a-z-index)
 
     </details>
 
@@ -91,7 +102,7 @@ dependencies:
 
     * [6.1 Listing and counting](#61-listing-and-counting)
     * [6.2 Creating a playlist](#62-creating-a-playlist)
-    * [6.3 Adding and removing items](#63-adding-and-removing-items)
+    * [6.3 Adding, removing and moving items](#63-adding-removing-and-moving-items)
     * [6.4 Renaming and deleting](#64-renaming-and-deleting)
 
     </details>
@@ -101,6 +112,7 @@ dependencies:
 
     * [7.1 Hub search](#71-hub-search)
     * [7.2 Legacy flat search](#72-legacy-flat-search)
+    * [7.3 Section search](#73-section-search)
 
     </details>
 
@@ -108,18 +120,20 @@ dependencies:
     <summary><a href="#8-playback-reporting"><b>8. Playback reporting</b></a></summary>
 
     * [8.1 Timeline heartbeat](#81-timeline-heartbeat)
-    * [8.2 Scrobble and unscrobble](#82-scrobble-and-unscrobble)
-    * [8.3 Rate and favourites](#83-rate-and-favourites)
+    * [8.2 What PMS counts as a play](#82-what-pms-counts-as-a-play)
+    * [8.3 Scrobble and unscrobble](#83-scrobble-and-unscrobble)
+    * [8.4 Rate and favourites](#84-rate-and-favourites)
 
     </details>
 
     <details>
     <summary><a href="#9-audio-streaming"><b>9. Audio streaming</b></a></summary>
 
-    * [9.1 Universal transcode URL](#91-universal-transcode-url)
+    * [9.1 Audio transcoding](#91-audio-transcoding)
     * [9.2 Direct file URL](#92-direct-file-url)
     * [9.3 Transcode session lifecycle](#93-transcode-session-lifecycle)
     * [9.4 Lyrics](#94-lyrics)
+    * [9.5 Loudness](#95-loudness)
 
     </details>
 
@@ -146,6 +160,7 @@ dependencies:
 
     * [12.1 Building a transcoded URL](#121-building-a-transcoded-url)
     * [12.2 Fetching bytes](#122-fetching-bytes)
+    * [12.3 Artwork versions and cache keys](#123-artwork-versions-and-cache-keys)
 
     </details>
 
@@ -199,16 +214,47 @@ dependencies:
     <summary><a href="#18-error-handling"><b>18. Error handling</b></a></summary>
 
     * [18.1 PlexException and PlexErrorType](#181-plexexception-and-plexerrortype)
-    * [18.2 Retriable vs terminal](#182-retriable-vs-terminal)
+    * [18.2 Classifying a failure](#182-classifying-a-failure)
     * [18.3 Auth invalidation](#183-auth-invalidation)
 
     </details>
 
     <details>
-    <summary><a href="#19-escape-hatch"><b>19. Escape hatch</b></a></summary>
+    <summary><a href="#19-cancellation-and-retries"><b>19. Cancellation and retries</b></a></summary>
 
-    * [19.1 Raw request](#191-raw-request)
-    * [19.2 Raw bytes](#192-raw-bytes)
+    * [19.1 Cancelling requests](#191-cancelling-requests)
+    * [19.2 Retry policy](#192-retry-policy)
+
+    </details>
+
+    <details>
+    <summary><a href="#20-paging"><b>20. Paging</b></a></summary>
+
+    * [20.1 How Plex pages](#201-how-plex-pages)
+    * [20.2 Walking every page](#202-walking-every-page)
+
+    </details>
+
+    <details>
+    <summary><a href="#21-notifications-and-events"><b>21. Notifications and events</b></a></summary>
+
+    * [21.1 Connecting](#211-connecting)
+    * [21.2 Typed events](#212-typed-events)
+
+    </details>
+
+    <details>
+    <summary><a href="#22-downloads"><b>22. Downloads</b></a></summary>
+
+    * [22.1 Downloading to a file](#221-downloading-to-a-file)
+
+    </details>
+
+    <details>
+    <summary><a href="#23-escape-hatch"><b>23. Escape hatch</b></a></summary>
+
+    * [23.1 Raw request](#231-raw-request)
+    * [23.2 Raw bytes and streams](#232-raw-bytes-and-streams)
 
     </details>
 *   [Project background](#project-background)
@@ -220,9 +266,9 @@ dependencies:
 <table>
 <tr>
 <td valign="middle" width="48"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/package.png" width="32"></td>
-<td valign="middle" width="45%"><b>Pure Dart</b><br>no native plugin, no Flutter dependency. Runs on every Dart-supported platform.</td>
+<td valign="middle" width="45%"><b>Pure Dart</b><br>no native plugin, no Flutter dependency. The main library also runs on the web; only the file helpers in <code>io.dart</code> need <code>dart:io</code>.</td>
 <td valign="middle" width="48"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/shield-check.png" width="32"></td>
-<td valign="middle" width="45%"><b>Typed DTOs</b><br>every response is a typed Dart object (libraries, items, media, streams, hubs, users), each with a <code>.raw</code> map so new server fields are never lost.</td>
+<td valign="middle" width="45%"><b>Typed models</b><br>every response is a typed Dart object (libraries, items, media, streams, hubs, server info, history, events), each with a <code>.raw</code> map so new server fields are never lost.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/key-round.png" width="32"></td>
@@ -234,13 +280,25 @@ dependencies:
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/layers.png" width="32"></td>
 <td valign="middle"><b>Stateful façade</b><br>one <code>PlexClient</code> holds your identity, server and token. Every sub-API works through it, so you set things up once.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/audio-lines.png" width="32"></td>
-<td valign="middle"><b>Audio streaming</b><br><code>streaming.universalAudioUrl()</code> builds <code>.m3u8</code> (HLS) or <code>.mpd</code> (DASH) manifest URLs; <code>directFileUrl()</code> gives the zero-transcode original.</td>
+<td valign="middle"><b>Audio streaming</b><br><code>streaming.startAudioTranscode()</code> starts an HLS or DASH transcode the way PMS accepts it, bitrate cap included; <code>directFileUrl()</code> gives the zero-transcode original.</td>
+</tr>
+<tr>
+<td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/sliders-horizontal.png" width="32"></td>
+<td valign="middle"><b>Your HTTP stack</b><br>any <code>http.Client</code>: the default <code>dart:io</code> one, <code>cupertino_http</code> or <code>cronet_http</code> for HTTP/2 and the system proxy, a <code>MockClient</code> in tests.</td>
+<td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/cpu.png" width="32"></td>
+<td valign="middle"><b>Off the UI isolate</b><br>large responses are inflated, JSON-decoded and parsed into models on a background isolate, so big pages barely stall the calling isolate.</td>
+</tr>
+<tr>
+<td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/zap.png" width="32"></td>
+<td valign="middle"><b>Cancellation and retries</b><br><code>withCancelToken()</code> makes every call of a page cancellable; an opt-in <code>PlexRetryPolicy</code> resends idempotent requests after transient failures.</td>
+<td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/activity.png" width="32"></td>
+<td valign="middle"><b>Live events</b><br>the server's notification stream decoded into a sealed <code>PlexEvent</code> hierarchy: play states, library changes, scans.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/triangle-alert.png" width="32"></td>
-<td valign="middle"><b>Semantic errors</b><br>every failure is a <code>PlexException</code> you can branch on (auth, not found, timeout, connection), never a raw network error in your code.</td>
+<td valign="middle"><b>Semantic errors</b><br>every failure is a <code>PlexException</code> you can branch on (auth, not found, network, transient, cancelled), never a raw network error in your code.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/terminal.png" width="32"></td>
-<td valign="middle"><b>Escape hatch</b><br><code>client.request&lt;T&gt;()</code> and <code>client.requestBytes()</code> for endpoints not yet covered by the typed sub-APIs.</td>
+<td valign="middle"><b>Escape hatch</b><br><code>client.request&lt;T&gt;()</code>, <code>requestBytes()</code> and <code>requestStream()</code> for endpoints not yet covered by the typed sub-APIs.</td>
 </tr>
 </table>
 
@@ -258,7 +316,7 @@ Future<void> main() async {
       product: 'MyApp',
       version: '1.0.0',
       device: 'iPhone',
-      deviceName: "My iPhone",
+      deviceName: 'My iPhone',
       platform: 'iOS',
     ),
   );
@@ -283,18 +341,19 @@ Future<void> main() async {
     sectionId: musicLib.id,
     type: PlexMetadataType.album,
     sort: 'titleSort:asc',
-    size: 50,
   );
 
-  // 4. Play a track.
-  final track = albums.items.first;
-  final url = plex.streaming.universalAudioUrl(
-    ratingKey: track.ratingKey,
-    protocol: 'hls',
-    audioCodec: 'aac',
-    maxAudioBitrate: 320,
+  // 4. Play the first track of the first album.
+  final tracks = await plex.library.children(albums.items.first.ratingKey);
+  final transcode = await plex.streaming.startAudioTranscode(
+    ratingKey: tracks.first.ratingKey,
+    session: 'a-uuid-per-playback',
+    maxBitrateKbps: 192,
   );
-  // hand `url` to your audio engine
+  print(transcode.url); // hand this to your audio engine
+
+  // 5. Release the HTTP client when you are done.
+  plex.close();
 }
 ```
 
@@ -313,14 +372,27 @@ final plex = PlexClient(
     product: 'MyApp',
     version: '1.0.0',
     device: 'iPhone',
-    deviceName: "My iPhone",
+    deviceName: 'My iPhone',
     platform: 'iOS',
   ),
 );
 ```
 
-The constructor optionally accepts a custom `dio: Dio()` instance plus
-`connectTimeout` and `receiveTimeout`. By default it owns its own Dio.
+The other constructor arguments are optional:
+
+| Argument | Default | |
+| :--- | :--- | :--- |
+| `httpClient` | a `dart:io` client owned by `PlexClient` | any `http.Client`, see [1.3](#13-choosing-the-http-stack) |
+| `connectTimeout` | 15 s | the handshake (default client) and, with `receiveTimeout`, the wait for response headers |
+| `receiveTimeout` | 30 s | also bounds every pause inside a response body |
+| `jsonIsolateThreshold` | 50 KB | responses this large or larger are decoded and parsed on a background isolate |
+| `retryPolicy` | `PlexRetryPolicy.none` | see [19.2](#192-retry-policy) |
+
+Above `jsonIsolateThreshold` the JSON decode and the walk that builds the
+typed models both leave the caller's isolate; gzip bodies received by the
+default client are inflated on that same background isolate. Pass `0` to
+send every response there, or a very large value to keep everything on
+the caller.
 
 #### 1.2 Credentials
 
@@ -338,16 +410,62 @@ Optional fields:
   to declare extra transcode targets the server should support for
   this client, e.g.
   `'add-transcode-target(type=musicProfile&context=streaming&protocol=hls&container=mpegts&audioCodec=aac,mp3)'`.
+  For audio, `startAudioTranscode()` sends its own ([9.1](#91-audio-transcoding)).
 
-#### 1.3 Disposing
+#### 1.3 Choosing the HTTP stack
+
+`PlexClient` speaks through `package:http`. Without an `httpClient` it
+creates a `dart:io` client of its own. Inject another one to change the
+stack, for example a `CupertinoClient` (`package:cupertino_http`) on
+Apple platforms or a `CronetClient` (`package:cronet_http`) on Android,
+for HTTP/2 and the system proxy:
 
 ```dart
-plex.disconnect(); // clears baseUrl + token
+final plex = PlexClient(
+  credentials: credentials,
+  httpClient: myHttpClient, // e.g. CupertinoClient.defaultSessionConfiguration()
+);
 ```
 
-`PlexClient` doesn't own any native resources, so a `disconnect()` is
-sufficient. There's no `dispose()` to call. If you injected a custom
-Dio, dispose it yourself if it owns native HTTP connections.
+Native clients inflate gzip on their own threads; the background
+isolate still decodes and parses the JSON.
+
+#### 1.4 Closing
+
+```dart
+plex.disconnect(); // clears baseUrl + token, the client stays usable
+plex.close();      // releases the HTTP client
+```
+
+`close()` closes the HTTP client that `PlexClient` created; requests made
+afterwards fail with `PlexErrorType.state`. An `httpClient` you injected
+is yours: `close()` leaves it open, close it yourself.
+
+#### 1.5 Faking the client in tests
+
+The models are `final` classes, built only by the library. `PlexClient`
+and the sub-API classes are deliberately left open, so an app's tests can
+`implements PlexClient` (or `PlexLibraryApi`, …) or use a mocking
+library. To test against canned HTTP answers instead, inject a
+`MockClient`:
+
+```dart
+import 'package:dart_plex/dart_plex.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
+final plex = PlexClient(
+  credentials: credentials,
+  httpClient: MockClient(
+    (request) async => http.Response(
+      '{"MediaContainer":{"size":0,"Directory":[]}}',
+      200,
+      headers: {'content-type': 'application/json'},
+    ),
+  ),
+  jsonIsolateThreshold: 0, // parse every response off-isolate too
+);
+```
 
 ---
 
@@ -376,7 +494,7 @@ status. The token is **not** automatically applied to the client; call
 
 ```dart
 // 1. Generate a PIN.
-final pin = await plex.account.createPin(strong: true);
+final pin = await plex.account.createPin();
 print('Open https://plex.tv/link and enter ${pin.code}');
 
 // 2. Poll until the user authorises the device.
@@ -384,15 +502,15 @@ while (true) {
   await Future<void>.delayed(const Duration(seconds: 2));
   final fresh = await plex.account.pollPin(pin.id);
   if (fresh.isAuthenticated) {
-    plex.setToken(fresh.authToken!);
+    plex.setToken(fresh.authToken);
     break;
   }
   if (fresh.isExpired) throw StateError('PIN expired');
 }
 ```
 
-`strong: true` opts into JWT-grade tokens (recommended). The pin expires
-after ~15 minutes.
+`createPin()` asks for a strong (JWT-grade) PIN by default; pass
+`strong: false` for the legacy kind. The pin expires after ~15 minutes.
 
 #### 2.3 Account info
 
@@ -422,15 +540,13 @@ calls would throw `PlexException(type: PlexErrorType.auth)`.
 
 ```dart
 final servers = await plex.account.fetchResources(
-  includeHttps: true,
-  includeRelay: true,
-  includeIPv6: true,
-  serverOnly: true,
+  includeRelay: false,
 );
 ```
 
-`serverOnly: true` (default) filters resources to those whose
-`provides` includes `"server"`, dropping player and client resources.
+`includeHttps`, `includeRelay` and `includeIPv6` are on by default. `serverOnly: true`
+(default) filters resources to those whose `provides` includes
+`"server"`, dropping player and client resources.
 
 Each `PlexResource` carries:
 
@@ -482,20 +598,25 @@ instantiate two `PlexClient`s with the same `PlexCredentials`.
 
 ```dart
 final id = await plex.server.identity();
-// {machineIdentifier: …, version: …, apiVersion: …}
+print('${id.machineIdentifier} ${id.version} claimed=${id.claimed}');
 ```
 
 `/identity` doesn't require a token. Useful for reachability checks
-before re-authenticating.
+before re-authenticating. Returns a `PlexServerIdentity`.
 
 #### 4.2 Full info
 
 ```dart
 final info = await plex.server.info();
-// machineIdentifier, version, platform, transcoderAudio, myPlex, …
+print('${info.friendlyName} ${info.version} on ${info.platform}');
+print('Plex Pass: ${info.myPlexSubscription}, '
+    'sonic analysis: ${info.musicAnalysis}');
 ```
 
-Same as `identity()` but with the full root MediaContainer.
+The root MediaContainer as a `PlexServerInfo`: everything `identity()`
+has plus `friendlyName`, `platform`, `myPlex`, `myPlexUsername`,
+`transcoderAudio`, `transcoderLyrics`, `allowSync`, `updatedAt`, and the
+rest in `raw`.
 
 #### 4.3 Ping
 
@@ -505,6 +626,22 @@ if (await plex.server.ping()) { /* server reachable */ }
 
 Swallows all transport errors. Use `identity()` directly when you need
 to inspect failures.
+
+#### 4.4 Activities, butler tasks and settings
+
+```dart
+final running = await plex.activities.list(); // List<PlexActivity>
+for (final a in running) {
+  print('${a.title} ${a.progress ?? 0}% cancellable=${a.cancellable}');
+}
+
+final tasks = await plex.butler.tasks(); // List<PlexButlerTask>
+final settings = await plex.preferences.all(); // List<PlexSetting>
+final name = await plex.preferences.byId('FriendlyName');
+print('${tasks.length} tasks, ${settings.length} settings, ${name?.value}');
+```
+
+Each model keeps the server's entry in `raw`.
 
 ---
 
@@ -529,8 +666,8 @@ for (final s in sections) {
 final page = await plex.library.allByType(
   sectionId: musicLib.id,
   type: PlexMetadataType.album,
-  start: 0,
-  size: 50,
+  start: 100,
+  size: 100,
   sort: 'titleSort:asc',
 );
 print('Got ${page.items.length} of ${page.totalSize}');
@@ -626,19 +763,50 @@ if (metadata != null) {
 }
 ```
 
-Returns `null` on 404. The DTO carries `media`, `genres`, `moods`,
-`styles`, plus `raw` for fields not promoted to typed properties.
+Returns `null` when the answer holds no item; a rating key the server
+does not know throws a `PlexException` whose `isNotFound` is true. The
+model carries `media` (with parts and
+streams), `genres`, `moods`, `styles`, counts such as `leafCount`,
+`childCount` and `viewedLeafCount`, dates such as `addedAt`,
+`lastViewedAt` and `originallyAvailableAt`, plus `raw` for fields not
+promoted to typed properties. The full item is also where the streams,
+and so `audioStream` and its loudness ([9.5](#95-loudness)), are; list
+responses usually leave them out.
 
 #### 5.5 Children and leaves
 
 ```dart
-final tracks = await plex.library.children('albumId');
-final allTracksInArtist = await plex.library.allLeaves('artistId');
+// An album's tracks, an artist's albums, a season's episodes.
+final tracks = await plex.library.children(album.ratingKey);
+
+// Sorted and paged.
+final albumsNewestFirst = await plex.library.children(
+  artist.ratingKey,
+  sort: 'year:desc',
+  start: 0,
+  size: 20,
+);
+
+// How many, without transferring them.
+final albumCount = await plex.library.countChildren(artist.ratingKey);
+
+// Every track of an artist in album order, in one request per page.
+final artistTracks = await plex.library.grandchildren(
+  artist.ratingKey,
+  start: 0,
+  size: 100,
+);
+
+// Every leaf under an item (tracks of an artist, episodes of a show).
+final leaves = await plex.library.allLeaves(artist.ratingKey, size: 100);
 ```
 
-`children()` returns direct descendants (album to tracks, artist to
-albums, season to episodes). `allLeaves()` returns every leaf-level
-item recursively, useful for "play artist" or "play show".
+Without `size`, `children()`, `grandchildren()` and `allLeaves()` answer
+every row; with it they read one page, and a page shorter than `size` is
+the last ([20](#20-paging)). `children()` takes the section sort syntax
+(`'year:desc'`, `'titleSort'`, verified on PMS 1.43.2). `allLeaves()` has
+no `sort`: PMS 1.43.2 ignores it there and answers in library order.
+`countChildren()` reads `totalSize` of an empty page.
 
 #### 5.6 Genres
 
@@ -700,12 +868,33 @@ sort and filter machinery of `allByType`:
 ```dart
 final paged = await plex.library.albums(
   sectionId: musicLib.id,
-  start: 0,
   size: 100,
 );
 final folders = await plex.library.folderLocations(sectionId: musicLib.id);
 final cats = await plex.library.categories(sectionId: photoLib.id);
 ```
+
+#### 5.8 Recently added and the A-Z index
+
+```dart
+// Newest first, of one section or of the whole server.
+final newInMusic = await plex.library.recentlyAdded(
+  sectionId: musicLib.id,
+  size: 20,
+);
+final newAnywhere = await plex.library.recentlyAdded(size: 20);
+
+// The letters a section's titles start with, for an A-Z scrubber.
+final letters = await plex.library.firstCharacters(
+  sectionId: musicLib.id,
+  type: '${PlexMetadataType.album.value}',
+);
+```
+
+In a music section `recentlyAdded()` answers albums (verified on PMS
+1.43.2, which ignores a `type` asking for tracks), so it takes no type.
+`firstCharacters()` calls `/library/sections/{id}/firstCharacter`; jump to
+a letter with `PlexFilter.firstCharacter('A')` on `allByType()`.
 
 ---
 
@@ -714,19 +903,32 @@ final cats = await plex.library.categories(sectionId: photoLib.id);
 #### 6.1 Listing and counting
 
 ```dart
-final audio = await plex.playlists.list(type: 'audio', start: 0, size: 50);
-final count = await plex.playlists.count(type: 'audio');
+final audio = await plex.playlists.list(type: 'audio', size: 100);
+
+// Narrowed on the server: title contains "mix" (case-insensitive),
+// and rated.
+final mixes = await plex.playlists.list(
+  type: 'audio',
+  filters: [PlexFilter.titleContains('mix'), PlexFilter.rated()],
+  sort: 'titleSort',
+);
+final count = await plex.playlists.count(
+  type: 'audio',
+  filters: [PlexFilter.titleContains('mix')],
+);
 ```
 
-`type` is `'audio' | 'video' | 'photo'`. Pass `smart: true` to filter
-to smart playlists. Each entry is a `PlexMetadata` of
-`PlexMetadataType.playlist`.
+`type` is `'audio' | 'video' | 'photo'`; `smart: true` or `false` keeps
+only smart or regular playlists. `filters` works as on `allByType()`:
+verified on PMS 1.43.2, `/playlists` honours `title` (a
+case-insensitive "contains") and `userRating` filters together, plus
+`sort`, so there is no need to scan pages and filter on the client. Each
+entry is a `PlexMetadata` of `PlexMetadataType.playlist`.
 
 #### 6.2 Creating a playlist
 
 ```dart
-final identity = await plex.server.identity();
-final machineId = identity['machineIdentifier'] as String;
+final machineId = (await plex.server.identity()).machineIdentifier;
 
 final playlist = await plex.playlists.create(
   title: 'My Mix',
@@ -739,7 +941,7 @@ final playlist = await plex.playlists.create(
 Plex requires the server's `machineIdentifier` to build the playlist
 URI. Pass an empty `itemRatingKeys` to create an empty playlist.
 
-#### 6.3 Adding and removing items
+#### 6.3 Adding, removing and moving items
 
 ```dart
 await plex.playlists.addItems(
@@ -748,19 +950,27 @@ await plex.playlists.addItems(
   itemRatingKeys: const ['99999'],
 );
 
-// To remove, find the playlistItemID from .raw on each entry returned
-// by .items().
-final items = await plex.playlists.items(playlist.ratingKey);
-final entryId = items.first.raw['playlistItemID'].toString();
+final entries = await plex.playlists.items(playlist.ratingKey);
+
+// Remove one entry.
+final added = entries.firstWhere((e) => e.ratingKey == '99999');
 await plex.playlists.removeItem(
   playlistId: playlist.ratingKey,
-  playlistItemId: entryId,
+  playlistItemId: added.playlistItemId!,
+);
+
+// Move the last entry to the start (leave afterPlaylistItemId out).
+await plex.playlists.moveItem(
+  playlistId: playlist.ratingKey,
+  playlistItemId: entries.last.playlistItemId!,
 );
 ```
 
-> ⚠️ `removeItem` expects the **playlistItemID**, not the underlying
-> rating key. Reading it from `items.raw[…]` is currently the only way;
-> a typed field will be added when promoted out of `.raw`.
+`removeItem` and `moveItem` take the **entry** id,
+`PlexMetadata.playlistItemId`, not the track's rating key, so a track
+listed twice loses or moves only the entry you name. It is set on items
+read from `playlists.items()`. Pass `start` and `size` to `items()` to
+read one page of a long playlist.
 
 #### 6.4 Renaming and deleting
 
@@ -779,7 +989,6 @@ await plex.playlists.delete('123');
 final hubs = await plex.search.hubs(
   query: 'pink floyd',
   sectionId: musicLib.id, // optional, scope to a single library
-  limit: 10,
 );
 
 for (final hub in hubs) {
@@ -791,16 +1000,30 @@ for (final hub in hubs) {
 ```
 
 Modern type-as-you-go search; returns one `PlexHub` per result
-category (artists, albums, tracks, …).
+category (artists, albums, tracks, …). `limit` defaults to 10 per hub.
 
 #### 7.2 Legacy flat search
 
 ```dart
-final results = await plex.search.flat(query: 'pink floyd', limit: 30);
+final results = await plex.search.flat(query: 'pink floyd', limit: 50);
 ```
 
 Older endpoint; returns a flat `List<PlexMetadata>` mixing all
 categories. Prefer `hubs()` when available.
+
+#### 7.3 Section search
+
+```dart
+final tracks = await plex.search.section(
+  sectionId: musicLib.id,
+  query: 'money',
+  type: PlexMetadataType.track,
+  limit: 20,
+);
+```
+
+One section, one kind of item, as a flat list: the shape for a "tracks
+matching…" view. `type` is required; PMS 1.43.2 answers 400 without it.
 
 ---
 
@@ -811,29 +1034,58 @@ categories. Prefer `hubs()` when available.
 ```dart
 await plex.playback.timeline(
   ratingKey: track.ratingKey,
-  state: PlexPlaybackApi.statePlaying, // 'playing' | 'paused' | 'stopped' | 'buffering'
-  timeMs: 42_000,
-  durationMs: 240_000,
-  playQueueItemId: 'optional-pq-id',
-  continuing: false,
+  playState: PlexPlayState.playing, // playing | paused | buffering | stopped
+  timeMs: 42000,
+  durationMs: track.durationMs!,
+  playQueueItemID: queueItemId, // only when playing a server play queue
 );
 ```
 
 Plex recommends sending a timeline every 10 s on LAN, 20 s on
 cellular, plus one on every state change.
 
+`durationMs` must be the item's real length: the call throws an
+`ArgumentError` for a `durationMs` of 0 or less (PMS never counts such a
+play) or a negative `timeMs`. `playQueueItemID` is the entry id of a
+server-side play queue ([14](#14-play-queues)); leave it null otherwise.
+`PlexPlayState.unknown` is refused. The `String state` argument, the
+`PlexPlaybackApi.state*` constants and the `String playQueueItemId` are
+deprecated.
+
 `continuing: true` tells the server "I'm about to start a different
 track in the same playback flow", so Plex won't reap the current
 transcode session, which matters during gapless prefetch.
 
-#### 8.2 Scrobble and unscrobble
+#### 8.2 What PMS counts as a play
+
+Measured on PMS 1.43.2 (music, `viewCount` and the history):
+
+* The server clocks the session itself. Reports must follow real time:
+  a `playing` at 0 and a `stopped` at the end two seconds later counts
+  nothing, however far `time` says the playhead moved.
+* About half the track must be heard: stopping at 50% of a 60 s track
+  counted, at 40% it did not.
+* With `duration=0` nothing is ever counted, which is why `timeline()`
+  refuses it.
+* Very short tracks are never counted (a 3 s track played in full was
+  not).
+
+A counted play raises `viewCount`, sets `lastViewedAt` and adds an entry
+to the playback history ([11.2](#112-playback-history)).
+
+#### 8.3 Scrobble and unscrobble
 
 ```dart
-await plex.playback.scrobble(ratingKey);   // mark as watched or listened
-await plex.playback.unscrobble(ratingKey); // mark as unwatched
+await plex.playback.scrobble(ratingKey);   // mark as played
+await plex.playback.unscrobble(ratingKey); // mark as unplayed
 ```
 
-#### 8.3 Rate and favourites
+`scrobble()` raises `viewCount` without adding a history entry: use it
+for "mark as played", and `timeline()` reports to record listening.
+`unscrobble()` clears `viewCount` and keeps the history. Both, like
+`rate()`, are sent as `PUT`.
+
+#### 8.4 Rate and favourites
 
 ```dart
 await plex.playback.rate(ratingKey: ratingKey, rating: 7.5); // 0..10
@@ -841,49 +1093,77 @@ await plex.playback.setFavorite(ratingKey: ratingKey, isFavorite: true);
 ```
 
 Plex does not have a separate "is favourite" flag; favourites are
-encoded as `userRating == 10`. `setFavorite` is sugar around `rate`.
-To list them, filter a section with `PlexFilter.ratingAbove(9)`
-([5.2](#52-items-by-type)) — there is no favourites endpoint.
+encoded as `userRating == 10`. `setFavorite` is sugar around `rate`, and
+`PlexMetadata.isFavorite` reads it back. To list them, filter a section
+with `PlexFilter.ratingAbove(9)` ([5.2](#52-items-by-type)) — there is
+no favourites endpoint.
 
 ---
 
 ### 9. Audio streaming
 
-These methods primarily **build URLs**. They don't fetch the audio
-stream themselves; hand the URL to your audio engine (mpv, AVPlayer,
-ExoPlayer, …). The `X-Plex-Token` is appended as a query parameter so
-segment requests work without custom headers.
+`startAudioTranscode()` talks to the server once, to make its decision;
+the other methods only **build URLs**. Neither fetches the audio itself:
+hand the URL to your audio engine (mpv, AVPlayer, ExoPlayer, …). The
+`X-Plex-Token` is in the URL's query so segment requests work without
+custom headers.
 
-#### 9.1 Universal transcode URL
+#### 9.1 Audio transcoding
 
 ```dart
-final url = plex.streaming.universalAudioUrl(
+final transcode = await plex.streaming.startAudioTranscode(
   ratingKey: track.ratingKey,
-  protocol: 'hls',          // 'hls' | 'dash' | 'http'
-  container: 'mpegts',      // for HLS use 'mpegts'; for direct mp3 use 'mp3'
-  audioCodec: 'aac',
-  maxAudioBitrate: 320,     // kbps; pass null to let the server pick
-  audioChannels: 2,
-  session: 'my-uuid',       // stable per playback session
-  directPlay: false,
-  directStream: true,
+  session: 'my-uuid',   // stable per playback session
+  protocol: 'dash',     // 'hls' (default, an .m3u8) or 'dash' (an .mpd)
+  maxBitrateKbps: 128,  // the target codec is AAC unless audioCodec says otherwise
 );
+if (transcode.decision.isPlayable) {
+  print(transcode.url); // hand to the player
+}
 ```
 
-The returned URL extension is derived from `protocol`: `.m3u8` for
-HLS, `.mpd` for DASH, the supplied `container` for HTTP.
+What PMS 1.43.2 was measured to require, and this method does for you:
+
+* **a decision first**: a `start` for a session with no decision is
+  refused with 400, so the method calls
+  `/music/:/transcode/universal/decision` for `session` and builds the
+  `start` URL from the same parameters;
+* **a client profile**: PMS picks one from `X-Plex-Platform` and has none
+  for `Linux` or `macOS`; `clientProfileName` (`'Generic'` by default)
+  names one explicitly, so any platform works;
+* **a transcode target** in `X-Plex-Client-Profile-Extra`;
+* **the bitrate cap as a profile limitation**: `maxBitrateKbps` becomes
+  an `add-limitation` on `audio.bitrate` (96 gave a 96 kbps stream). The
+  cap cannot go above the profile's own ceiling (256 kbps AAC for
+  `Generic`).
+
+The URL also carries the client identity, since the player opens it
+without this client's headers. When `decision.isPlayable` is false the
+URL will not play either. Stop sessions you no longer play
+([9.3](#93-transcode-session-lifecycle)): PMS ties one client's
+transcodes together, and a new session's bitrate cap was seen not to
+apply while other transcodes of the same client were still open.
+
+`PlexStreamingApi.musicProfileExtra()` builds the same profile-extra
+value if you drive the decision yourself. `universalAudioUrl()` is
+deprecated: PMS 1.43.2 refuses the URL it builds, and its
+`maxAudioBitrate` has no effect.
 
 #### 9.2 Direct file URL
 
 ```dart
 final (url, ext) = plex.streaming.directFileUrl(
   partKey: track.media.first.parts.first.key!,
-  download: true,
 );
 ```
 
-Best-quality, zero-server-CPU URL. Use for downloads and for clients
-that can decode whatever the file contains.
+Best-quality, zero-server-CPU URL. Use for downloads ([22](#22-downloads))
+and for clients that can decode whatever the file contains.
+
+PMS 1.43.2 serves an MP3 part **without its ID3v2 tag** (the body is the
+file minus the tag), so a downloaded MP3 carries no embedded tags or
+cover and is a little shorter than `PlexPart.size`. Take metadata and
+artwork from the server, not from the downloaded file.
 
 #### 9.3 Transcode session lifecycle
 
@@ -892,14 +1172,21 @@ await plex.streaming.pingUniversal(sessionId);  // keep alive
 await plex.streaming.stopUniversal(sessionId);  // teardown
 ```
 
-Plex reaps inactive sessions after ~2 minutes. Ping every 30 s
-while a player is paused but the session must stay warm.
+Plex reaps inactive sessions after ~2 minutes. Ping every 30 s while a
+player is paused but the session must stay warm; `pingUniversal()`
+throws a `PlexException` of type `notFound` once the session is gone.
+`stopUniversal()` returns normally on 404: a session already stopped,
+timed out, or never started (PMS creates a DASH session lazily, with its
+first segment) is already the state you asked for.
 
 #### 9.4 Lyrics
 
 ```dart
-// streamKey is the .key of a track's Stream entry with streamType == 4.
-final lyrics = await plex.streaming.lyrics(streamKey: streamKey);
+// The lyrics stream is a track's stream with streamType 4.
+final full = await plex.library.item(track.ratingKey);
+final lyricsStream = full!.media.first.parts.first.streams
+    .firstWhere((s) => s.isLyrics);
+final lyrics = await plex.streaming.lyrics(streamKey: lyricsStream.key!);
 ```
 
 Returns the lyrics body (LRC or plain text) or `null` if not
@@ -911,6 +1198,25 @@ wins if the file carries one (and is stripped, so the first
 `[mm:ss.xx]` still starts the line), then the response's `charset` if
 Plex sends one, then a strict UTF-8 attempt that falls back to Latin-1.
 So the string you get back is already text, whatever the file was.
+
+#### 9.5 Loudness
+
+```dart
+final full = await plex.library.item(track.ratingKey);
+final audio = full?.audioStream;
+if (audio != null && audio.hasLoudness) {
+  print('track gain ${audio.gain} dB, album gain ${audio.albumGain} dB, '
+      'peak ${audio.peak}, ${audio.loudness} LUFS');
+}
+```
+
+An analysed audio stream carries `gain`, `albumGain`, `peak`,
+`albumPeak`, `loudness` (LUFS) and `lra` (LU). They come from the
+server's own analysis of the file, so they survive a transcode that
+drops the file's ReplayGain tags: read them from the original stream
+and apply the gain to the transcoded audio. `audioStream` is the
+selected audio stream of the first part; streams are in the full item
+from `library.item()`, not in list responses.
 
 ---
 
@@ -947,7 +1253,7 @@ final decision = await plex.streaming.decisionUniversal(
     // global PlexCredentials.clientProfileExtra.
     'X-Plex-Client-Profile-Extra':
         'add-transcode-target(type=videoProfile&context=streaming'
-        '&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)',
+            '&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)',
   },
 );
 
@@ -967,8 +1273,6 @@ if (decision.isDirect) {
 ```dart
 final url = plex.streaming.universalVideoUrl(
   ratingKey: ratingKey,
-  protocol: 'hls',
-  container: 'mpegts',
   videoResolution: '1920x1080',
   videoBitrate: 8000,
   audioBitrate: 256,
@@ -979,8 +1283,9 @@ final url = plex.streaming.universalVideoUrl(
 );
 ```
 
-The URL extension is derived from `protocol`: `.m3u8` for HLS, `.mpd`
-for DASH, the container otherwise. Bandwidth is in kbps.
+`protocol` (default `'hls'`) and `container` (default `'mpegts'`) pick
+the target. The URL extension is derived from `protocol`: `.m3u8` for
+HLS, `.mpd` for DASH, the container otherwise. Bandwidth is in kbps.
 
 #### 10.3 Session lifecycle
 
@@ -1003,12 +1308,12 @@ starting a new transcode when the user is already streaming.
 final sessions = await plex.sessions.active();
 for (final s in sessions) {
   print('${s.user?.title} → ${s.metadata.title}'
-        ' (${s.player?.state}, ${s.viewOffsetMs} ms,'
-        ' ${s.transcodeSession == null ? 'direct' : 'transcode'})');
+      ' (${s.player?.state}, ${s.viewOffsetMs} ms,'
+      ' ${s.transcodeSession == null ? 'direct' : 'transcode'})');
 }
 ```
 
-Each [`PlexSession`] carries the full [`PlexMetadata`] of the item
+Each `PlexSession` carries the full `PlexMetadata` of the item
 being played plus `user`, `player`, `transcodeSession` and a
 `sessionId` you can pass to [11.3](#113-terminating-a-session).
 
@@ -1018,15 +1323,21 @@ being played plus `user`, `player`, `transcodeSession` and a
 final history = await plex.sessions.history(
   accountId: 1,
   mindate: DateTime.now()
-      .subtract(const Duration(days: 30))
-      .millisecondsSinceEpoch ~/ 1000,
+          .subtract(const Duration(days: 30))
+          .millisecondsSinceEpoch ~/
+      1000,
   size: 100,
   sort: 'viewedAt:desc',
 );
+print('${history.items.length} of ${history.totalSize}');
+for (final h in history.items) {
+  print('${h.viewedAt} ${h.grandparentTitle} - ${h.title}');
+}
 ```
 
-Returns raw maps (`viewedAt`, `ratingKey`, `accountID`, `deviceID`)
-so callers stay flexible. Promote a typed DTO when usage justifies it.
+A page of `PlexHistoryEntry` (`historyKey`, `ratingKey`, `title`,
+`parentTitle`, `grandparentTitle`, `type`, `viewedAt`, `accountId`,
+`deviceId`, `librarySectionId`, and `raw`), with `totalSize` for paging.
 
 #### 11.3 Terminating a session
 
@@ -1047,30 +1358,41 @@ The `reason` is shown to the user whose session was killed.
 
 ```dart
 final url = plex.images.transcodeUrl(
-  sourcePath: metadata.thumb!,  // e.g. '/library/metadata/123/thumb/1700000000'
-  width: 500,
-  height: 500,
-  minSize: 1,
-  upscale: false,
+  sourcePath: metadata.thumb!, // e.g. '/library/metadata/123/thumb/1700000000'
+  width: 300,
+  height: 300,
 );
 ```
 
 Goes through `/photo/:/transcode` so the server delivers a
-pre-resized JPEG (~50-150KB at 500×500).
+pre-resized JPEG (~50-150KB at 500×500, the default size).
 
 #### 12.2 Fetching bytes
 
 ```dart
-final Uint8List? bytes = await plex.images.fetch(
+final bytes = await plex.images.fetch( // Uint8List?
   sourcePath: metadata.thumb!,
-  width: 500,
-  height: 500,
 );
 ```
 
 Returns `null` on 404. Throws `PlexException` on transient failures
 (5xx, network down) so the caller can distinguish "no artwork ever" from
 "try again later".
+
+#### 12.3 Artwork versions and cache keys
+
+```dart
+final cacheKey = '${album.ratingKey}@${album.thumbVersion}';
+final version = PlexArtwork.versionOf('/library/metadata/123/thumb/1791659974');
+// '1791659974'
+```
+
+PMS appends a Unix timestamp to artwork paths, and it changes whenever
+the image does (verified on PMS 1.43.2: each new poster upload gets a new
+one). Put it in your artwork cache key and a cover replaced on the server
+is fetched again. `thumbVersion`, `artVersion`, `parentThumbVersion` and
+`grandparentThumbVersion` read it off a `PlexMetadata`; a track without
+art of its own carries its album's thumb, version included.
 
 ---
 
@@ -1084,12 +1406,11 @@ of items; render them as horizontal carousels.
 
 ```dart
 // Global hubs (all libraries).
-final globalHubs = await plex.hubs.global(count: 16);
+final globalHubs = await plex.hubs.global(count: 8);
 
 // Hubs scoped to one library section.
 final musicHubs = await plex.hubs.forSection(
   sectionId: musicLib.id,
-  count: 16,
 );
 
 for (final hub in musicHubs) {
@@ -1097,22 +1418,22 @@ for (final hub in musicHubs) {
 }
 ```
 
-Each [`PlexHub`] carries a small preview of items in `hub.items`
-plus a `more` flag indicating whether the rail has more entries
-behind a `Show all` action.
+Each `PlexHub` carries a small preview of items in `hub.items` (16 per
+hub unless you pass `count`) plus a `more` flag indicating whether the
+rail has more entries behind a `Show all` action.
 
 #### 13.2 Promoted and on-deck
 
 ```dart
 final promoted = await plex.hubs.promoted();
-final onDeck   = await plex.hubs.continueWatching();
+final onDeck = await plex.hubs.continueWatching();
 final perLibrary = await plex.hubs.sectionOnDeck(
   sectionId: musicLib.id,
 );
 ```
 
-`continueWatching()` and `sectionOnDeck()` return
-[`List<PlexMetadata>`] directly (not wrapped in a hub) since the
+`continueWatching()` and `sectionOnDeck()` return a
+`List<PlexMetadata>` directly (not wrapped in a hub) since the
 data is already a flat list of "Up Next" entries.
 
 #### 13.3 Drilling into a hub
@@ -1123,7 +1444,6 @@ rest:
 ```dart
 final all = await plex.hubs.drill(
   hubKeyOrIdentifier: hub.hubKey, // or hub.hubIdentifier
-  start: 0,
   size: 100,
 );
 ```
@@ -1144,8 +1464,7 @@ persisted "Up Next", or party-mode add-to-queue from another device.
 #### 14.1 Creating a queue
 
 ```dart
-final identity = await plex.server.identity();
-final machineId = identity['machineIdentifier'] as String;
+final machineId = (await plex.server.identity()).machineIdentifier;
 
 final uri = PlexPlayQueuesApi.seedFromItems(
   machineIdentifier: machineId,
@@ -1154,11 +1473,13 @@ final uri = PlexPlayQueuesApi.seedFromItems(
 final queue = await plex.playQueues.create(
   type: 'audio',
   uri: uri,
-  shuffle: false,
-  continuous: true,
 );
-final queueId = int.parse(queue.raw['playQueueID'].toString());
+final queueId = queue.id;
 ```
+
+`shuffle` (off) and `continuous` (on) set the queue's mode. The
+`PlexPlayQueue` carries `id`, `selectedItemId`, `shuffled`, `version`
+and its `items`.
 
 #### 14.2 Reading and editing
 
@@ -1245,8 +1566,9 @@ listings provider setup stay on the escape hatch (admin-only).
 ```dart
 final liveSessions = await plex.liveTv.sessions();
 for (final entry in liveSessions) {
-  print('${entry['title']} on ${entry['channelCallSign']}'
-        ' (${entry['Player']?['title']})');
+  final player = entry['Player'];
+  final playerTitle = player is Map<String, Object?> ? player['title'] : null;
+  print('${entry['title']} on ${entry['channelCallSign']} ($playerTitle)');
 }
 ```
 
@@ -1259,11 +1581,13 @@ for (final entry in liveSessions) {
 ```dart
 final dvrs = await plex.liveTv.dvrs();
 for (final dvr in dvrs) {
-  print('${dvr['title']} (${dvr['lineup']?['name']})');
+  final lineup = dvr['lineup'];
+  print('${dvr['title']} '
+      '(${lineup is Map<String, Object?> ? lineup['name'] : '-'})');
 }
 
 // Drill into the channels grouped under one DVR:
-final channels = await plex.liveTv.dvrChannels(dvrs.first['key'] as String);
+final channels = await plex.liveTv.dvrChannels(dvrs.first['key']! as String);
 ```
 
 #### 15.3 Subscriptions
@@ -1272,21 +1596,27 @@ DVR recording subscriptions live on their own sub-API,
 `plex.subscriptions` (`PlexSubscriptionsApi`), not on `plex.liveTv`:
 
 ```dart
-// List every recording rule. Returns the raw `MediaContainer` map.
-final container = await plex.subscriptions.list();
-final subs = (container['MediaContainer']?['MediaSubscription'] as List?)
-    ?.cast<Map<String, dynamic>>() ?? const [];
+// List every recording rule. Returns the raw response map.
+final body = await plex.subscriptions.list();
+final container = body['MediaContainer'];
+final list =
+    container is Map<String, Object?> ? container['MediaSubscription'] : null;
+final subs = list is List
+    ? list.whereType<Map<String, Object?>>().toList()
+    : const <Map<String, Object?>>[];
 for (final sub in subs) {
   print('${sub['title']} - ${sub['type']}');
 }
 
 // Delete a subscription by its id.
-await plex.subscriptions.delete(subs.first['id'].toString());
+await plex.subscriptions.delete('${subs.first['id']}');
 ```
 
-> Live TV (sessions, DVRs) results come back as raw maps. They could get
-> typed wrappers later, but the underlying shapes are deeply nested and
-> change often between Plex releases, so the raw map is the safer bet for now.
+> Live TV (sessions, DVRs) results come back as raw maps
+> (`Map<String, Object?>`), so nested values need a type check before
+> use. They could get typed wrappers later, but the underlying shapes are
+> deeply nested and change often between Plex releases, so the raw map
+> is the safer bet for now.
 
 ---
 
@@ -1316,21 +1646,24 @@ final nearest = await plex.library.nearestToTrack(
   ratingKey: track.ratingKey,
   limit: 25,
   maxDistance: 0.25,
+  excludeGrandparentRatingKey: track.grandparentRatingKey,
 );
 ```
 
-Use `excludeParentID` and `excludeGrandparentID` to keep the album
-or artist of the seed out of the result (useful when the seed track
-dominates the radio).
+`excludeParentRatingKey` and `excludeGrandparentRatingKey` keep the
+album or artist of the seed out of the result (useful when the seed
+track dominates the radio); pass the rating key as the track has it.
+The `int` forms, `excludeParentID` and `excludeGrandparentID`, are
+deprecated. Each result carries its `distance` from the seed.
 
 #### 16.3 Nearest tracks in a section
 
 ```dart
 // The sonic vector lives in the raw envelope under `musicAnalysis`
 // (a track has one once the server has analysed it).
-final seed = (track.raw['musicAnalysis'] as List).cast<num>();
+final seed = (track.raw['musicAnalysis']! as List).cast<num>();
 final radio = await plex.library.nearestInSection(
-  sectionId: musicSection.key,
+  sectionId: musicLib.id,
   values: seed,
   limit: 50,
 );
@@ -1355,12 +1688,14 @@ final palettes = await plex.ultraBlur.colors(
   sourceUrl: album.thumb!,
 );
 final palette = palettes.first;
-print('${palette.topLeft} ${palette.topRight} ${palette.bottomLeft} ${palette.bottomRight}');
+print('${palette.topLeft} ${palette.topRight} '
+    '${palette.bottomLeft} ${palette.bottomRight}');
 ```
 
 The container shape returns an array; pick the first element for the
 common case. `sourceUrl` accepts a relative PMS path (most common) or
-an absolute URL.
+an absolute URL. When the item details carry the palette already, it is
+in `PlexMetadata.ultraBlurColors`.
 
 #### 17.2 Server-rendered backdrop
 
@@ -1412,21 +1747,40 @@ try {
 ```
 
 `PlexErrorType` values: `connection`, `timeout`, `auth`, `notFound`,
-`badRequest`, `serverError`, `parse`, `state`, `unknown`.
+`badRequest`, `serverError`, `parse`, `state`, `cancelled`, `unknown`.
+The exception also carries the request `path`, the underlying `cause`,
+the original `stackTrace` and, when the server sent `Retry-After` (on a
+`429` or `503`), `retryAfter`.
 
-#### 18.2 Retriable vs terminal
+#### 18.2 Classifying a failure
 
 ```dart
+try {
+  await plex.library.sections();
 } on PlexException catch (e) {
-  if (e.isRetriable) {       // connection or timeout
-    scheduleRetry();
-  } else if (e.isAuthError) { // 401 or 403, token rejected
-    await reAuthenticate();
+  if (e.isCancelled) {
+    // the caller gave up; not a failure, ignore it
+  } else if (e.isAuthError) {
+    await reAuthenticate(); // 401 or 403, token rejected
+  } else if (e.isTransient) {
+    scheduleRetry(e.retryAfter); // network, 5xx or 429
+  } else if (e.isNotFound) {
+    showGone(); // 404: confirmed absence
   } else {
     surfaceError(e.message);
   }
 }
 ```
+
+| Getter | True for |
+| :--- | :--- |
+| `isNetworkFailure` | no answer at all: connection failed or timed out (same as `isRetriable`) |
+| `isTransient` | may pass if sent again later: a network failure, a 5xx, or `429` |
+| `isNotFound` | the server answered `404` |
+| `isCancelled` | the request was cancelled through a `PlexCancelToken` |
+| `isAuthError` | `401` / `403`, or a PIN that expired |
+
+The getters mean the same in `dart_plex` and `dart_jellyfin`.
 
 #### 18.3 Auth invalidation
 
@@ -1436,38 +1790,265 @@ token; that's an app-level policy decision.
 
 ---
 
-### 19. Escape hatch
+### 19. Cancellation and retries
+
+#### 19.1 Cancelling requests
+
+```dart
+PlexCancelToken? _searchToken;
+
+Future<List<PlexHub>> searchAsYouType(PlexClient plex, String text) async {
+  _searchToken?.cancel(); // drop the previous keystroke's request
+  final token = _searchToken = PlexCancelToken();
+  try {
+    return await plex.withCancelToken(token).search.hubs(query: text);
+  } on PlexException catch (e) {
+    if (e.isCancelled) return const [];
+    rethrow;
+  }
+}
+```
+
+`withCancelToken(token)` returns a view of the client whose every
+sub-API call is cancelled by `token.cancel()`. The view shares the
+client's connection pool, server and token (`connect`, `setToken` and
+`close` on either affect both) and costs nothing to create, so make one
+per page, filter or search term. A token cancels only once: make a new
+one for the next request. `request()`, `requestBytes()`,
+`requestStream()` and `downloadToFile()` also take a `cancelToken`
+directly.
+
+A cancelled call throws a `PlexException` of type `cancelled`
+(`isCancelled`), which is not a failure. `notifications` is the same
+object on the view as on the client: a WebSocket or event stream is not
+a request and is not cancelled.
+
+#### 19.2 Retry policy
+
+```dart
+final plex = PlexClient(
+  credentials: credentials,
+  retryPolicy: const PlexRetryPolicy(
+    maxAttempts: 4, // the first attempt included
+    maxDelay: Duration(seconds: 10),
+  ),
+);
+```
+
+Off by default. With a policy, only idempotent requests (`GET`, `HEAD`)
+are resent, and only after a failure another attempt can fix: no answer
+(connection lost, timeout), `502`, `503`, `504` or `429`. A `500` is not
+retried. The wait grows exponentially from `initialDelay` (300 ms) with
+full jitter, a `Retry-After` header is honoured up to `maxDelay` (5 s),
+and a cancel token cancels the wait too. `const PlexRetryPolicy()`
+resends up to twice. Opening a stream is retried as well; a body already
+flowing is not replayed.
+
+---
+
+### 20. Paging
+
+#### 20.1 How Plex pages
+
+Plex pages with `X-Plex-Container-Start` and `X-Plex-Container-Size`.
+PMS 1.43.2 ignores `Size` sent on its own and answers the whole list
+(verified on `/children`, `/allLeaves`, `/all` and
+`/playlists/{id}/items`), so every paged method here sends both. Methods
+whose `start` and `size` are optional (`children()`, `allLeaves()`,
+`grandchildren()`, `recentlyAdded()`, `playlists.items()`) answer every
+row when you pass neither, read one page when you pass `size` (`start`
+defaults to 0), and throw an `ArgumentError` for a `start` without a
+`size`.
+
+#### 20.2 Walking every page
+
+```dart
+final tracks = PlexPaging.items(
+  (start, size) => plex.library.grandchildren(
+    artist.ratingKey,
+    start: start,
+    size: size,
+  ),
+  pageSize: 200,
+);
+await for (final track in tracks) {
+  print(track.title);
+}
+
+// allByType answers a container: hand PlexPaging its items.
+final albumPages = PlexPaging.pages(
+  (start, size) async => (await plex.library.allByType(
+    sectionId: musicLib.id,
+    type: PlexMetadataType.album,
+    start: start,
+    size: size,
+  ))
+      .items,
+  limit: 500,
+);
+```
+
+`PlexPaging.pages()` streams one page at a time and `items()` the rows
+one by one. Paging stops at the first page shorter than `pageSize`
+(default 100) or once `limit` rows have been delivered, asking the last
+page for exactly what is left. Nothing is fetched ahead: each page is
+one request, made when the stream is listened to, so cancelling the
+subscription stops the requests. Pair it with a cancel token
+([19.1](#191-cancelling-requests)) to drop the request in flight too.
+
+---
+
+### 21. Notifications and events
+
+#### 21.1 Connecting
+
+```dart
+final frames = await plex.notifications.connectWebSocket();
+final subscription = frames.listen((frame) => print(frame.type));
+
+// Later:
+await subscription.cancel();
+await plex.notifications.closeWebSocket();
+```
+
+`connectWebSocket()` waits for the handshake, so the stream is live when
+it returns, and throws a `PlexException` of type `connection` if it
+cannot open. `connectEventSource()` gives the same stream over
+Server-Sent Events, for networks whose proxies block WebSockets (close it
+with `closeEventSource()`). Both take an optional `filter` naming one
+frame type (`'playing'`, `'activity'`, …). Each frame is a
+`PlexNotification` with its `type` and `raw` body.
+
+#### 21.2 Typed events
+
+```dart
+final frames = await plex.notifications.connectWebSocket();
+final subscription = frames.events().listen((event) {
+  switch (event) {
+    case PlexPlaySessionEvent(:final ratingKey, :final state):
+      print('$ratingKey is ${state.name}');
+    case PlexLibraryItemEvent(:final itemId, isDeleted: true):
+      print('$itemId was deleted');
+    case PlexLibraryItemEvent(:final itemId, isReady: true):
+      print('$itemId changed, re-read it');
+    case PlexActivityEvent(isLibraryScan: true, isEnded: true):
+      print('scan finished, reload the library');
+    case _:
+  }
+});
+
+// When done:
+await subscription.cancel();
+```
+
+`events()` on a notification stream (or `PlexNotification.events` on one
+frame, which can carry several entries) decodes frames into the sealed
+`PlexEvent` hierarchy:
+
+| Event | Frame type | |
+| :--- | :--- | :--- |
+| `PlexPlaySessionEvent` | `playing` | a player's `PlexPlayState`, playhead, rating key, play queue ids |
+| `PlexLibraryItemEvent` | `timeline` | an item created, changed, analysed or deleted (`isCreated`, `isReady`, `isDeleted`, `updatedAt`) |
+| `PlexActivityEvent` | `activity` | a background activity started, progressed or ended; `isLibraryScan` |
+| `PlexStatusEvent` | `status` | a server status message |
+| `PlexUnknownEvent` | anything else | the whole frame in `raw` |
+
+The shapes follow frames captured from PMS 1.43.2. One library change
+arrives as several `PlexLibraryItemEvent`s as the item moves through its
+states; new artwork arrives as a ready event with a new `updatedAt`.
+
+---
+
+### 22. Downloads
+
+#### 22.1 Downloading to a file
+
+```dart
+import 'package:dart_plex/dart_plex.dart';
+import 'package:dart_plex/io.dart';
+
+final (url, ext) = plex.streaming.directFileUrl(
+  partKey: track.media.first.parts.first.key!,
+);
+final bytes = await plex.downloadToFile(
+  url,
+  '/music/${track.ratingKey}.$ext',
+  cancelToken: token,
+  onProgress: (received, total) => print('$received / ${total ?? '?'}'),
+);
+```
+
+`downloadToFile()` is an extension on `PlexClient` in
+`package:dart_plex/io.dart`, kept out of the main library so that stays
+usable on the web. It streams the body to `<path>.part` as it arrives (a
+whole track never sits in memory) and renames it to `path` once
+complete, so `path` either holds the whole file or does not exist: a
+failure, a stall past the receive timeout or a cancellation removes the
+partial file and throws a `PlexException`. `onProgress` gets the bytes
+received so far and the total when the server sent a `Content-Length`.
+It returns the number of bytes written. Mind the MP3 note in
+[9.2](#92-direct-file-url).
+
+---
+
+### 23. Escape hatch
 
 When the typed sub-APIs don't yet cover an endpoint, drop down to:
 
-#### 19.1 Raw request
+#### 23.1 Raw request
 
 ```dart
-final response = await plex.request<Map<String, dynamic>>(
+final response = await plex.request<Map<String, Object?>>(
   '/library/sections/$id/all',
-  queryParameters: {'type': 9, 'X-Plex-Container-Size': 50},
+  queryParameters: {
+    'type': 9,
+    'X-Plex-Container-Start': 0,
+    'X-Plex-Container-Size': 50,
+  },
 );
+print('${response.statusCode} ${response.contentType}');
 final container = response.data?['MediaContainer'];
 ```
 
-Same Dio, same headers, same `PlexException` translation as the
-typed sub-APIs. Pass `method: 'POST'`, `'PUT'` or `'DELETE'`,
-`extraHeaders`, `data`, `absoluteUrl: true` as needed.
+Same HTTP client, headers, retry policy and `PlexException` translation
+as the typed sub-APIs. A `PlexResponse<T>` carries `data`, `statusCode`,
+`headers` (lower-case names), `contentType` and the requested `uri`.
+Pass `method: 'POST'`, `'PUT'` or `'DELETE'` (or use `get`, `post`,
+`put`, `delete`), `extraHeaders`, `data`, `absoluteUrl: true`,
+`cancelToken` as needed. `responseType` picks the decoding:
+`PlexResponseType.json` (JSON when the server says so, else text),
+`bytes` or `plain`.
 
-#### 19.2 Raw bytes
+#### 23.2 Raw bytes and streams
 
 ```dart
-final response = await plex.requestBytes(
-  '${plex.baseUrl}/library/parts/123/file.flac?X-Plex-Token=${plex.token}',
+// Small bodies, held in memory.
+final art = await plex.requestBytes(
+  '/library/metadata/123/thumb/1700000000',
+  absoluteUrl: false,
 );
-final bytes = response.data;
+final bytes = art.data; // Uint8List?
+
+// Large bodies, chunk by chunk.
+final res = await plex.requestStream(
+  '${plex.baseUrl}/library/parts/123/1700000000/file.flac',
+);
+print('${res.contentLength} bytes of ${res.contentType}');
+await for (final chunk in res.stream) {
+  sink.add(chunk);
+}
 ```
+
+`requestBytes()` and `requestStream()` take a full URL by default
+(`absoluteUrl: false` for a path on the connected server); the token
+travels in the headers either way. Listen to a `PlexStreamedResponse`'s
+`stream` once; cancelling the subscription closes the connection.
 
 ---
 
 ## Project background
 
-All the typed DTOs, sub-APIs, and architectural patterns were implemented through the use of Claude Code.
+All the typed models, sub-APIs, and architectural patterns were implemented through the use of Claude Code.
 
 ---
 

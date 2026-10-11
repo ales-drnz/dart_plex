@@ -32,7 +32,8 @@ final class PlexException implements Exception {
   /// Path of the request that triggered the failure, if known.
   final String? path;
 
-  /// The underlying error, if any (DioException, FormatException, …).
+  /// The underlying error, if any (the transport's `ClientException`, a
+  /// `FormatException`, …).
   final Object? cause;
 
   /// How long the server asked the client to wait (`Retry-After`, on a

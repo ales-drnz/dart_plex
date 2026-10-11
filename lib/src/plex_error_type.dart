@@ -4,6 +4,7 @@
 
 import 'plex_client.dart';
 import 'plex_exception.dart';
+import 'transport/plex_cancel_token.dart';
 
 /// Semantic categories for failures coming out of [PlexClient].
 ///
@@ -40,8 +41,8 @@ enum PlexErrorType {
   /// endpoint before [PlexClient.connect]).
   state,
 
-  /// The request was cancelled by the caller via a `CancelToken` before it
-  /// completed. Not an error condition — distinct from [unknown] so callers
+  /// The request was cancelled by the caller via a [PlexCancelToken]
+  /// before it completed. Not an error condition — distinct from [unknown] so callers
   /// can ignore cancellations instead of logging them as failures.
   cancelled,
 
