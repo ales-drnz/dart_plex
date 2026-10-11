@@ -299,7 +299,7 @@ class PlexNotificationsApi {
 }
 
 /// One frame received from the Plex notifications stream.
-class PlexNotification {
+final class PlexNotification {
   /// Upstream `type` discriminator (e.g. `'playing'`, `'progress'`,
   /// `'activity'`, `'transcodeSession.update'`,
   /// `'transcodeSession.end'`, `'preference'`, `'reachability'`).

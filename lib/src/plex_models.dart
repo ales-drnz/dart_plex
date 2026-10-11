@@ -142,7 +142,7 @@ enum PlexMetadataType {
 
 /// Every PMS endpoint returns a `MediaContainer` envelope wrapping the
 /// payload. This helper unwraps it and validates the basic shape.
-class PlexMediaContainer<T> {
+final class PlexMediaContainer<T> {
   /// Total number of records, when paginated (`totalSize`).
   final int totalSize;
 
@@ -200,7 +200,7 @@ class PlexMediaContainer<T> {
 // ---------------------------------------------------------------------------
 
 /// User profile returned by `/api/v2/user` and `/users/sign_in.json`.
-class PlexUser {
+final class PlexUser {
   /// Numeric plex.tv account id.
   final int id;
 
@@ -258,7 +258,7 @@ class PlexUser {
 ///
 /// `connections` is the list of candidate URIs to reach the server —
 /// pick the best one with [bestConnection].
-class PlexResource {
+final class PlexResource {
   /// Friendly display name of the resource (server or player).
   final String name;
 
@@ -389,7 +389,7 @@ class PlexResource {
 ///   `https://192-168-0-2.{uuid}.plex.direct:32400` for local-https
 ///   `https://1-2-3-4.{uuid}.plex.direct:32400`     for remote-https
 ///   `https://relay-…plex.tv`                       for relay
-class PlexServerConnection {
+final class PlexServerConnection {
   /// `http` or `https`.
   final String protocol;
 
@@ -440,7 +440,7 @@ class PlexServerConnection {
 /// The 4-character [code] is what the user types at <https://plex.tv/link>.
 /// Poll [PlexAccountApi.pollPin] until [authToken] is non-null, or until
 /// [expiresAt] passes.
-class PlexPin {
+final class PlexPin {
   /// Server-assigned pin id used to poll for completion.
   final int id;
 
@@ -493,7 +493,7 @@ class PlexPin {
 // ---------------------------------------------------------------------------
 
 /// One library section from `/library/sections`.
-class PlexLibrarySection {
+final class PlexLibrarySection {
   /// `key` field — the numeric/string id used in `/library/sections/{id}/all`.
   final String id;
 
@@ -613,7 +613,7 @@ enum PlexFilterValueType {
 /// [PlexFilter.new] or one of its named constructors. [valuesKey] is
 /// the endpoint listing the values the facet can take, which
 /// [PlexLibraryApi.filterValues] fetches for you.
-class PlexLibraryFilter {
+final class PlexLibraryFilter {
   /// Parameter name this facet filters on (`genre`, `year`,
   /// `unwatched`) — the `filter` attribute on the wire.
   final String field;
@@ -662,7 +662,7 @@ class PlexLibraryFilter {
 /// filtering by this tag and [field] is the parameter it belongs to;
 /// hand the whole tag to [PlexFilter.of] rather than reassembling
 /// either by hand.
-class PlexTag {
+final class PlexTag {
   /// Numeric tag id — the value in `?genre=<id>`.
   ///
   /// Null when the server sent no id this package could resolve, in
@@ -762,7 +762,7 @@ class PlexTag {
 /// A single item under `/library/metadata/{ratingKey}` (or as an entry in
 /// any list response). Generic across types — the [type] tag tells you
 /// which fields are meaningful.
-class PlexMetadata {
+final class PlexMetadata {
   /// `ratingKey` — the numeric id used in every `/library/metadata/...`
   /// path. Always present.
   final String ratingKey;
@@ -1096,7 +1096,7 @@ class PlexMetadata {
 
 /// One `<Media>` node under a [PlexMetadata]. Tracks/movies usually have
 /// exactly one; some items have alternate versions and produce several.
-class PlexMedia {
+final class PlexMedia {
   /// Per-server media id.
   final int? id;
 
@@ -1176,7 +1176,7 @@ class PlexMedia {
 }
 
 /// One `<Part>` node — a single file backing a [PlexMedia].
-class PlexPart {
+final class PlexPart {
   /// Per-server part id.
   final int? id;
 
@@ -1231,7 +1231,7 @@ class PlexPart {
 }
 
 /// `streamType`: 1 video, 2 audio, 3 subtitle, 4 lyrics.
-class PlexStream {
+final class PlexStream {
   /// Per-server stream id.
   final int? id;
 
@@ -1372,7 +1372,7 @@ class PlexStream {
 
 /// One `<Hub>` entry from `/hubs` or `/hubs/search` — a titled, optionally
 /// paginated bucket of [PlexMetadata] items grouped by Plex.
-class PlexHub {
+final class PlexHub {
   /// Relative URL to fetch the full contents of this hub (e.g.
   /// `/hubs/sections/home/onDeck`). This is the field to use for
   /// fetching or paginating a hub's contents.
@@ -1447,7 +1447,7 @@ class PlexHub {
 /// `playQueueVersion` — and the items in the `Metadata` array. This
 /// DTO surfaces both so callers can pass [id] straight back to
 /// [PlexPlayQueuesApi.items], [PlexPlayQueuesApi.addItems], …
-class PlexPlayQueue {
+final class PlexPlayQueue {
   /// Server-assigned queue identifier. Use this with the rest of
   /// [PlexPlayQueuesApi].
   final int id;
@@ -1516,7 +1516,7 @@ class PlexPlayQueue {
 /// One entry from `/status/sessions` — a Plex metadata item enriched
 /// with `User`, `Player` and (when transcoding) `TranscodeSession`
 /// sub-nodes describing **who is playing** and **how**.
-class PlexSession {
+final class PlexSession {
   /// The underlying metadata for the item being played.
   final PlexMetadata metadata;
 
@@ -1580,7 +1580,7 @@ class PlexSession {
 
 /// `Player` sub-node of a [PlexSession] — identifies the device that's
 /// driving playback.
-class PlexSessionPlayer {
+final class PlexSessionPlayer {
   /// Friendly device name (`Living Room Apple TV`, …).
   final String? title;
 
@@ -1633,7 +1633,7 @@ class PlexSessionPlayer {
 
 /// `User` sub-node of a [PlexSession] — identifies the account streaming
 /// the item.
-class PlexSessionUser {
+final class PlexSessionUser {
   /// Plex account id of the streaming user.
   final String id;
 
@@ -1671,7 +1671,7 @@ class PlexSessionUser {
 /// Four hex colours extracted from an image by the Plex server. Use
 /// the same four values to ask `/services/ultrablur/image` for a
 /// server-rendered gradient backdrop.
-class PlexUltraBlurColors {
+final class PlexUltraBlurColors {
   /// Top-left swatch as a hex string (e.g. `#1a2b3c`).
   final String? topLeft;
 

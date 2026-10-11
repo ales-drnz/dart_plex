@@ -60,6 +60,11 @@ import 'transport/plex_retry_policy.dart';
 ///
 /// final sections = await plex.library.sections();
 /// ```
+///
+/// The client and its sub-API classes are deliberately not `final`, so an
+/// app's tests can stand in for them (`class FakeClient implements
+/// PlexClient`, or a mocking library). The models are `final`: they are
+/// data, built by the library.
 class PlexClient {
   final PlexConnection _http;
 

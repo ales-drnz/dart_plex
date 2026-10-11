@@ -18,7 +18,7 @@ import 'plex_error_type.dart';
 ///   else showError(e.message);
 /// }
 /// ```
-class PlexException implements Exception {
+final class PlexException implements Exception {
   /// Human-readable description.
   final String message;
 

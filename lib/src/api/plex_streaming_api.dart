@@ -375,7 +375,7 @@ String _decodeUtf16(List<int> bytes, {required bool littleEndian}) {
 /// that is read from the sibling `directPlayDecisionCode` /
 /// `transcodeDecisionCode` fields (same 1xxx-means-success convention),
 /// which [PlexStreamingApi.decisionUniversal] preserves in [raw].
-class PlexTranscodeDecision {
+final class PlexTranscodeDecision {
   /// The numeric `generalDecisionCode` from the response. Null when
   /// the response shape was unexpected.
   final int? code;
