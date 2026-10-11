@@ -38,9 +38,9 @@ void main() {
         expect(active, isA<List<PlexSession>>());
       });
 
-      test('sessions.history returns a list (possibly empty)', () async {
+      test('sessions.history returns a page (possibly empty)', () async {
         final history = await plex.sessions.history(size: 10);
-        expect(history, isA<List<Map<String, dynamic>>>());
+        expect(history.items.length, lessThanOrEqualTo(10));
       });
 
       test('timeline playing -> paused -> stopped round trip', () async {

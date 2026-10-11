@@ -92,6 +92,18 @@ void main() {
         expect(tracks.first.parentYear, detail.year);
       });
 
+      test('server, history, butler and activities are typed', () async {
+        final history = await plex.sessions.history(size: 5);
+        expect(history.totalSize, greaterThanOrEqualTo(history.items.length));
+        for (final e in history.items) {
+          expect(e.historyKey, startsWith('/status/sessions/history/'));
+          expect(e.viewedAt, isNotNull);
+        }
+        final tasks = await plex.butler.tasks();
+        expect(tasks.any((t) => t.name == 'BackupDatabase'), isTrue);
+        expect(await plex.activities.list(), isA<List<PlexActivity>>());
+      });
+
       test('countChildren moves no rows and still counts', () async {
         expect(await plex.library.countChildren(album.ratingKey), 3);
         expect(await plex.library.countChildren(artist.ratingKey), 1);

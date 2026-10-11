@@ -5,6 +5,7 @@
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_server_models.dart';
 
 /// `/status/sessions` and `/status/sessions/history/*` — "what's
 /// playing on the server right now" and "what was played in the past".
@@ -34,7 +35,7 @@ class PlexSessionsApi {
   /// [accountId] filters to one user (`1` is the owner). [mindate]
   /// uses `viewedAt >= unixtime` and [maxdate] uses `viewedAt <= unixtime`
   /// (both bounds inclusive).
-  Future<List<Map<String, dynamic>>> history({
+  Future<PlexMediaContainer<PlexHistoryEntry>> history({
     int? accountId,
     int? mindate,
     int? maxdate,
@@ -42,7 +43,7 @@ class PlexSessionsApi {
     int start = 0,
     int size = 50,
     String? sort,
-  }) async {
+  }) {
     final qp = <String, dynamic>{
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size,
@@ -54,18 +55,11 @@ class PlexSessionsApi {
       qp['librarySectionID'] = librarySectionId;
     }
     if (sort != null) qp['sort'] = sort;
-    final res = await _http.request<Map<String, dynamic>>(
+    return _http.requestJson(
       '/status/sessions/history/all',
       queryParameters: qp,
+      containerOf('Metadata', PlexHistoryEntry.fromJson),
     );
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
-    final list = container['Metadata'];
-    if (list is! List) return const [];
-    return [
-      for (final e in list)
-        if (e is Map<String, dynamic>) e,
-    ];
   }
 
   /// Forcibly stop a session. [sessionId] is the `Session.id` field

@@ -73,9 +73,8 @@ void main() {
       final req = ctx.adapter.lastRequest!;
       expect(req.method, 'GET');
       expect(req.path, 'http://192.168.1.10:32400/status/sessions/history/all');
-      expect(history, isA<List<Map<String, dynamic>>>());
-      expect(history, hasLength(1));
-      expect(history.single['title'], 'Watched Movie');
+      expect(history.items, hasLength(1));
+      expect(history.items.single.title, 'Watched Movie');
     });
 
     test('uses inclusive viewedAt>= / viewedAt<= operators for date bounds',
@@ -92,13 +91,14 @@ void main() {
       expect(qp.containsKey('viewedAt<'), isFalse);
     });
 
-    test('returns an empty list when the MediaContainer has no Metadata',
+    test('returns an empty page when the MediaContainer has no Metadata',
         () async {
       final ctx = _makeApi(const {'MediaContainer': <String, dynamic>{}});
 
       final history = await ctx.api.history();
 
-      expect(history, isEmpty);
+      expect(history.items, isEmpty);
+      expect(history.totalSize, 0);
     });
   });
 

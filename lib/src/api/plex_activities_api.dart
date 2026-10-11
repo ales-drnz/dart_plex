@@ -3,6 +3,8 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import '../plex_connection.dart';
+import '../plex_parsing.dart';
+import '../plex_server_models.dart';
 
 /// `/activities` — long-running server activities (scan progress,
 /// transcoding sessions, etc.).
@@ -17,10 +19,10 @@ class PlexActivitiesApi {
   PlexActivitiesApi(this._http);
 
   /// `GET /activities` — list running activities.
-  Future<Map<String, dynamic>> list() async {
-    final res = await _http.request<Map<String, dynamic>>('/activities');
-    return res.data ?? const {};
-  }
+  Future<List<PlexActivity>> list() => _http.requestJson(
+        '/activities',
+        itemsOf('Activity', PlexActivity.fromJson),
+      );
 
   /// `DELETE /activities/{activityId}` — cancel a running activity
   /// (best-effort; some activity types cannot be cancelled).

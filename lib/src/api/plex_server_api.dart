@@ -3,6 +3,7 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import '../plex_connection.dart';
+import '../plex_server_models.dart';
 
 /// Top-level server endpoints — `/`, `/identity`, `/capabilities`.
 class PlexServerApi {
@@ -15,23 +16,17 @@ class PlexServerApi {
   /// authentication, so this works even with an expired token (you can
   /// use it to verify the server URL is reachable before re-authenticating).
   ///
-  /// Returns the raw `MediaContainer` map — useful keys are
-  /// `machineIdentifier`, `version`, `apiVersion`.
-  Future<Map<String, dynamic>> identity() async {
-    final res = await _http.request<Map<String, dynamic>>('/identity');
-    final data = res.data ?? const <String, dynamic>{};
-    final container = data['MediaContainer'];
-    return container is Map<String, dynamic> ? container : data;
-  }
+  Future<PlexServerIdentity> identity() => _http.requestJson(
+        '/identity',
+        (json) => PlexServerIdentity.fromJson(_container(json)),
+      );
 
   /// Full server root — same shape as [identity] but with more fields
   /// (`platform`, `platformVersion`, `myPlex`, `transcoderAudio`, etc.).
-  Future<Map<String, dynamic>> info() async {
-    final res = await _http.request<Map<String, dynamic>>('/');
-    final data = res.data ?? const <String, dynamic>{};
-    final container = data['MediaContainer'];
-    return container is Map<String, dynamic> ? container : data;
-  }
+  Future<PlexServerInfo> info() => _http.requestJson(
+        '/',
+        (json) => PlexServerInfo.fromJson(_container(json)),
+      );
 
   /// `true` when the server replies to `/identity`. Swallows transport
   /// failures and timeouts. Use [identity] directly to inspect errors.
@@ -94,4 +89,11 @@ class PlexServerApi {
     );
     return res.data ?? const {};
   }
+}
+
+/// The `MediaContainer` of [json], or [json] itself when it has none.
+Map<String, dynamic> _container(Object? json) {
+  if (json is! Map<String, dynamic>) return const <String, dynamic>{};
+  final c = json['MediaContainer'];
+  return c is Map<String, dynamic> ? c : json;
 }

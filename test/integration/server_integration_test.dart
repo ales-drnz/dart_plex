@@ -26,14 +26,17 @@ void main() {
       test('identity returns the machine identifier from the bootstrap',
           () async {
         final id = await plex.server.identity();
-        expect(id['machineIdentifier'], cache.machineIdentifier);
-        expect(id['version'], isNotEmpty);
+        expect(id.machineIdentifier, cache.machineIdentifier);
+        expect(id.version, isNotEmpty);
+        expect(id.claimed, isTrue);
       });
 
       test('info returns extended server metadata', () async {
         final info = await plex.server.info();
-        expect(info['machineIdentifier'], cache.machineIdentifier);
-        expect(info['platform'] ?? info['Platform'], isNotEmpty);
+        expect(info.machineIdentifier, cache.machineIdentifier);
+        expect(info.platform, isNotEmpty);
+        expect(info.friendlyName, isNotEmpty);
+        expect(info.transcoderAudio, isTrue);
       });
 
       test('ping returns true for a reachable PMS', () async {

@@ -3,6 +3,7 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import '../plex_connection.dart';
+import '../plex_server_models.dart';
 
 /// `/butler` — Plex's nightly maintenance task runner.
 ///
@@ -17,10 +18,10 @@ class PlexButlerApi {
   PlexButlerApi(this._http);
 
   /// `GET /butler` — list configured tasks and their state.
-  Future<Map<String, dynamic>> tasks() async {
-    final res = await _http.request<Map<String, dynamic>>('/butler');
-    return res.data ?? const {};
-  }
+  Future<List<PlexButlerTask>> tasks() => _http.requestJson(
+        '/butler',
+        _butlerTasks,
+      );
 
   /// `POST /butler` — start every task now.
   Future<void> startAll() async {
@@ -41,4 +42,16 @@ class PlexButlerApi {
   Future<void> stop(String butlerTask) async {
     await _http.request<void>('/butler/$butlerTask', method: 'DELETE');
   }
+}
+
+/// `/butler` answers `{ButlerTasks: {ButlerTask: [...]}}`, not a
+/// `MediaContainer`.
+List<PlexButlerTask> _butlerTasks(Object? json) {
+  final outer = json is Map<String, dynamic> ? json['ButlerTasks'] : null;
+  final list = outer is Map<String, dynamic> ? outer['ButlerTask'] : null;
+  return [
+    if (list is List)
+      for (final e in list)
+        if (e is Map<String, dynamic>) PlexButlerTask.fromJson(e),
+  ];
 }

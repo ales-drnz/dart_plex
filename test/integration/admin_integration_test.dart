@@ -31,10 +31,12 @@ void main() {
 
       test('preferences.byId returns one preference by id', () async {
         final all = await plex.preferences.all();
-        final first = all.first['id']?.toString();
-        expect(first, isNotNull);
-        final one = await plex.preferences.byId(first!);
-        expect(one, isA<Map<String, dynamic>>());
+        final loudness =
+            all.firstWhere((s) => s.id == 'LoudnessAnalysisBehavior');
+        expect(loudness.enumValues.keys, containsAll(['never', 'asap']));
+        final one = await plex.preferences.byId(loudness.id);
+        expect(one!.id, loudness.id);
+        expect(one.value, loudness.value);
       });
 
       test('log.writeMessage accepts a message without throwing', () async {
@@ -45,9 +47,9 @@ void main() {
         );
       });
 
-      test('activities.list returns the activities map', () async {
+      test('activities.list returns the running activities', () async {
         final acts = await plex.activities.list();
-        expect(acts, isA<Map<String, dynamic>>());
+        expect(acts.every((a) => a.uuid.isNotEmpty), isTrue);
       });
 
       test('providers.list returns the metadata-providers map', () async {
@@ -60,9 +62,10 @@ void main() {
         expect(s, isA<Map<String, dynamic>>());
       });
 
-      test('butler.tasks returns the scheduled-task map', () async {
+      test('butler.tasks returns the scheduled tasks', () async {
         final t = await plex.butler.tasks();
-        expect(t, isA<Map<String, dynamic>>());
+        expect(t, isNotEmpty);
+        expect(t.every((task) => task.name.isNotEmpty), isTrue);
       });
 
       test('notifications WebSocket: connect -> close round trip', () async {
