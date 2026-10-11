@@ -10,8 +10,13 @@
 /// nested inside a `MediaContainer` envelope (PMS endpoints).
 library;
 
+import 'api/plex_account_api.dart';
+import 'api/plex_library_api.dart';
+import 'api/plex_play_queues_api.dart';
+import 'api/plex_playlists_api.dart';
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
+import 'plex_filter.dart';
 
 // ---------------------------------------------------------------------------
 // Type tags

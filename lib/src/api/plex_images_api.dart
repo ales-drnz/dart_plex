@@ -4,6 +4,7 @@
 
 import 'dart:typed_data';
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';

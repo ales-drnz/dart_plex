@@ -3,6 +3,9 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import 'dart:async';
+import '../plex_client.dart';
+import '../plex_error_type.dart';
+import '../plex_exception.dart';
 
 /// Cancels requests that are still in flight.
 ///

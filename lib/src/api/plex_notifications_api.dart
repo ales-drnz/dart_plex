@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_events.dart';
@@ -93,7 +94,7 @@ class PlexNotificationsApi {
     final controller = StreamController<PlexNotification>.broadcast(
       onCancel: () {
         if (!(_wsController?.hasListener ?? false)) {
-          closeWebSocket();
+          unawaited(closeWebSocket());
         }
       },
     );
@@ -116,7 +117,7 @@ class PlexNotificationsApi {
         );
       },
       onDone: () {
-        controller.close();
+        unawaited(controller.close());
         _cleanupWs();
       },
       cancelOnError: false,
@@ -156,14 +157,14 @@ class PlexNotificationsApi {
     final controller = StreamController<PlexNotification>.broadcast(
       onCancel: () {
         if (!(_sseController?.hasListener ?? false)) {
-          closeEventSource();
+          unawaited(closeEventSource());
         }
       },
     );
     _sseController = controller;
 
     // Use the connection's streaming GET to consume the SSE body.
-    () async {
+    unawaited(() async {
       try {
         final res = await _http.requestStream(
           '/:/eventsource/notifications',
@@ -212,7 +213,7 @@ class PlexNotificationsApi {
             );
           },
           onDone: () {
-            controller.close();
+            unawaited(controller.close());
             _cleanupSse();
           },
           cancelOnError: false,
@@ -228,7 +229,7 @@ class PlexNotificationsApi {
         unawaited(controller.close());
         _cleanupSse();
       }
-    }();
+    }());
 
     return controller.stream;
   }
@@ -240,11 +241,11 @@ class PlexNotificationsApi {
   }
 
   void _cleanupWs() {
-    _wsSub?.cancel();
+    unawaited(_wsSub?.cancel());
     _wsSub = null;
     _wsChannel = null;
     if (!(_wsController?.isClosed ?? true)) {
-      _wsController?.close();
+      unawaited(_wsController?.close());
     }
     _wsController = null;
   }
@@ -252,7 +253,7 @@ class PlexNotificationsApi {
   void _cleanupSse() {
     _sseSub = null;
     if (!(_sseController?.isClosed ?? true)) {
-      _sseController?.close();
+      unawaited(_sseController?.close());
     }
     _sseController = null;
   }

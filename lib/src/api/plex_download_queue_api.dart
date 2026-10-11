@@ -2,7 +2,10 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
+import 'plex_play_queues_api.dart';
+import 'plex_streaming_api.dart';
 
 /// `/downloadQueue/*` — legacy mobile-sync download queue.
 ///

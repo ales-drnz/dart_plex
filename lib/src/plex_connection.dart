@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
+import 'plex_client.dart';
 import 'plex_credentials.dart';
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
@@ -262,6 +263,9 @@ final class PlexConnection {
       rethrow;
     } on FormatException catch (e, st) {
       throw _parseError(e, st, exchange.uri);
+      // A parser meeting a body of the wrong shape fails with a TypeError
+      // (`as Map` on a list): that is a malformed response, not a bug here.
+      // ignore: avoid_catching_errors
     } on TypeError catch (e, st) {
       throw _parseError(e, st, exchange.uri);
     }
@@ -551,7 +555,7 @@ final class PlexConnection {
       onListen: () {
         if (token != null) {
           if (token.isCancelled) return fail(_cancelled(uri));
-          token.whenCancelled.then((_) => fail(_cancelled(uri)));
+          unawaited(token.whenCancelled.then((_) => fail(_cancelled(uri))));
         }
         arm();
         sub = opened.response.stream.listen(

@@ -4,6 +4,7 @@
 
 import 'dart:typed_data';
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
 
 /// `/log` — send log entries to the server.

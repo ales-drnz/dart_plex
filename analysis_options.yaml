@@ -32,3 +32,22 @@ linter:
     - use_super_parameters
     - avoid_redundant_argument_values
     - unnecessary_parenthesis
+    - avoid_dynamic_calls
+    - comment_references
+    - unnecessary_lambdas
+    - prefer_final_fields
+    - always_declare_return_types
+    - type_annotate_public_apis
+    - cancel_subscriptions
+    - close_sinks
+    - avoid_slow_async_io
+    - literal_only_boolean_expressions
+    - no_adjacent_strings_in_list
+    - test_types_in_equals
+    - throw_in_finally
+    - unnecessary_statements
+    - unnecessary_await_in_return
+    - prefer_void_to_null
+    - avoid_catching_errors
+    - only_throw_errors
+    - discarded_futures

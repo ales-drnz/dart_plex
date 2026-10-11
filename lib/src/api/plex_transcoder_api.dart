@@ -2,9 +2,12 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import 'plex_images_api.dart';
+import 'plex_streaming_api.dart';
 
 /// `/photo/:/transcode` and `/{audio|video|photo}/:/transcode/...` —
 /// universal transcode URL builders.

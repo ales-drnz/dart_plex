@@ -35,6 +35,8 @@ import 'api/plex_ultra_blur_api.dart';
 import 'api/plex_updater_api.dart';
 import 'plex_connection.dart';
 import 'plex_credentials.dart';
+import 'plex_error_type.dart';
+import 'plex_exception.dart';
 import 'transport/plex_cancel_token.dart';
 import 'transport/plex_response.dart';
 import 'transport/plex_retry_policy.dart';

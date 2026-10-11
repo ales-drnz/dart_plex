@@ -2,6 +2,8 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../plex_client.dart';
+
 /// How [PlexClient.request] decodes a response body.
 enum PlexResponseType {
   /// JSON when the server says so (`Content-Type: application/json`),

@@ -2,6 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
 
 /// `/media/grabbers/*` — DVR/IPTV grabber device management.
@@ -126,7 +127,8 @@ class PlexDevicesApi {
   }
 
   /// `PUT /media/grabbers/devices/{deviceId}/prefs` — set device
-  /// preferences. [body] keys vary by grabber type.
+  /// preferences. [prefs] keys vary by grabber type and travel as query
+  /// parameters; [name] renames the device.
   Future<void> setPreferences({
     required String deviceId,
     Map<String, dynamic>? prefs,

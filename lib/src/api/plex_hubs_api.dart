@@ -2,9 +2,11 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import 'plex_search_api.dart';
 
 /// `/hubs/*` — global and per-section discovery rails.
 ///
@@ -39,8 +41,9 @@ class PlexHubsApi {
 
   /// Hubs scoped to a single library section (`/hubs/sections/{id}`).
   ///
-  /// [count] caps each hub's item list. [excludeFields] / [includeMeta]
-  /// follow the upstream contract.
+  /// [count] caps each hub's item list, [onlyTransient] keeps only the
+  /// transient hubs (recently added, continue listening), and
+  /// [includeMeta] asks for each hub's metadata.
   Future<List<PlexHub>> forSection({
     required String sectionId,
     int count = 16,

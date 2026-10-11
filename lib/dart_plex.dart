@@ -42,6 +42,8 @@
 /// [PlexClient.images], [PlexClient.streaming], [PlexClient.playback].
 library;
 
+import 'src/plex_client.dart';
+
 export 'src/api/plex_account_api.dart';
 export 'src/api/plex_activities_api.dart';
 export 'src/api/plex_butler_api.dart';

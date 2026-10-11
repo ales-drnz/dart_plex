@@ -2,6 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import 'plex_client.dart';
+import 'plex_exception.dart';
+
 /// Semantic categories for failures coming out of [PlexClient].
 ///
 /// Used by [PlexException.type] so callers can decide whether to retry,

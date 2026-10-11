@@ -2,11 +2,13 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import 'plex_library_api.dart';
 
 /// `/library/collections/*` — hand-curated groupings of metadata
 /// items.
@@ -26,7 +28,7 @@ class PlexCollectionsApi {
   /// collection in the library section [sectionId].
   ///
   /// Only [sectionId] is required by the server. Provide [title] to
-  /// name the collection, [type] (a [PlexMediaType]-style numeric
+  /// name the collection, [type] (a [PlexMetadataType]-style numeric
   /// code) to constrain its contents, and [smart] to create a smart
   /// collection driven by a filter.
   ///
