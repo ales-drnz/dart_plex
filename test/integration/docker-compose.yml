@@ -36,10 +36,9 @@ services:
       - PLEX_CLAIM=${PLEX_CLAIM:-}
       # Tell Plex the URL it should advertise to clients.
       - ADVERTISE_IP=http://127.0.0.1:${PLEX_HOST_PORT:-42400}/
-      # Limit the networks Plex accepts connections from. Loopback +
-      # the default Docker bridge range so the bootstrap can reach
-      # the container from the host.
-      - ALLOWED_NETWORKS=127.0.0.1/32,172.16.0.0/12
+      # No ALLOWED_NETWORKS: every request must carry the token, so the
+      # suite notices a transport that stops sending it (the bootstrap
+      # also clears the pref on volumes created with it).
       - TZ=Etc/UTC
     restart: unless-stopped
     healthcheck:

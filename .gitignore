@@ -14,8 +14,9 @@ pubspec.lock
 *.iml
 .DS_Store
 
-# Docs
-docs/
+# Docs (the pinned API document is tracked: the contract test reads it)
+docs/*
+!docs/plex-api-spec.yaml
 
 # AI tooling
 .claude/

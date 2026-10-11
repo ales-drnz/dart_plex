@@ -43,6 +43,21 @@ void main() {
         expect(await plex.server.ping(), isTrue);
       });
 
+      test(
+          'the server answers 401 without the token, so the suite checks '
+          'that the transport sends it', () async {
+        final anonymous = PlexClient(
+          credentials: plex.credentials,
+        )..connect(cache.baseUrl);
+        addTearDown(anonymous.close);
+        await expectLater(
+          anonymous.library.sections(),
+          throwsA(
+            isA<PlexException>().having((e) => e.isAuthError, 'auth', true),
+          ),
+        );
+      });
+
       test('backgroundTasks is callable', () async {
         final bg = await plex.server.backgroundTasks();
         expect(bg, isNotEmpty);

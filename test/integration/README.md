@@ -8,7 +8,8 @@ The lightweight drift watchdog at
 [`../spec_drift_watchdog_test.dart`](../spec_drift_watchdog_test.dart)
 runs on every `dart test` and does not require Docker — it only
 checks the upstream OpenAPI spec for changes. The Docker-backed
-integration suite below is opt-in via the `integration` tag.
+integration suite below is tagged `integration` and skipped by a plain
+`dart test`; the `integration` preset runs it, one file at a time.
 
 ## Quick start
 
@@ -60,7 +61,8 @@ integration suite below is opt-in via the `integration` tag.
 5. Run the integration tests:
 
    ```sh
-   dart test --tags integration
+   dart test -P integration                      # everything, serially
+   dart test -P integration --tags integration   # the integration suites only
    ```
 
 6. Tear down when done:

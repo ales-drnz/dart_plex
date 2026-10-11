@@ -156,6 +156,17 @@ Future<void> main(List<String> args) async {
   print('   ✓ Connected to ${server.name} '
       '(machineId=${server.clientIdentifier})');
 
+  // 5b. Require the token from every client.
+  //
+  // `allowedNetworks` lets listed networks in without auth. The host
+  // reaches the container through the Docker bridge, so any entry there
+  // would let a request with no token through — and a transport that
+  // stopped sending X-Plex-Token would pass the whole suite. Older
+  // checkouts set it through ALLOWED_NETWORKS, and the pref persists in
+  // the config volume, so clear it on every run.
+  _step('Requiring a token from every client');
+  await client.preferences.set({'allowedNetworks': ''});
+
   // 6. Ensure Music library
   _step('Ensuring "Music" library exists');
   final sections = await client.library.sections();
@@ -200,7 +211,7 @@ Future<void> main(List<String> args) async {
 
   _section('Bootstrap complete');
   print('Run integration tests with:');
-  print('  dart test --tags integration');
+  print('  dart test -P integration');
 }
 
 // ─── Plex-specific helpers ──────────────────────────────────────────

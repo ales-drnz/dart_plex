@@ -112,10 +112,12 @@ void main() {
         expect(afterScrobble, isNotNull);
         expect(afterScrobble!.viewCount ?? 0, greaterThan(beforeViews));
 
+        // Unscrobble marks the item unplayed: the count goes to zero, not
+        // back to what it was (other suites may have played it before).
         await plex.playback.unscrobble(trackRatingKey);
         final afterUnscrobble = await plex.library.item(trackRatingKey);
         expect(afterUnscrobble, isNotNull);
-        expect(afterUnscrobble!.viewCount ?? 0, beforeViews);
+        expect(afterUnscrobble!.viewCount ?? 0, 0);
       });
     },
     skip: bootstrapSkipReason,

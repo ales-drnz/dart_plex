@@ -65,11 +65,12 @@ class PlexPlayQueuesApi {
       'shuffle': shuffle ? 1 : 0,
       'repeat': repeat ? 1 : 0,
       'continuous': continuous ? 1 : 0,
-      // Non-spec param honoured by Plex servers.
+      // Not in the community document; sent as 0.1 did. Not verified on a
+      // server: a music queue has no chapters.
       'includeChapters': includeChapters ? 1 : 0,
     };
     if (key != null) qp['key'] = key;
-    // Non-spec param honoured by Plex servers.
+    // Not in the community document; sent as 0.1 did (not verified).
     if (playQueueItemId != null) qp['playQueueItemID'] = playQueueItemId;
     final res = await _http.request<Map<String, Object?>>(
       '/playQueues',

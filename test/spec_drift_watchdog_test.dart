@@ -42,7 +42,7 @@ void main() {
       expect(
         report.pinnedCount,
         greaterThan(200),
-        reason: 'pinned Plex spec parsed to too few ops (have 241) — '
+        reason: 'pinned Plex spec parsed to too few ops (the pin has 405) — '
             'likely corrupted or schema changed',
       );
 

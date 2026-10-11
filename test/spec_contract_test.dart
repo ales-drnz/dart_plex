@@ -12,7 +12,11 @@
 ///
 /// * its path matches a documented route,
 /// * that route documents its HTTP method,
-/// * every query parameter is one the route declares.
+/// * every query parameter is one the route declares, spelt with the
+///   same case (PMS reads `excludeParentID`, not `excludeParentId`).
+///
+/// Deprecated methods are called too: they still ship. A map parameter
+/// that nests (`prefs[key]=…`) is checked by its outer name.
 ///
 /// PMS ignores a query parameter it does not know and answers 200 with
 /// a *wider* result, so a misspelt or misplaced parameter is invisible
@@ -40,18 +44,18 @@ const _allowedExtras = <String, Map<String, String>>{
     // The document lists these as headers; PMS reads every X-Plex-* header
     // as a query parameter too (its own API Info section says so), and
     // URLs a player opens must carry the token in the query.
-    'x-plex-token': 'auth for URLs opened by a player',
-    'x-plex-container-start': 'paging, header or query (API Info)',
-    'x-plex-container-size': 'paging, header or query (API Info)',
-    'x-plex-client-identifier': 'X-Plex-* header as query (API Info)',
-    'x-plex-product': 'X-Plex-* header as query (API Info)',
-    'x-plex-version': 'X-Plex-* header as query (API Info)',
-    'x-plex-platform': 'X-Plex-* header as query (API Info)',
-    'x-plex-device': 'X-Plex-* header as query (API Info)',
-    'x-plex-device-name': 'X-Plex-* header as query (API Info)',
-    'x-plex-client-profile-name':
+    'X-Plex-Token': 'auth for URLs opened by a player',
+    'X-Plex-Container-Start': 'paging, header or query (API Info)',
+    'X-Plex-Container-Size': 'paging, header or query (API Info)',
+    'X-Plex-Client-Identifier': 'X-Plex-* header as query (API Info)',
+    'X-Plex-Product': 'X-Plex-* header as query (API Info)',
+    'X-Plex-Version': 'X-Plex-* header as query (API Info)',
+    'X-Plex-Platform': 'X-Plex-* header as query (API Info)',
+    'X-Plex-Device': 'X-Plex-* header as query (API Info)',
+    'X-Plex-Device-Name': 'X-Plex-* header as query (API Info)',
+    'X-Plex-Client-Profile-Name':
         'picks the base profile; without one Linux/macOS get 400 (verified)',
-    'x-plex-client-profile-extra':
+    'X-Plex-Client-Profile-Extra':
         'transcode target and bitrate limitation (verified: 96 -> 96 kbps)',
   },
   'GET /library/sections/{sectionId}/all': {
@@ -62,8 +66,7 @@ const _allowedExtras = <String, Map<String, String>>{
     // PlexFilter conditions travel as their own parameters (genre=6,
     // year>>=2009): plex_library_filter_test pins the encoding and the
     // integration suite their effect.
-    'genre':
-        'a PlexFilter condition; verified on PMS 1.43.2 (integration: filtering)',
+    ..._filterFields,
   },
   'GET /library/metadata/{id}/children': {
     'sort': 'index:desc reversed an album; verified on PMS 1.43.2',
@@ -75,16 +78,19 @@ const _allowedExtras = <String, Map<String, String>>{
     'type': 'type=10&title.query=Tra answered tracks; verified on PMS 1.43.2',
   },
   'GET /library/sections/{sectionId}/common': {
-    'type': 'answers 200 for type 9 and 10; no visible effect on the seed',
+    'type': 'required: 400 without it, and type 8/9/10 answer different '
+        'bodies; verified on PMS 1.43.2',
   },
   'PUT /library/sections/{sectionId}': {
-    'location':
-        'accepted (200) with the section\'s own path; verified on PMS 1.43.2',
+    // PMS answers 200 to any parameter, so the 200 proves nothing; the
+    // web app sends location this way when editing a section's folders.
+    'location': 'NOT verified: an unknown parameter also answers 200',
   },
   'GET /playlists': {
     'sort': 'titleSort:desc reversed the list; verified on PMS 1.43.2',
-    'genre': 'general filter syntax: title= and userRating>>= narrowed; '
-        'verified on PMS 1.43.2',
+    // General filter syntax: title= and userRating>>= narrowed (verified
+    // on PMS 1.43.2); the other fields are the section filter syntax.
+    ..._filterFields,
   },
   'POST /playlists': {
     'title':
@@ -99,11 +105,13 @@ const _allowedExtras = <String, Map<String, String>>{
   'GET /playQueues/{playQueueId}': {
     'window': 'window=1 around center answered 3 items; verified on PMS 1.43.2',
     'center': 'centres the window on that item; verified on PMS 1.43.2',
-    'includechapters': 'NOT verified: no chapters in a music queue',
+    'includeChapters':
+        'NOT verified: no chapters in a music queue; sent as 0.1 did',
   },
   'POST /playQueues': {
-    'includechapters': 'NOT verified: no chapters in a music queue',
-    'playqueueitemid': 'NOT verified',
+    'includeChapters':
+        'NOT verified: no chapters in a music queue; sent as 0.1 did',
+    'playQueueItemID': 'NOT verified: sent as 0.1 did',
   },
   'GET /library/sections/{sectionId}/search': {
     'query': 'query=Track answered the tracks; verified on PMS 1.43.2',
@@ -111,35 +119,58 @@ const _allowedExtras = <String, Map<String, String>>{
     'limit': 'limit=1 answered one; verified on PMS 1.43.2',
   },
   'GET /status/sessions/history/all': {
-    'viewedat>=': 'narrowed 3 plays to 1; verified on PMS 1.43.2',
-    'viewedat<=': 'narrowed 3 plays to 1; verified on PMS 1.43.2',
+    'viewedAt>=': 'narrowed 3 plays to 1; verified on PMS 1.43.2',
+    'viewedAt<=': 'narrowed 3 plays to 1; verified on PMS 1.43.2',
   },
   'GET /hubs': {
-    'includemeta': 'accepted; no effect observed on 1.43.2',
+    'includeMeta': 'no effect observed on 1.43.2 (identical bodies with, '
+        'without and with garbage); sent as 0.1 did',
   },
   'GET /hubs/sections/{sectionId}': {
-    'includemeta': 'accepted; no effect observed on 1.43.2',
+    'includeMeta': 'no effect observed on 1.43.2; sent as 0.1 did',
   },
   'GET /{transcodeType}/:/transcode/universal/start.{extension}': {
-    'audiocodec': 'NOT verified for video (the music path uses a profile)',
-    'videocodec': 'NOT verified: video transcode',
+    'audioCodec': 'NOT verified for video (the music path uses a profile)',
+    'videoCodec': 'NOT verified: video transcode',
     'container': 'NOT verified: video transcode',
-    'fastseek': 'sent by the verified music start too',
-    'maxaudiobitrate': 'NOT verified for video; no effect on music',
+    'fastSeek': 'sent by the verified music start too',
+    'maxAudioBitrate': 'NOT verified for video; no effect on music',
+    'audioChannels': 'deprecated universalAudioUrl only, sent as 0.1 did; '
+        'NOT verified (startAudioTranscode replaces it)',
     'session': 'session id for ping/stop; verified on PMS 1.43.2',
   },
   'GET /{transcodeType}/:/transcode/universal/decision': {
     'path': 'the item; verified on PMS 1.43.2',
-    'mediaindex': 'verified on PMS 1.43.2 (startAudioTranscode)',
-    'partindex': 'verified on PMS 1.43.2 (startAudioTranscode)',
+    'mediaIndex': 'verified on PMS 1.43.2 (startAudioTranscode)',
+    'partIndex': 'verified on PMS 1.43.2 (startAudioTranscode)',
     'protocol': 'hls / dash; verified on PMS 1.43.2',
-    'directplay': 'verified on PMS 1.43.2 (startAudioTranscode)',
-    'directstream': 'verified on PMS 1.43.2 (startAudioTranscode)',
-    'fastseek': 'verified on PMS 1.43.2 (startAudioTranscode)',
+    'directPlay': 'verified on PMS 1.43.2 (startAudioTranscode)',
+    'directStream': 'verified on PMS 1.43.2 (startAudioTranscode)',
+    'fastSeek': 'verified on PMS 1.43.2 (startAudioTranscode)',
     'offset': 'verified on PMS 1.43.2 (startAudioTranscode)',
     'session': 'verified on PMS 1.43.2 (startAudioTranscode)',
   },
 };
+
+/// The [PlexFilter] fields the stand-in filters send (see [_filters]): the
+/// section filter syntax, each narrowed a section on PMS 1.43.2
+/// (integration: filtering, and the 0.2 review's A/B checks).
+const _filterFields = <String, String>{
+  'genre': 'genre=5 narrowed, genre=999 emptied; verified on PMS 1.43.2',
+  'year>>': 'year>>=2019 kept the 2020 album, 2021 dropped it; verified',
+  'title=': 'exact title match; verified on PMS 1.43.2',
+  'userRating>>': 'rated() narrowed; verified on PMS 1.43.2',
+  'unwatched': 'played()/unplayed() partition a section; verified',
+};
+
+/// One filter of each kind, so every field name is checked.
+final _filters = <PlexFilter>[
+  PlexFilter.genre(1),
+  PlexFilter.yearAfter(2019),
+  PlexFilter.titleIs('x'),
+  PlexFilter.rated(),
+  PlexFilter.unplayed(),
+];
 
 /// Routes PMS serves that the community document does not list, with the
 /// methods and query parameters verified on a real server.
@@ -177,6 +208,9 @@ const _extraRoutes = <String, Map<String, List<String>>>{
     'POST': [
       'name', 'type', 'agent', 'scanner', 'language', 'location', //
       'importFromiTunes', 'metadataAgentProviderGroupId', 'relative',
+      // Agent preferences as prefs[name]=value, as 0.1 sent them; the
+      // bootstrap's own section creation sends none (NOT verified).
+      'prefs',
     ],
   },
   // NOT verified (needs Plex Pass): the document says POST; the wrapper
@@ -184,7 +218,8 @@ const _extraRoutes = <String, Map<String, List<String>>>{
   '/status/sessions/terminate': {
     'GET': ['sessionId', 'reason'],
   },
-  // NOT verified (needs tuner hardware): the newer document lists only GET.
+  // POST answers 200 with an empty container, GET and PUT 404, on PMS
+  // 1.43.2 without tuners: the document's GET is the wrong one.
   '/media/grabbers/devices/discover': {
     'POST': [],
   },
@@ -239,8 +274,7 @@ List<_Route> _loadSpec() {
       if (op is! YamlMap || method == 'parameters') return;
       byMethod[(method as String).toUpperCase()] = {
         for (final p in [...?(op['parameters'] as YamlList?), ...?shared])
-          if (_param(spec, p) case {'in': 'query', 'name': final String n})
-            n.toLowerCase(),
+          if (_param(spec, p) case {'in': 'query', 'name': final String n}) n,
       };
     });
     routes.add(_route(path, byMethod));
@@ -248,8 +282,7 @@ List<_Route> _loadSpec() {
   _extraRoutes.forEach((path, methods) {
     routes.add(
       _route(path, {
-        for (final e in methods.entries)
-          e.key: {for (final p in e.value) p.toLowerCase()},
+        for (final e in methods.entries) e.key: {...e.value},
       }),
     );
   });
@@ -333,18 +366,24 @@ Object? _value(TypeMirror type, String name) {
   if (type.isEnum) {
     return (type.getField(#values).reflectee as List<Object?>).first;
   }
+  if (type.simpleName == #List &&
+      (type.typeArguments.single as ClassMirror).reflectedType == PlexFilter) {
+    return _filters;
+  }
   if (type.simpleName == #List) {
     final arg = type.typeArguments.single;
     final inner = _value(arg, name);
     return inner == #skip ? #skip : _list(arg, inner);
   }
-  // Free-form maps (`args`, `prefs`, `changes`) are spread into the query
-  // verbatim: empty, so only the wrapper's own parameters are checked.
+  // A map is either spread into the query (`args`, `changes`: free-form,
+  // its keys are the caller's) or nested under its own name
+  // (`prefs[key]=…`). One sentinel entry tells them apart: a bare
+  // sentinel is a spread map, `name[sentinel]` is checked as `name`.
   if (type.simpleName == #Map) {
     final v = (type.typeArguments.last as ClassMirror).reflectedType;
-    if (v == String) return <String, String>{};
-    if (v == Object) return <String, Object>{};
-    return <String, Object?>{};
+    if (v == String) return <String, String>{_free: 'x'};
+    if (v == Object) return <String, Object>{_free: 'x'};
+    return <String, Object?>{_free: 'x'};
   }
   if (t == PlexCredentials) {
     return const PlexCredentials(
@@ -383,6 +422,15 @@ Object _list(TypeMirror arg, Object? element) {
 bool _deprecated(DeclarationMirror d) =>
     d.metadata.any((m) => m.reflectee is Deprecated);
 
+/// The key of the one entry every stand-in map carries.
+const _free = 'freeFormKey';
+
+/// The name a query key is checked under: `prefs[x]` is `prefs`.
+String _outer(String key) {
+  final i = key.indexOf('[');
+  return i > 0 && key.endsWith(']') ? key.substring(0, i) : key;
+}
+
 void main() {
   final routes = _loadSpec();
 
@@ -408,8 +456,7 @@ void main() {
                     m.isRegularMethod &&
                     !m.isPrivate &&
                     !m.isStatic &&
-                    !m.isOperator &&
-                    !_deprecated(m),
+                    !m.isOperator,
               );
       for (final m in methods) {
         final name = '$apiName.${MirrorSystem.getName(m.simpleName)}';
@@ -483,7 +530,8 @@ void main() {
             ...?_allowedExtras['$method ${route.path}']?.keys,
           };
           for (final q in uri.queryParametersAll.keys) {
-            final k = q.toLowerCase();
+            if (q == _free) continue; // a spread free-form map
+            final k = _outer(q);
             if (!declared.contains(k) && !allowed.contains(k)) {
               violations.add(
                 '$name: $method ${route.path} sends "$q", '

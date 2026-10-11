@@ -1,16 +1,14 @@
-# Use the `integration` preset to force serial execution when running
-# integration tests against a single shared Plex Media Server. Pair
-# with `--tags integration` to filter:
+# The integration suites need the Docker PMS (test/integration/README.md)
+# and race each other in parallel (timeline and playQueue writes), so a
+# plain `dart test` skips them. Run everything, one file at a time, with:
 #
-#     dart test -P integration --tags integration
+#     dart test -P integration
 #
-# Without --concurrency 1, parallel test files race on writes (timeline
-# + playQueue mutations in particular trigger lost-update behaviour
-# upstream).
-# Declare the `integration` tag so `--tags integration` doesn't warn
-# about an unknown tag.
+# and only the integration suites with `dart test -P integration --tags
+# integration`.
 tags:
   integration:
+    skip: 'needs the Docker PMS: run with -P integration'
   # Read-only checks against a server named by environment variables
   # (see test/live_server_test.dart).
   live:
@@ -18,3 +16,6 @@ tags:
 presets:
   integration:
     concurrency: 1
+    tags:
+      integration:
+        skip: false
