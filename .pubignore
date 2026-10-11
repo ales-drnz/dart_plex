@@ -28,5 +28,10 @@ test/
 dart_test.yaml
 .env.test
 
-# Dev tools that read the sibling repository
-tool/
+# Branding stays on GitHub: the README loads the diagrams from there. Only
+# the icon ships, as the pubspec screenshot.
+/imgs/*
+!/imgs/dart_plex.png
+
+# Dev tools: the transport drift check and the icon and diagram generator
+/tool/

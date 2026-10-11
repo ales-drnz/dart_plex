@@ -36,7 +36,7 @@ dependencies:
 *   [Quick start](#quick-start)
 *   [Guide](#guide)
     <details>
-    <summary><a href="#1-setup"><b>1. Setup</b></a></summary>
+    <summary><a href="#1-initialization-and-lifecycle"><b>1. Initialization and lifecycle</b></a></summary>
 
     * [1.1 Creating a client](#11-creating-a-client)
     * [1.2 Credentials](#12-credentials)
@@ -337,7 +337,13 @@ Future<void> main() async {
 
 ## Guide
 
-### 1. Setup
+`PlexClient` holds the identity of your app, the server and the token. Each part of the Plex API is a sub-API on it (`plex.library`, `plex.playlists`, `plex.streaming` and so on), and every call goes through one connection, the same transport `dart_jellyfin` uses.
+
+<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/architecture.png" width="100%" alt="Architecture: your code calls PlexClient; PlexConnection sends through an http.Client and parses large answers on a background isolate into typed models">
+
+### 1. Initialization and lifecycle
+
+<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/client_lifecycle.png" width="100%" alt="Client lifecycle: PlexClient, sign in and connect, sub-APIs, withCancelToken, close">
 
 #### 1.1 Creating a client
 
@@ -447,6 +453,8 @@ final plex = PlexClient(
 ---
 
 ### 2. Sign-in and server discovery
+
+<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/sign_in_flow.png" width="100%" alt="Sign-in: createPin, the user enters the code at plex.tv/link, pollPin until a token, setToken; then fetchResources, bestConnection and connect">
 
 Sign-in talks to plex.tv and returns a token. `setToken` applies it to the
 client; no call applies it for you.
@@ -1095,6 +1103,8 @@ matches it slowly, so scope it with `type`.
 
 ### 7. Playback reporting
 
+<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/play_reporting.png" width="100%" alt="Timeline reports at each change and every 10 seconds; the play counts after about half the track in real time">
+
 #### 7.1 Timeline reports
 
 ```dart
@@ -1157,6 +1167,8 @@ back. To list favourites, filter a section with
 ---
 
 ### 8. Streaming and transcoding
+
+<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/audio_transcode_sequence.png" width="100%" alt="Audio transcode: startAudioTranscode makes the decision and returns the URL; the player opens it; pingUniversal while paused; stopUniversal at the end">
 
 The streaming calls return URLs; none of them fetches the audio. Hand the
 URL to your audio engine (mpv, AVPlayer, ExoPlayer). The URL carries
@@ -1922,6 +1934,8 @@ request in flight too.
 ---
 
 ### 18. Notifications and events
+
+<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/events.png" width="100%" alt="Notification frames from the WebSocket or the event source become a PlexNotification, and events() decodes them into the sealed PlexEvent subtypes">
 
 #### 18.1 Connecting
 
