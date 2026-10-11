@@ -1,7 +1,8 @@
 """Generates the package icon (imgs/dart_plex.png) and the README
 diagrams in imgs/diagrams, as PNG only, in the style of mpv_audio_kit's.
 
-The branding is two flat colors: the icon's navy plate and light blue glyph.
+The branding is flat colors: the icon's navy plate with a white glyph, and
+light blue for your code in the diagrams.
 Library nodes take the navy and your code's nodes the light blue. The
 PNGs are transparent, so they sit on the page's own ground: text inside a
 node relies on the node's fill, and the free text, arrows and bands use mid
@@ -16,6 +17,9 @@ OUT = os.path.join('imgs', 'diagrams')
 ICON = os.path.join('imgs', 'dart_plex.png')
 NAVY = '#0D2A75'
 LIGHT_BLUE = '#A8EDFA'
+# The icon's glyph: white on the navy disc. The diagrams keep the light
+# blue, which also reads on a light page, where white would vanish.
+GLYPH = '#FFFFFF'
 SANS = "Noto Sans, system-ui, -apple-system, Segoe UI, sans-serif"
 MONO = "Noto Sans Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
 
@@ -205,7 +209,7 @@ def icon_svg():
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" '
             'role="img" aria-label="dart_plex">\n'
             f'<circle cx="512" cy="512" r="512" fill="{NAVY}"/>\n'
-            f'<path transform="translate({tx:.3f} {ty:.3f}) scale({s:.4f})" d="{chevron}" fill="{LIGHT_BLUE}"/>\n</svg>\n')
+            f'<path transform="translate({tx:.3f} {ty:.3f}) scale({s:.4f})" d="{chevron}" fill="{GLYPH}"/>\n</svg>\n')
 
 
 ALL = [architecture, client_lifecycle, sign_in_flow, play_reporting, audio_transcode, events]

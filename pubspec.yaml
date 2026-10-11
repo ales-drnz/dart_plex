@@ -1,6 +1,6 @@
 name: dart_plex
 description: Dart client for Plex Media Server. Supports authentication, library browsing, playlists, streaming, search and more. Targets macOS, Windows, Linux, iOS and Android.
-version: 0.2.0
+version: 0.2.1
 homepage: https://github.com/ales-drnz/dart_plex
 repository: https://github.com/ales-drnz/dart_plex
 issue_tracker: https://github.com/ales-drnz/dart_plex/issues
