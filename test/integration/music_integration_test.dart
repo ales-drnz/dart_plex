@@ -104,6 +104,23 @@ void main() {
         expect(await plex.activities.list(), isA<List<PlexActivity>>());
       });
 
+      test('PlexPaging walks an artist two tracks at a time', () async {
+        var requests = 0;
+        final all = await PlexPaging.items(
+          (start, size) {
+            requests++;
+            return plex.library.grandchildren(
+              artist.ratingKey,
+              start: start,
+              size: size,
+            );
+          },
+          pageSize: 2,
+        ).toList();
+        expect(all.map((t) => t.ratingKey), tracks.map((t) => t.ratingKey));
+        expect(requests, 2);
+      });
+
       test('countChildren moves no rows and still counts', () async {
         expect(await plex.library.countChildren(album.ratingKey), 3);
         expect(await plex.library.countChildren(artist.ratingKey), 1);
