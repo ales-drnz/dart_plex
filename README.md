@@ -13,7 +13,7 @@
 <table>
 <tr>
 <td valign="middle" width="90"><img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/dart_plex.png" width="70" alt="logo"></td>
-<td valign="middle"><code>dart_plex</code> is a Dart client for Plex Media Server <code>v1.43.x</code>. It covers libraries, hubs, playlists, audio streaming and transcoding, playback reporting, search, play queues, Live TV and server notifications through typed Dart objects, and handles plex.tv sign-in and server discovery. It runs on <code>package:http</code>, so you choose the HTTP stack, and every call can be cancelled.</td>
+<td valign="middle"><code>dart_plex</code> is a Dart client for Plex Media Server 1.43. It covers libraries, playlists, streaming, playback reporting, play queues and search through typed Dart objects, and handles plex.tv sign-in and server discovery.</td>
 </tr>
 </table>
 
@@ -27,10 +27,6 @@ Add `dart_plex` to your `pubspec.yaml`:
 dependencies:
   dart_plex: ^0.2.0
 ```
-
-`package:dart_plex/dart_plex.dart` is the library. File downloads live in a
-separate entrypoint, `package:dart_plex/io.dart`, because they need
-`dart:io` ([19.1](#191-downloading-to-a-file)).
 
 ---
 

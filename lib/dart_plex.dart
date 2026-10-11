@@ -2,45 +2,43 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-/// Pure-Dart client for Plex Media Server.
+/// A Dart client for Plex Media Server 1.43.
 ///
-/// Entry point is [PlexClient] — a stateful façade that holds the
-/// credentials/token across calls and exposes one sub-API per domain:
+/// [PlexClient] holds the client identity, the server and the token, and
+/// exposes one sub-API per domain:
 ///
 /// ```dart
 /// final plex = PlexClient(
 ///   credentials: const PlexCredentials(
-///     clientIdentifier: '2f5b…-uuid',
-///     product: 'Finova',
+///     clientIdentifier: 'a-stable-id-per-install',
+///     product: 'MyApp',
 ///     version: '1.0.0',
 ///     device: 'iPhone',
-///     deviceName: "Alex's iPhone",
+///     deviceName: 'My iPhone',
 ///     platform: 'iOS',
 ///   ),
 /// );
 ///
-/// // 1. Authenticate against plex.tv
-/// final user = await plex.account.signInWithPassword(username: 'alex', password: 'hunter2');
-/// plex.setToken(user.authToken);
+/// // The user enters pin.code at plex.tv/link.
+/// var pin = await plex.account.createPin();
+/// while (!pin.isAuthenticated) {
+///   await Future<void>.delayed(const Duration(seconds: 2));
+///   pin = await plex.account.pollPin(id: pin.id);
+/// }
+/// plex.setToken(pin.authToken);
 ///
-/// // 2. Discover the user's servers and connect to one
-/// final resources = await plex.account.fetchResources();
-/// final server = resources.firstWhere((r) => r.owned);
+/// final servers = await plex.account.fetchResources();
+/// final server = servers.firstWhere((s) => s.owned);
 /// plex.connect(server.bestConnection()!.uri, accessToken: server.accessToken);
 ///
-/// // 3. Browse libraries
-/// final libs = await plex.library.sections();
-/// final musicLib = libs.firstWhere((l) => l.type == PlexLibraryType.music);
+/// final sections = await plex.library.sections();
+/// final music = sections.firstWhere((s) => s.type == PlexLibraryType.music);
 /// final albums = await plex.library.allByType(
-///   sectionId: musicLib.id,
+///   sectionId: music.id,
 ///   type: PlexMetadataType.album,
 ///   size: 50,
 /// );
 /// ```
-///
-/// Higher-level use cases (artwork URLs, transcode session URLs,
-/// playback reporting) are exposed through dedicated sub-APIs:
-/// [PlexClient.images], [PlexClient.streaming], [PlexClient.playback].
 library;
 
 import 'src/plex_client.dart';
