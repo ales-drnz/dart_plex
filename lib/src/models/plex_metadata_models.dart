@@ -179,11 +179,15 @@ final class PlexMetadata {
   /// only on items read from `/playlists/{id}/items`.
   ///
   /// It names one *entry*, not the track: pass it to
-  /// [PlexPlaylistsApi.removeItem] / [PlexPlaylistsApi.moveItem], so a
-  /// track that is in the playlist twice loses or moves only the entry you
-  /// mean. Kept as a `String` like [ratingKey] and the ids those methods
-  /// take.
+  /// [PlexPlaylistsApi.removeItem] / [PlexPlaylistsApi.moveItem]. Kept as
+  /// a `String` like [ratingKey] and the ids those methods take.
   final String? playlistItemId;
+
+  /// The entry id inside a server play queue (`playQueueItemID`), present
+  /// only on items read from [PlexPlayQueuesApi]: what
+  /// `PlexPlaybackApi.timeline(playQueueItemID:)` and the play queue's
+  /// move and remove calls take.
+  final int? playQueueItemId;
 
   /// Full raw map — keep around for fields not lifted onto strongly
   /// typed properties yet.
@@ -227,6 +231,7 @@ final class PlexMetadata {
     this.addedAt,
     this.updatedAt,
     this.playlistItemId,
+    this.playQueueItemId,
     this.originallyAvailableAt,
     this.parentYear,
     this.leafCount,
@@ -288,6 +293,7 @@ final class PlexMetadata {
       styles: tagNames(json['Style']),
       roles: tagNames(json['Role']),
       playlistItemId: asString(json['playlistItemID']),
+      playQueueItemId: asInt(json['playQueueItemID']),
       originallyAvailableAt: asCalendarDate(json['originallyAvailableAt']),
       parentYear: asInt(json['parentYear']),
       leafCount: asInt(json['leafCount']),

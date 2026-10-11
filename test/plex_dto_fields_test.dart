@@ -72,6 +72,7 @@ const _trackMetadataJson = r'''
   "summary": "",
   "index": 1,
   "parentIndex": 2,
+  "playQueueItemID": 256,
   "userRating": 10.0,
   "rating": 8.5,
   "viewCount": 4,
@@ -356,6 +357,7 @@ void main() {
       expect(m.genres, ['Rock']);
       expect(m.moods, ['Energetic']);
       expect(m.roles, ['Guest Singer', 'Second Artist']);
+      expect(m.playQueueItemId, 256);
       expect(m.styles, isEmpty);
     });
 

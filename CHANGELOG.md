@@ -25,7 +25,7 @@ A revision of the whole package. See [MIGRATION.md](MIGRATION.md) for the change
 - `streaming.startAudioTranscode()`, which makes the decision and caps the bitrate the way the server accepts, and `PlexStreamingApi.musicProfileExtra()`.
 - Typed notification events: `PlexEvent` with `PlexPlaySessionEvent`, `PlexLibraryItemEvent`, `PlexActivityEvent`, `PlexStatusEvent` and `PlexUnknownEvent`, through `notification.events` or `stream.events()`.
 - `timeline(playState:, playQueueItemID:)`.
-- `PlexMetadata.roles`, `playlistItemId`, `audioStream`, `originallyAvailableAt`, `parentYear`, `leafCount`, `viewedLeafCount`, `childCount`, `skipCount`, `lastRatedAt`, `librarySectionId`, `librarySectionTitle`, `parentGuid`, `grandparentGuid`, `distance`, `score` and `ultraBlurColors`.
+- `PlexMetadata.roles`, `playlistItemId`, `playQueueItemId`, `audioStream`, `originallyAvailableAt`, `parentYear`, `leafCount`, `viewedLeafCount`, `childCount`, `skipCount`, `lastRatedAt`, `librarySectionId`, `librarySectionTitle`, `parentGuid`, `grandparentGuid`, `distance`, `score` and `ultraBlurColors`.
 - `PlexMetadata.thumbVersion`, `artVersion`, `parentThumbVersion`, `grandparentThumbVersion` and `PlexArtwork.versionOf()`, for artwork cache keys.
 - `PlexStream.gain`, `albumGain`, `peak`, `albumPeak`, `loudness` and `lra`.
 - `PlexPaging.pages()` and `items()`.

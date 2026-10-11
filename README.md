@@ -1445,8 +1445,8 @@ final items = await plex.playQueues.items(
   center: queue.selectedItemId,
   window: 50,
 );
-// Each entry's queue id is in its raw map.
-final entryId = items.last.raw['playQueueItemID']! as int;
+// Each entry's own id in the queue.
+final entryId = items.last.playQueueItemId!;
 
 // Append, or play next.
 await plex.playQueues.addItems(
