@@ -46,25 +46,25 @@ void main() {
       test('timeline playing -> paused -> stopped round trip', () async {
         await plex.playback.timeline(
           ratingKey: trackRatingKey,
-          state: PlexPlaybackApi.statePlaying,
+          playState: PlexPlayState.playing,
           timeMs: 0,
           durationMs: 30000,
         );
         await plex.playback.timeline(
           ratingKey: trackRatingKey,
-          state: PlexPlaybackApi.statePlaying,
+          playState: PlexPlayState.playing,
           timeMs: 5000,
           durationMs: 30000,
         );
         await plex.playback.timeline(
           ratingKey: trackRatingKey,
-          state: PlexPlaybackApi.statePaused,
+          playState: PlexPlayState.paused,
           timeMs: 8000,
           durationMs: 30000,
         );
         await plex.playback.timeline(
           ratingKey: trackRatingKey,
-          state: PlexPlaybackApi.stateStopped,
+          playState: PlexPlayState.stopped,
           timeMs: 10000,
           durationMs: 30000,
         );

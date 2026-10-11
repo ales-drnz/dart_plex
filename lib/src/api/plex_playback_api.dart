@@ -3,6 +3,7 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import '../plex_connection.dart';
+import '../plex_events.dart';
 
 /// `/:/timeline`, `/:/scrobble`, `/:/unscrobble`, `/:/rate`.
 ///
@@ -21,15 +22,19 @@ class PlexPlaybackApi {
   PlexPlaybackApi(this._http);
 
   /// `'stopped'` — playback ended or was cancelled.
+  @Deprecated('Use PlexPlayState.stopped')
   static const String stateStopped = 'stopped';
 
   /// `'paused'` — playback is paused but the session is still alive.
+  @Deprecated('Use PlexPlayState.paused')
   static const String statePaused = 'paused';
 
   /// `'playing'` — playback is actively progressing.
+  @Deprecated('Use PlexPlayState.playing')
   static const String statePlaying = 'playing';
 
   /// `'buffering'` — playback is stalled while the player refills its buffer.
+  @Deprecated('Use PlexPlayState.buffering')
   static const String stateBuffering = 'buffering';
 
   /// Report a playback heartbeat (`/:/timeline`). Send one on every state
@@ -37,7 +42,9 @@ class PlexPlaybackApi {
   /// LAN, 20 s on cellular.
   ///
   /// [timeMs] is the playhead and [durationMs] the item's length, both in
-  /// milliseconds. [ratingKey] is the item's rating key; `key` is sent as
+  /// milliseconds. [playState] is what the player is doing (the `String`
+  /// [state] is deprecated). [ratingKey] is the item's rating key; `key`
+  /// is sent as
   /// `/library/metadata/{ratingKey}`. [playQueueItemID] is the entry id of
   /// a server-side play queue ([PlexPlayQueuesApi]); leave it null when
   /// you are not playing one — never send a made-up value.
@@ -66,13 +73,21 @@ class PlexPlaybackApi {
   /// [timeMs] is negative.
   Future<void> timeline({
     required String ratingKey,
-    required String state,
+    PlexPlayState? playState,
+    @Deprecated('Use playState (a PlexPlayState)') String? state,
     required int timeMs,
     required int durationMs,
     int? playQueueItemID,
     @Deprecated('Use playQueueItemID (an int)') String? playQueueItemId,
     bool continuing = false,
   }) async {
+    if ((playState == null) == (state == null)) {
+      throw ArgumentError('Pass exactly one of playState and state.');
+    }
+    if (playState == PlexPlayState.unknown) {
+      throw ArgumentError.value(playState, 'playState', 'is not reportable');
+    }
+    final wireState = playState?.wire ?? state!;
     if (durationMs <= 0) {
       throw ArgumentError.value(
         durationMs,
@@ -93,7 +108,7 @@ class PlexPlaybackApi {
     final qp = <String, dynamic>{
       'ratingKey': ratingKey,
       'key': '/library/metadata/$ratingKey',
-      'state': state,
+      'state': wireState,
       'time': timeMs,
       'duration': durationMs,
       'continuing': continuing ? 1 : 0,

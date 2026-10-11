@@ -226,7 +226,7 @@ void main() {
     test('timeline sends the report with a real duration', () async {
       await plex.playback.timeline(
         ratingKey: '541',
-        state: PlexPlaybackApi.statePlaying,
+        playState: PlexPlayState.playing,
         timeMs: 12000,
         durationMs: 60029,
         playQueueItemID: 7,
@@ -247,11 +247,43 @@ void main() {
     test('timeline sends no playQueueItemID unless given', () async {
       await plex.playback.timeline(
         ratingKey: '541',
-        state: PlexPlaybackApi.statePaused,
+        playState: PlexPlayState.paused,
         timeMs: 0,
         durationMs: 1000,
       );
       expect(query().containsKey('playQueueItemID'), isFalse);
+    });
+
+    test('the deprecated String state still works, but not with playState',
+        () async {
+      await plex.playback.timeline(
+        ratingKey: '1',
+        // ignore: deprecated_member_use_from_same_package
+        state: 'buffering',
+        timeMs: 0,
+        durationMs: 1000,
+      );
+      expect(query()['state'], 'buffering');
+      expect(
+        () => plex.playback.timeline(
+          ratingKey: '1',
+          playState: PlexPlayState.playing,
+          // ignore: deprecated_member_use_from_same_package
+          state: 'playing',
+          timeMs: 0,
+          durationMs: 1000,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => plex.playback.timeline(
+          ratingKey: '1',
+          playState: PlexPlayState.unknown,
+          timeMs: 0,
+          durationMs: 1000,
+        ),
+        throwsArgumentError,
+      );
     });
 
     test('timeline refuses a duration PMS cannot count', () async {
@@ -259,7 +291,7 @@ void main() {
         expect(
           () => plex.playback.timeline(
             ratingKey: '1',
-            state: 'playing',
+            playState: PlexPlayState.playing,
             timeMs: 0,
             durationMs: d,
           ),
@@ -269,7 +301,7 @@ void main() {
       expect(
         () => plex.playback.timeline(
           ratingKey: '1',
-          state: 'playing',
+          playState: PlexPlayState.playing,
           timeMs: -5,
           durationMs: 1000,
         ),

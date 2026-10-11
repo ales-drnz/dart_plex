@@ -206,7 +206,7 @@ void main() {
         try {
           await plex.playback.timeline(
             ratingKey: tracks.first.ratingKey,
-            state: PlexPlaybackApi.statePlaying,
+            playState: PlexPlayState.playing,
             timeMs: 0,
             durationMs: tracks.first.durationMs!,
           );
@@ -216,7 +216,7 @@ void main() {
         } finally {
           await plex.playback.timeline(
             ratingKey: tracks.first.ratingKey,
-            state: PlexPlaybackApi.stateStopped,
+            playState: PlexPlayState.stopped,
             timeMs: 0,
             durationMs: tracks.first.durationMs!,
           );
@@ -246,7 +246,7 @@ void main() {
         expect(
           () => plex.playback.timeline(
             ratingKey: tracks.first.ratingKey,
-            state: PlexPlaybackApi.statePlaying,
+            playState: PlexPlayState.playing,
             timeMs: 0,
             durationMs: 0,
           ),
