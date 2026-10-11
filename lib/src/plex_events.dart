@@ -10,6 +10,7 @@
 /// document leaves out (`parentItemID`, `mediaState`, `Context`).
 library;
 
+import 'plex_json.dart';
 import 'plex_models.dart';
 
 /// One event from the notification stream. Switch over the subtypes:
@@ -106,14 +107,14 @@ final class PlexPlaySessionEvent extends PlexEvent {
 
   /// Decodes a `PlaySessionStateNotification` entry.
   PlexPlaySessionEvent.fromJson(super.raw)
-      : sessionKey = _str(raw['sessionKey']),
-        clientIdentifier = _str(raw['clientIdentifier']),
-        ratingKey = _str(raw['ratingKey']) ?? '',
-        key = _str(raw['key']),
-        state = PlexPlayState.fromWire(_str(raw['state'])),
-        viewOffsetMs = _int(raw['viewOffset']),
-        playQueueItemId = _int(raw['playQueueItemID']),
-        playQueueId = _int(raw['playQueueID']);
+      : sessionKey = asString(raw['sessionKey']),
+        clientIdentifier = asString(raw['clientIdentifier']),
+        ratingKey = asString(raw['ratingKey']) ?? '',
+        key = asString(raw['key']),
+        state = PlexPlayState.fromWire(asString(raw['state'])),
+        viewOffsetMs = asInt(raw['viewOffset']),
+        playQueueItemId = asInt(raw['playQueueItemID']),
+        playQueueId = asInt(raw['playQueueID']);
 }
 
 /// Play state of a session.
@@ -187,16 +188,16 @@ final class PlexLibraryItemEvent extends PlexEvent {
 
   /// Decodes a `TimelineEntry`.
   PlexLibraryItemEvent.fromJson(super.raw)
-      : itemId = _str(raw['itemID']) ?? '',
-        parentItemId = _str(raw['parentItemID']),
-        rootItemId = _str(raw['rootItemID']),
-        sectionId = _str(raw['sectionID']),
-        type = PlexMetadataType.fromValue(_int(raw['type'])),
-        title = _str(raw['title']) ?? '',
-        state = _int(raw['state']),
-        metadataState = _str(raw['metadataState']),
-        mediaState = _str(raw['mediaState']),
-        updatedAt = _epoch(raw['updatedAt']);
+      : itemId = asString(raw['itemID']) ?? '',
+        parentItemId = asString(raw['parentItemID']),
+        rootItemId = asString(raw['rootItemID']),
+        sectionId = asString(raw['sectionID']),
+        type = PlexMetadataType.fromValue(asInt(raw['type'])),
+        title = asString(raw['title']) ?? '',
+        state = asInt(raw['state']),
+        metadataState = asString(raw['metadataState']),
+        mediaState = asString(raw['mediaState']),
+        updatedAt = asEpochSeconds(raw['updatedAt']);
 
   /// The item was just created (state 0 / `metadataState: created`).
   bool get isCreated => state == 0 || metadataState == 'created';
@@ -246,14 +247,14 @@ final class PlexActivityEvent extends PlexEvent {
         : const <String, Object?>{};
     return PlexActivityEvent._(
       raw,
-      event: _str(raw['event']) ?? '',
-      uuid: _str(raw['uuid']) ?? _str(activity['uuid']) ?? '',
-      activityType: _str(activity['type']) ?? '',
-      title: _str(activity['title']) ?? '',
-      subtitle: _str(activity['subtitle']),
-      progress: _int(activity['progress']),
+      event: asString(raw['event']) ?? '',
+      uuid: asString(raw['uuid']) ?? asString(activity['uuid']) ?? '',
+      activityType: asString(activity['type']) ?? '',
+      title: asString(activity['title']) ?? '',
+      subtitle: asString(activity['subtitle']),
+      progress: asInt(activity['progress']),
       cancellable: activity['cancellable'] == true,
-      librarySectionId: _str(context['librarySectionID']),
+      librarySectionId: asString(context['librarySectionID']),
     );
   }
 
@@ -291,9 +292,9 @@ final class PlexStatusEvent extends PlexEvent {
 
   /// Decodes a `StatusNotification` entry.
   PlexStatusEvent.fromJson(super.raw)
-      : title = _str(raw['title']) ?? '',
-        description = _str(raw['description']),
-        notificationName = _str(raw['notificationName']);
+      : title = asString(raw['title']) ?? '',
+        description = asString(raw['description']),
+        notificationName = asString(raw['notificationName']);
 }
 
 /// A frame type without a typed event (`progress`, `reachability`,
@@ -304,20 +305,4 @@ final class PlexUnknownEvent extends PlexEvent {
 
   /// Wraps a frame of [type].
   const PlexUnknownEvent(this.type, super.raw);
-}
-
-String? _str(Object? v) => v == null ? null : '$v';
-
-int? _int(Object? v) => switch (v) {
-      int() => v,
-      double() => v.toInt(),
-      String() => int.tryParse(v),
-      _ => null,
-    };
-
-DateTime? _epoch(Object? v) {
-  final s = _int(v);
-  return s == null
-      ? null
-      : DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true);
 }

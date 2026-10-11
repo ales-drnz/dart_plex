@@ -450,14 +450,15 @@ void main() {
 
     for (final api in apis) {
       final apiName = MirrorSystem.getName(api.type.simpleName);
-      final methods =
-          api.type.declarations.values.whereType<MethodMirror>().where(
-                (m) =>
-                    m.isRegularMethod &&
-                    !m.isPrivate &&
-                    !m.isStatic &&
-                    !m.isOperator,
-              );
+      // instanceMembers, not declarations: a sub-API split into mixins
+      // (PlexLibraryApi) inherits most of its methods.
+      final methods = api.type.instanceMembers.values.where(
+        (m) =>
+            m.isRegularMethod &&
+            !m.isPrivate &&
+            !m.isOperator &&
+            (m.owner as ClassMirror?)?.reflectedType != Object,
+      );
       for (final m in methods) {
         final name = '$apiName.${MirrorSystem.getName(m.simpleName)}';
         if (_skipped.containsKey(name) || _skipped.containsKey('$apiName.*')) {

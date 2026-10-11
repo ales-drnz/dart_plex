@@ -9,6 +9,8 @@
 /// responses, not only the API document.
 library;
 
+import 'plex_json.dart';
+
 /// `GET /identity` — who the server is. Answers without a token.
 final class PlexServerIdentity {
   /// The server's unique id — what playlist and play-queue URIs need
@@ -39,9 +41,9 @@ final class PlexServerIdentity {
   /// Decodes the `/identity` `MediaContainer`.
   factory PlexServerIdentity.fromJson(Map<String, Object?> json) =>
       PlexServerIdentity(
-        machineIdentifier: _str(json['machineIdentifier']) ?? '',
-        version: _str(json['version']),
-        apiVersion: _str(json['apiVersion']),
+        machineIdentifier: asString(json['machineIdentifier']) ?? '',
+        version: asString(json['version']),
+        apiVersion: asString(json['apiVersion']),
         claimed: json['claimed'] == true || json['claimed'] == 1,
         raw: json,
       );
@@ -116,20 +118,20 @@ final class PlexServerInfo {
 
   /// Decodes the `/` `MediaContainer`.
   factory PlexServerInfo.fromJson(Map<String, Object?> json) => PlexServerInfo(
-        friendlyName: _str(json['friendlyName']),
-        machineIdentifier: _str(json['machineIdentifier']) ?? '',
-        version: _str(json['version']),
-        platform: _str(json['platform']),
-        platformVersion: _str(json['platformVersion']),
-        myPlex: _bool(json['myPlex']),
-        myPlexUsername: _str(json['myPlexUsername']),
-        myPlexSubscription: _bool(json['myPlexSubscription']),
-        musicAnalysis: _bool(json['musicAnalysis']),
-        transcoderAudio: _bool(json['transcoderAudio']),
-        transcoderLyrics: _bool(json['transcoderLyrics']),
-        allowSync: _bool(json['allowSync']),
-        countryCode: _str(json['countryCode']),
-        updatedAt: _epoch(json['updatedAt']),
+        friendlyName: asString(json['friendlyName']),
+        machineIdentifier: asString(json['machineIdentifier']) ?? '',
+        version: asString(json['version']),
+        platform: asString(json['platform']),
+        platformVersion: asString(json['platformVersion']),
+        myPlex: asBool(json['myPlex']),
+        myPlexUsername: asString(json['myPlexUsername']),
+        myPlexSubscription: asBool(json['myPlexSubscription']),
+        musicAnalysis: asBool(json['musicAnalysis']),
+        transcoderAudio: asBool(json['transcoderAudio']),
+        transcoderLyrics: asBool(json['transcoderLyrics']),
+        allowSync: asBool(json['allowSync']),
+        countryCode: asString(json['countryCode']),
+        updatedAt: asEpochSeconds(json['updatedAt']),
         raw: json,
       );
 }
@@ -187,16 +189,16 @@ final class PlexHistoryEntry {
   /// Decodes a history `Metadata` entry.
   factory PlexHistoryEntry.fromJson(Map<String, Object?> json) =>
       PlexHistoryEntry(
-        historyKey: _str(json['historyKey']) ?? '',
-        ratingKey: _str(json['ratingKey']),
-        title: _str(json['title']) ?? '',
-        parentTitle: _str(json['parentTitle']),
-        grandparentTitle: _str(json['grandparentTitle']),
-        type: _str(json['type']),
-        viewedAt: _epoch(json['viewedAt']),
-        accountId: _int(json['accountID']),
-        deviceId: _int(json['deviceID']),
-        librarySectionId: _str(json['librarySectionID']),
+        historyKey: asString(json['historyKey']) ?? '',
+        ratingKey: asString(json['ratingKey']),
+        title: asString(json['title']) ?? '',
+        parentTitle: asString(json['parentTitle']),
+        grandparentTitle: asString(json['grandparentTitle']),
+        type: asString(json['type']),
+        viewedAt: asEpochSeconds(json['viewedAt']),
+        accountId: asInt(json['accountID']),
+        deviceId: asInt(json['deviceID']),
+        librarySectionId: asString(json['librarySectionID']),
         raw: json,
       );
 }
@@ -244,14 +246,14 @@ final class PlexActivity {
   factory PlexActivity.fromJson(Map<String, Object?> json) {
     final context = json['Context'];
     return PlexActivity(
-      uuid: _str(json['uuid']) ?? '',
-      type: _str(json['type']) ?? '',
-      title: _str(json['title']) ?? '',
-      subtitle: _str(json['subtitle']),
-      progress: _int(json['progress']),
+      uuid: asString(json['uuid']) ?? '',
+      type: asString(json['type']) ?? '',
+      title: asString(json['title']) ?? '',
+      subtitle: asString(json['subtitle']),
+      progress: asInt(json['progress']),
       cancellable: json['cancellable'] == true,
       librarySectionId: context is Map<String, Object?>
-          ? _str(context['librarySectionID'])
+          ? asString(context['librarySectionID'])
           : null,
       raw: json,
     );
@@ -294,10 +296,10 @@ final class PlexButlerTask {
 
   /// Decodes a `ButlerTask` entry.
   factory PlexButlerTask.fromJson(Map<String, Object?> json) => PlexButlerTask(
-        name: _str(json['name']) ?? '',
-        title: _str(json['title']),
-        description: _str(json['description']),
-        intervalDays: _int(json['interval']),
+        name: asString(json['name']) ?? '',
+        title: asString(json['title']),
+        description: asString(json['description']),
+        intervalDays: asInt(json['interval']),
         enabled: json['enabled'] == true,
         scheduleRandomized: json['scheduleRandomized'] == true,
         raw: json,
@@ -370,35 +372,17 @@ final class PlexSetting {
       }
     }
     return PlexSetting(
-      id: _str(json['id']) ?? '',
-      label: _str(json['label']),
-      summary: _str(json['summary']),
-      type: _str(json['type']) ?? '',
+      id: asString(json['id']) ?? '',
+      label: asString(json['label']),
+      summary: asString(json['summary']),
+      type: asString(json['type']) ?? '',
       value: json['value'],
       defaultValue: json['default'],
       hidden: json['hidden'] == true,
       advanced: json['advanced'] == true,
-      group: _str(json['group']),
+      group: asString(json['group']),
       enumValues: enums,
       raw: json,
     );
   }
-}
-
-String? _str(Object? v) => v == null ? null : '$v';
-
-int? _int(Object? v) => switch (v) {
-      int() => v,
-      double() => v.toInt(),
-      String() => int.tryParse(v),
-      _ => null,
-    };
-
-bool _bool(Object? v) => v == true || v == 1 || v == '1';
-
-DateTime? _epoch(Object? v) {
-  final s = _int(v);
-  return s == null
-      ? null
-      : DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true);
 }
