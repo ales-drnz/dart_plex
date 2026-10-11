@@ -1,77 +1,52 @@
-## [0.2.0] - 11-10-2026
+## [0.2.0] - unreleased
 
-Targets Plex Media Server `1.43.x`; every behaviour noted as verified below was checked against PMS `1.43.2` in the integration stack.
+A revision of the whole package. See [MIGRATION.md](MIGRATION.md) for the changes to make in an app.
 
 ### Breaking
-- **The transport is `package:http`, not Dio.** `PlexClient(dio:)` is gone: pass any `http.Client` as `httpClient:` (a `CupertinoClient` or `CronetClient` for HTTP/2 and the system proxy, a `MockClient` in tests), or none for the default `dart:io` one. `request()` / `get()` / `post()` / `put()` / `delete()` return a `PlexResponse<T>` (`.data`, `.statusCode`, `.headers`, `.contentType`) instead of Dio's `Response<T>`, take a `PlexResponseType` instead of Dio's `ResponseType`, and a `PlexCancelToken` instead of Dio's `CancelToken`. `requestBytes()` answers a `PlexResponse<Uint8List>`. `PlexException.fromDio` and the deprecated `fetchBytes()` are gone; `PlexException.cause` is the transport's `ClientException` (or `null`), not a `DioException`.
-- **What the typed API sends is what 0.1 sent** — same query string, bodies and headers, checked request by request against 0.1.3. The differences are in the raw `request()` escape hatch and in edge cases:
-  - a query value that is not a `String` (a `DateTime`, a number) is now form-encoded like a string, so a `+` in it no longer reaches the server as a space; a `Set` repeats its key like a `List`;
-  - a `List<int>` body travels as bytes (0.1 sent the text `"[1, 2]"` — `library.setItemArtwork(data:)` uploads real bytes now), a `List` of other values as JSON;
-  - an empty answer with no JSON content type is `null` in `PlexResponse.data`, not `""`;
-  - the wait for the response headers is bounded by `connectTimeout + receiveTimeout` (45 s by default; Dio counted `receiveTimeout` from the connection) — `package:http` does not say when the connection is up. An injected client brings its own connect timeout;
-  - an answer of the wrong shape is a `PlexErrorType.parse` error with its status code (was `unknown`); a body cut short is a `connection` error.
-- **Ids are named parameters everywhere.** 42 methods took their id positionally while the other 111 named it, sometimes within one class. All are named now: `library.item(ratingKey: …)`, `library.children(ratingKey: …)`, `playlists.items(playlistId: …)`, `playlists.delete(playlistId: …)`, `playback.scrobble(ratingKey: …)`, `streaming.stopUniversal(session: …)`, `playQueues.clear(playQueueId: …)`, … (`preferences.set` and `library.matches` keep their positional map).
-- **Typed answers instead of maps**: `server.identity()` → `PlexServerIdentity`, `server.info()` → `PlexServerInfo`, `sessions.history()` → `PlexMediaContainer<PlexHistoryEntry>` (with `totalSize`), `activities.list()` → `List<PlexActivity>`, `butler.tasks()` → `List<PlexButlerTask>`, `preferences.all()` → `List<PlexSetting>`, `preferences.byId()` → `PlexSetting?` (`null` when there is no such setting). Each keeps the body in `raw`, so `identity()['machineIdentifier']` becomes `identity().machineIdentifier` (or `.raw['machineIdentifier']`).
-- **`Object?` instead of `dynamic`** in every map and list the API exposes (`raw`, `queryParameters`, the admin answers that are still maps). Reading and assigning work as before; a chained dynamic access such as `raw['a']['b']` now needs a type check.
-- **Classes are `final`**: the models, and also `PlexException`, `PlexCredentials`, `PlexFilter`, `PlexNotification` and `PlexTranscodeDecision`, can no longer be extended or implemented outside the package. `PlexClient` and the sub-API classes stay open, but they gained members (`close()`, `withCancelToken()`, `requestStream()`, new methods): a fake that `implements` one must add them — extend it, or use `noSuchMethod`.
-- `PlexMediaContainer.raw` holds the envelope's own fields, without the entry array (that is `items`): keeping the JSON of a large page next to its models doubled what it held.
-- `playback.timeline()`:
-  - throws an `ArgumentError` for `durationMs <= 0` or a negative `timeMs` — PMS never counts a play reported with duration 0 (verified);
-  - sends a `timeMs` past `durationMs` as `durationMs` (PMS answers 400 to `time > duration`);
-  - takes exactly one of `playState:` and the deprecated `state:` (neither is required at compile time any more), and refuses `PlexPlayState.unknown`.
-- `playlists.items()` and `children()` / `allLeaves()` refuse a `start` without a `size`, and always send `X-Plex-Container-Start` with `-Size`: PMS ignores `Size` on its own and answers the whole list (verified).
-- `library.autocomplete()` takes a required `PlexMetadataType type`: PMS answers 400 without one (verified).
-- `streaming.stopUniversal()` returns normally on 404 (the session is already gone).
+- The transport is `package:http`, not Dio. Pass any `http.Client` as `httpClient:` (`dio:` is gone). `request()` and its siblings return a `PlexResponse<T>` and take a `PlexResponseType` and a `PlexCancelToken`. `PlexException.fromDio` and `fetchBytes()` are gone.
+- Every id is a named parameter: `library.item(ratingKey: …)`, `playlists.items(playlistId: …)`, `playback.scrobble(ratingKey: …)` and so on.
+- `server.identity()`, `server.info()`, `sessions.history()`, `activities.list()`, `butler.tasks()` and `preferences.all()` return typed models instead of maps. `preferences.byId()` returns `null` for an unknown id.
+- The API exposes `Object?` instead of `dynamic` in its maps and lists.
+- Models, `PlexException`, `PlexCredentials`, `PlexFilter`, `PlexNotification` and `PlexTranscodeDecision` are `final`. `PlexClient` and the sub-APIs gained members, so a fake that implements one must add them.
+- `PlexMediaContainer.raw` holds the envelope's own fields, without the entry array.
+- `playback.timeline()` takes exactly one of `playState:` and the deprecated `state:`, and throws `ArgumentError` for a duration of zero or less, a negative time or `PlexPlayState.unknown`.
+- `playlists.items()`, `library.children()` and `allLeaves()` throw `ArgumentError` for a `start` without a `size`.
+- `library.autocomplete()` requires a `PlexMetadataType type`.
+- `streaming.stopUniversal()` returns normally when the session is already gone.
+- An empty answer without a JSON content type is `null` in `PlexResponse.data`, not `""`. Query values that are not strings are form-encoded, and a `List<int>` body is sent as bytes.
 
 ### Added
-- `PlexClient.withCancelToken(token)`: a view of the client whose every sub-API call is cancelled by `token.cancel()` — for leaving a page, changing a filter, typing in a search. `PlexClient.close()` closes the client the library created.
-- `PlexRetryPolicy` (`retryPolicy:`): opt-in resend of `GET` / `HEAD` after a network failure, `502`, `503`, `504` or `429`, with backoff, jitter and `Retry-After`.
-- `PlexException.isNetworkFailure`, `isTransient`, `isNotFound`, `isCancelled`, `retryAfter`, with the same meaning as in `dart_jellyfin`.
-- `requestStream()`, and `downloadToFile()` in the new `package:dart_plex/io.dart`: streams to disk at the pace the disk takes, through a temporary file renamed into place, so the path holds the whole file or what was there before; with progress.
-- `library.children(ratingKey:, start:, size:, sort:)`, `countChildren()`, `allLeaves(ratingKey:, start:, size:)`, `grandchildren()`, `recentlyAdded(sectionId:)`; `search.section()`.
-- `playlists.list()` / `count()` take `filters:` — `/playlists` honours the general filter syntax, e.g. `PlexFilter.titleContains()` and `PlexFilter.rated()` (verified) — and `sort:`.
-- `PlexMetadata.playlistItemId`: a playlist entry's own id, for removing or moving that entry.
-- `PlexMetadata.roles`: the `Role` tag names, a track's performers.
-- `PlexMetadata.thumbVersion`, `artVersion`, `parentThumbVersion`, `grandparentThumbVersion` and `PlexArtwork.versionOf()`: the timestamp PMS appends to artwork paths, which changes with the image (verified) — for artwork cache keys.
-- `PlexStream.gain`, `albumGain`, `peak`, `albumPeak`, `loudness`, `lra`; `PlexMetadata.audioStream`.
-- `PlexMetadata.originallyAvailableAt`, `parentYear`, `leafCount`, `viewedLeafCount`, `childCount`, `skipCount`, `lastRatedAt`, `librarySectionId`, `librarySectionTitle`, `parentGuid`, `grandparentGuid`, `distance`, `score`, `ultraBlurColors`.
-- Typed notification events: `PlexNotification.events` and `Stream<PlexNotification>.events()` decode frames into `PlexPlaySessionEvent`, `PlexLibraryItemEvent`, `PlexActivityEvent`, `PlexStatusEvent` and `PlexUnknownEvent`, following frames captured from PMS 1.43.2.
-- `playback.timeline(playState: PlexPlayState, playQueueItemID: int)`.
-- `streaming.startAudioTranscode()` and `PlexStreamingApi.musicProfileExtra()`.
-- `PlexPaging.pages()` / `items()`.
+- `PlexClient.withCancelToken()`, a view of the client whose calls one token cancels, and `PlexClient.close()`.
+- `PlexRetryPolicy`: opt-in resend of `GET` and `HEAD` after a network failure, `502`, `503`, `504` or `429`, with backoff and `Retry-After`.
+- `PlexException.isNetworkFailure`, `isTransient`, `isNotFound`, `isCancelled` and `retryAfter`.
+- `requestStream()`, and `downloadToFile()` in the new `package:dart_plex/io.dart`.
+- `library.children()` with paging and sort, `countChildren()`, `allLeaves()` with paging, `grandchildren()`, `recentlyAdded()` and `search.section()`.
+- `playlists.list()` and `count()` take `filters:` and `sort:`.
+- `streaming.startAudioTranscode()`, which makes the decision and caps the bitrate the way the server accepts, and `PlexStreamingApi.musicProfileExtra()`.
+- Typed notification events: `PlexEvent` with `PlexPlaySessionEvent`, `PlexLibraryItemEvent`, `PlexActivityEvent`, `PlexStatusEvent` and `PlexUnknownEvent`, through `notification.events` or `stream.events()`.
+- `timeline(playState:, playQueueItemID:)`.
+- `PlexMetadata.roles`, `playlistItemId`, `audioStream`, `originallyAvailableAt`, `parentYear`, `leafCount`, `viewedLeafCount`, `childCount`, `skipCount`, `lastRatedAt`, `librarySectionId`, `librarySectionTitle`, `parentGuid`, `grandparentGuid`, `distance`, `score` and `ultraBlurColors`.
+- `PlexMetadata.thumbVersion`, `artVersion`, `parentThumbVersion`, `grandparentThumbVersion` and `PlexArtwork.versionOf()`, for artwork cache keys.
+- `PlexStream.gain`, `albumGain`, `peak`, `albumPeak`, `loudness` and `lra`.
+- `PlexPaging.pages()` and `items()`.
 
 ### Changed
-- JSON decoding, model parsing and gzip inflation run on a background isolate above `jsonIsolateThreshold` (50 KB by default, now a constructor argument); gzip is checked against its trailer, so a body cut short fails instead of coming back short. On a 5 MB page the calling isolate still pauses for about a third of an inline parse (garbage collection), so page large lists.
-- `scrobble()`, `unscrobble()` and `rate()` (and so `setFavorite()`) are sent as `PUT`, as the API document asks (`GET` still works on 1.43.2).
-- `connectEventSource()` no longer drops a quiet stream after the receive timeout, and closing it before the server answers cancels the request.
-- `PlexDVRsApi` is `PlexDvrsApi`, matching `PlexEpgApi`.
-- The pinned community API document moves to LukeHagar/plex-api-spec@3f0fb272b29c.
-- Stricter lints; every documentation reference resolves.
+- Large responses are decoded, inflated and parsed into models on a background isolate, above `jsonIsolateThreshold` (50 KB by default).
+- `scrobble()`, `unscrobble()`, `rate()` and `setFavorite()` are sent as `PUT`.
+- `timeline()` sends a time past the duration as the duration.
+- `PlexDVRsApi` is `PlexDvrsApi`; the old name is a deprecated typedef.
+- `streaming.universalAudioUrl()` is deprecated: use `startAudioTranscode()`.
+- `timeline(state: String)` and the `PlexPlaybackApi.state*` constants are deprecated: use `playState:`. `timeline(playQueueItemId: String)` is deprecated: use `playQueueItemID: int`.
+- `nearestToTrack(excludeParentID:, excludeGrandparentID:)` are deprecated: use `excludeParentRatingKey` and `excludeGrandparentRatingKey`.
+- `isRetriable` is deprecated: use `isNetworkFailure`, or `isTransient` to include 5xx and 429.
+- The pinned API document is LukeHagar/plex-api-spec@3f0fb272b29c, and a contract test checks every request against it.
 
 ### Fixed
-- `library.firstCharacters()` called `/firstCharacters`, which answers 404; the route is `/firstCharacter`.
-- A transcode PMS accepts: `universalAudioUrl()` built a URL PMS 1.43.2 refuses (no prior decision from the client, no client profile — there is none for platform `Linux` or `macOS` — no transcode target) and its `maxAudioBitrate` had no effect. `startAudioTranscode()` makes the decision, sends `X-Plex-Client-Profile-Name` and the target, and caps the bitrate with a profile limitation (96 → a 96 kbps stream, verified).
-- `library.setItemArtwork(data:)` uploaded the text of the byte list instead of the bytes.
-- Two `create` calls threw a bare `Exception` when the server answered no item; they throw a `PlexException` of type `parse`.
-
-### Deprecated
-- `streaming.universalAudioUrl()` → `startAudioTranscode()`.
-- `timeline(state: String)` and `PlexPlaybackApi.state*` → `timeline(playState: PlexPlayState)`; `timeline(playQueueItemId: String)` → `playQueueItemID: int`.
-- `nearestToTrack(excludeParentID: int, excludeGrandparentID: int)` → `excludeParentRatingKey` / `excludeGrandparentRatingKey` (`String`).
-- `PlexException.isRetriable` and `PlexErrorType.isRetriable` → `isNetworkFailure` (or `isTransient` to include 5xx and 429).
-- `PlexDVRsApi` → `PlexDvrsApi`.
-
-### Notes (verified on PMS 1.43.2)
-- **What counts a play**: timeline reports that follow real time over about half the track (50 % of a 60 s track counted, 40 % did not — measured on full-length tracks); fast-forwarded reports and `duration=0` never count. PMS judges the *reported* duration: a 3 s file reported with its length never counted, the same file reported as 20 s and played for 16 s did. A counted play adds a history entry; `scrobble()` does not.
-- `/library/metadata/{id}/allLeaves` ignores `sort` (`/grandchildren` honours it).
-- `recentlyAdded` in a music section answers albums whatever `type` says.
-- PMS serves an MP3 part without its ID3v2 tag: a downloaded file has no embedded tags or cover.
-- PMS ignores adding an item that is already in a regular playlist, on every path tried — a track cannot be listed twice through the API.
-- Several routes in the community document answer 404 (`/library/metadata/{id}/parent`, `/grandparent`, `/library/sections/{id}/hubs`, `/artists`, `/byDecade`, `/playlists`); they are not wrapped.
-
-### Tests
-- A spec contract test calls every public method, deprecated ones included, and checks each request's route, method and query parameters — with their case — against the pinned document, which is now tracked in `docs/`; parameters the document misses are listed with how they were verified, or marked as not verified.
-- Wire tests for the new surface, real anonymised fixtures, integration tests against PMS 1.43.2 (which now refuses requests without a token, so a transport that stopped sending it would fail), and read-only live tests against any server (`PLEX_URL` / `PLEX_TOKEN`, tag `live`). A plain `dart test` skips the integration suites; `dart test -P integration` runs everything.
+- `library.firstCharacters()` calls `/firstCharacter`: the old route answered 404.
+- `library.setItemArtwork(data:)` uploads the bytes instead of their text.
+- `notifications.connectEventSource()` keeps a quiet stream open, and closing it before the server answers cancels the request.
+- A gzip body cut short fails instead of coming back short.
+- Two `create` calls throw a `PlexException` of type `parse`, not a bare `Exception`, when the server answers no item.
 
 ## [0.1.3] - 22-09-2026
 
@@ -79,80 +54,78 @@ Targets Plex Media Server `1.43.x`; every behaviour noted as verified below was 
 - `playlists.items()` takes optional `start` and `size` for paging. Without them it still returns the whole playlist.
 
 ### Changed
-- The default transport decodes JSON responses of 50 KB or more on a background isolate (`PlexConnection.jsonIsolateThreshold`), so large responses no longer block the caller's isolate. A `Dio` you inject keeps its own transformer.
+- The default transport decodes JSON responses of 50 KB or more on a background isolate (`PlexConnection.jsonIsolateThreshold`). A `Dio` you inject keeps its own transformer.
 
 ## [0.1.2] - 09-09-2026
 
 ### Fixed
-- `streaming.lyrics()` returns readable text whatever the file's encoding. Each byte was read as one code unit, so accented characters in a UTF-8 `.lrc` came back mangled and a UTF-16 one came back full of NUL.
-- `notifications.connectEventSource()` decodes the event stream as a whole instead of one network chunk at a time, which turned any multi-byte character split across a chunk boundary into U+FFFD.
+- `streaming.lyrics()` returns readable text whatever the file's encoding: accented characters in a UTF-8 `.lrc` came back mangled, and a UTF-16 one full of NUL.
+- `notifications.connectEventSource()` decodes the event stream as a whole, so a multi-byte character split across two network chunks no longer becomes U+FFFD.
 
 ## [0.1.1] - 12-08-2026
 
 ### Breaking
-- `library.allByType()` and `library.countByType()`: the `filter` argument is gone, replaced by `filters` — a list of `PlexFilter`. The old argument was sent as a query parameter literally named `filter`, which Plex has no such thing as, so every filtered call quietly came back unfiltered. Instead of `filter: 'genre=6'` write `filters: [PlexFilter.genre(6)]`; instead of `filter: 'userRating>>=8'` write `filters: [PlexFilter.ratingAbove(8)]`. Several filters in the list are ANDed.
-- `library.allByType()` lost its `title` argument. It was a filter wearing a different hat, and two ways to filter one call is how the bug above happened. Write `filters: [PlexFilter.titleContains('abbey')]` for the old behaviour, or `PlexFilter.titleIs('Abbey Road')` for a whole-title match.
-- `library.genres()` now returns `List<PlexTag>` instead of `List<PlexMetadata>`. A `PlexTag` has the numeric `id` you filter by as a typed field; getting it used to mean digging through `raw['fastKey']` or `raw['key']` and knowing that `key` is a bare id on current servers but a path on older ones. Pass the tag straight to `PlexFilter.of(tag)`; use `tag.title` where you used `metadata.title`.
-- `library.filters()` now returns `List<PlexLibraryFilter>` instead of `List<PlexMetadata>`. These entries were never metadata items. Use `f.field` for the query parameter to filter on (it was `raw['filter']`), `f.valueType` for `raw['filterType']`, and `f.valuesKey` for the endpoint listing the values (it was `f.key`). The `Pivot` array is still in `raw`.
-- `library.updateSectionItems()`: the `filters` argument is now called `filterExpression`. Its wire form is unchanged — it is still sent as the PUT route's own `filters` parameter, which really does take one whole expression as a string. Only the Dart name changed, so that it can no longer be mistaken for `allByType`'s list of `PlexFilter`.
+- `library.allByType()` and `countByType()` take `filters`, a list of `PlexFilter`, instead of `filter`: write `filters: [PlexFilter.genre(6)]` for `filter: 'genre=6'`. Several filters are combined with AND.
+- `library.allByType()` loses its `title` argument: use `PlexFilter.titleContains()` or `PlexFilter.titleIs()`.
+- `library.genres()` returns `List<PlexTag>` instead of `List<PlexMetadata>`. Pass a tag to `PlexFilter.of(tag)`; use `tag.title` for its name.
+- `library.filters()` returns `List<PlexLibraryFilter>`: `field`, `valueType` and `valuesKey` replace `raw['filter']`, `raw['filterType']` and `key`.
+- `library.updateSectionItems()` names its argument `filterExpression` instead of `filters`. The request is unchanged.
 
 ### Added
-- `PlexFilter`, a typed library filter you compose instead of writing query fragments by hand: `PlexFilter.genre()`, `.tag()`, `.year()`, `.yearAfter()`, `.yearBefore()`, `.ratingAbove()`, `.rated()`, `.unplayed()`, `.played()`, `.titleContains()`, `.titleIs()`, `.firstCharacter()`, `.studio()`, `.contentRating()`, `.resolution()`, plus `.number()`, `.text()`, `.flag()` and a plain constructor for fields the named ones do not cover. Every operator these produce was checked against a live PMS 1.43.2.
-- `PlexFilter.of(tag)` builds the filter for a genre, mood or style row you got back from the server, reading both the field name and the id off the tag so neither is spelled by hand.
-- `library.filterValues()`: the values a facet can take (the moods, styles or decades behind a `PlexLibraryFilter`), fetched by following the endpoint the server itself nominates for them.
-- `PlexTag` and `PlexLibraryFilter` DTOs, and `PlexFilterValueType` for a facet's `string` / `integer` / `boolean` value kind.
+- `PlexFilter`, a typed library filter: `genre()`, `tag()`, `year()`, `yearAfter()`, `yearBefore()`, `ratingAbove()`, `rated()`, `unplayed()`, `played()`, `titleContains()`, `titleIs()`, `firstCharacter()`, `studio()`, `contentRating()`, `resolution()`, and `number()`, `text()`, `flag()` and a plain constructor for other fields.
+- `PlexFilter.of(tag)`, the filter for a genre, mood or style the server returned.
+- `library.filterValues()`: the values a facet can take.
+- `PlexTag`, `PlexLibraryFilter` and `PlexFilterValueType`.
 
 ### Fixed
-- Filtering a library section works. `library.allByType(filter: ...)` and `countByType(filter: ...)` sent `?filter=genre%3D6`; Plex ignores query parameters it does not recognise and answers 200 with the whole section, so every genre showed the same albums and a "favourites" view returned the entire library. Filters now travel the way the server states them in its own `fastKey` — one query parameter per condition, named after the field, with the operator in the name: `?genre=6`, `?year>>=2009`, `?unwatched=1`.
-- `library.countByType()` now runs the identical request to `allByType()` with `X-Plex-Container-Size=0` rather than a second hand-rolled copy of it, so a count can no longer disagree with the page it counts, and it takes the same filters.
+- Filtering a library section works. `filter: ...` was sent as a parameter named `filter`, which Plex ignores, so every filtered call returned the whole section. Filters travel as one parameter per condition, with the operator in the name: `?genre=6`, `?year>>=2009`, `?unwatched=1`.
+- `library.countByType()` sends the same request as `allByType()` with a page size of zero, so a count matches the page it counts, filters included.
 
 ## [0.1.0] - 30-06-2026
 
-### Deprecated
-- `PlexClient.fetchBytes` is deprecated. Use `requestBytes` instead (same thing, and it already handles full URLs).
-
 ### Breaking
-- `liveTv.history()`, `liveTv.subscriptions()` and `liveTv.cancelSubscription()` are gone. They pointed at Plex routes that don't exist, so they always failed. Use `sessions.history()` for playback history and `PlexClient.subscriptions` for recording rules instead.
-- `streaming.directFileUrl()` now takes the item's full file key instead of a part id and container. The old form built a URL Plex couldn't serve.
-- `server.securityResources()` now needs a `source`; Plex rejects the call without one.
-- `server.transientToken()` no longer takes `type` or `scope` (Plex only allows one mode) and returns the token string directly.
-- `transcoder.imageUrl()`: `chromaSubsampling` is now a number (0 to 3) instead of free text, matching what Plex accepts.
-- `devices.setChannelMap()`: channel remapping actually works now. The mapping and enabled-channels arguments are sent the way Plex expects.
-- `epg.bestLineup()` now needs both `device` and `lineupGroup`.
-- `epg.lineupChannels()` takes a list of lineups instead of one, so you can fetch several at once.
-- To move an item to the front with `playlists.moveItem()`, `playQueues.moveItem()` or `subscriptions.reorder()`, just leave `after` out. It is now optional (passing `0` never worked).
-- `PlexStream.selected` now means only "the user picked this stream". The separate "file default" flag is its own `PlexStream.isDefault` field.
-- `PlexHub` gained a `key` field for fetching its content; `hubKey` is documented as the optional re-fetch key.
-- `subscriptions.create()`: `type` is now a number, matching what Plex expects.
-- `notifications.connectWebSocket()` now returns a `Future` and waits for the connection to open before returning. `isWebSocketConnected` is only `true` once the socket is really open, and a failed connection throws straight away instead of showing up later on the stream.
+- `liveTv.history()`, `liveTv.subscriptions()` and `liveTv.cancelSubscription()` are gone: their routes do not exist. Use `sessions.history()` and `PlexClient.subscriptions`.
+- `streaming.directFileUrl()` takes the item's file key instead of a part id and container.
+- `server.securityResources()` requires a `source`.
+- `server.transientToken()` takes no `type` or `scope` and returns the token string.
+- `transcoder.imageUrl()`: `chromaSubsampling` is a number from 0 to 3.
+- `devices.setChannelMap()` sends the mapping and the enabled channels the way Plex reads them.
+- `epg.bestLineup()` requires `device` and `lineupGroup`.
+- `epg.lineupChannels()` takes a list of lineups.
+- `playlists.moveItem()`, `playQueues.moveItem()` and `subscriptions.reorder()` move an item to the front when `after` is left out.
+- `PlexStream.selected` means the user picked the stream; the file default is `PlexStream.isDefault`.
+- `PlexHub.key` fetches a hub's content; `hubKey` is the optional re-fetch key.
+- `subscriptions.create()`: `type` is a number.
+- `notifications.connectWebSocket()` returns a `Future` that completes once the socket is open, and a failed connection throws.
 
 ### Added
-- `library.editItem()`, `library.deleteMetadataItem()`, `library.setItemArtwork()` and `library.updateSectionItems()`: edit an item's fields, delete an item, set custom artwork, and bulk-edit many items at once.
-- `hubs.forMetadata()`: the related rows for one item (e.g. "More from this artist").
-- `sessions.historyItem()`: fetch a single playback-history entry by id.
+- `library.editItem()`, `deleteMetadataItem()`, `setItemArtwork()` and `updateSectionItems()`.
+- `hubs.forMetadata()`: the related rows of one item.
+- `sessions.historyItem()`: one playback history entry.
 - `playlists.upload()`: import an m3u playlist from a path on the server.
-- `PlexClient.clearSession()`: drop the token but stay connected to the server.
+- `PlexClient.clearSession()`: drop the token and stay connected.
 
 ### Changed
-- `collections.create()` can now make empty, named, typed and smart collections (the seed item is optional, with a new `smart` flag).
-- `playQueues.create()` gained a `key` to pick the starting item and turn on shuffle.
-- `search.voice()` gained a `type` filter to limit a voice search to one kind of media.
-- `streaming.decisionUniversal()` gained `transcodeType` so it works for video, audio and photo.
-- `PlexCredentials` now accepts the optional `X-Plex-Model`, `X-Plex-Device-Vendor` and `X-Plex-Marketplace` identity headers.
-- You can pass a `CancelToken` to `request()` and `requestBytes()` to cancel a request that is still running; a cancelled request now reports `PlexErrorType.cancelled` instead of a generic `unknown`.
-- `PlexException` now keeps the original stack trace, so crash reports point at where the failure actually happened.
+- `collections.create()` makes empty, named, typed and smart collections.
+- `playQueues.create()` takes a `key` for the starting item.
+- `search.voice()` takes a `type`.
+- `streaming.decisionUniversal()` takes a `transcodeType`.
+- `PlexCredentials` accepts the optional `X-Plex-Model`, `X-Plex-Device-Vendor` and `X-Plex-Marketplace` headers.
+- `request()` and `requestBytes()` take a `CancelToken`; a cancelled request is `PlexErrorType.cancelled`.
+- `PlexException` keeps the original stack trace.
+- `PlexClient.fetchBytes` is deprecated: use `requestBytes`.
 
 ### Fixed
-- Library settings passed to `addSection()` and `editSection()` are now actually applied. Before, they were sent in a form Plex ignored, so a new or edited library quietly kept its defaults.
-- The transcode decision is read correctly now: a successful decision counts as playable (direct play or transcode) and error codes count as errors, so `isPlayable`, `isDirect` and `isTranscode` no longer mistake an error for "needs transcoding".
-- `playlists.generators()` reads the right field, so it no longer always comes back empty.
-- `preferences.byId()` returns the setting itself, in the same shape as the entries from `all()`, instead of the raw response wrapper.
-- `sessions.history()` date filters now include the start and end dates you pass, instead of dropping items that land exactly on them.
-- `transcoder.imageUrl()`, `subtitlesUrl()` and `startUrl()` now throw a clear error when called before connecting, instead of returning a broken URL.
-- `subscriptions.editPreferences()` now sends recording settings in the form Plex expects, so edits take effect.
-- A response body that can't be decoded is now reported as a `parse` error instead of a generic `unknown`.
-- `PlexResource.provides` returns an empty list (not a list holding one empty string) when a resource advertises nothing, and trims stray spaces.
-- `PlexMetadataType.photoAlbum` now uses the exact value Plex sends.
+- `addSection()` and `editSection()` apply the library settings they are given.
+- The transcode decision reads error codes as errors, so `isPlayable`, `isDirect` and `isTranscode` are right.
+- `playlists.generators()` reads the right field.
+- `preferences.byId()` returns the setting in the same shape as `all()`.
+- `sessions.history()` includes the start and end dates it is given.
+- `transcoder.imageUrl()`, `subtitlesUrl()` and `startUrl()` throw before connecting instead of returning a broken URL.
+- `subscriptions.editPreferences()` sends the settings in the form Plex reads.
+- A body that cannot be decoded is a `parse` error.
+- `PlexResource.provides` is empty when a resource advertises nothing.
+- `PlexMetadataType.photoAlbum` uses the value Plex sends.
 
 ## [0.0.2] - 25-05-2026
 
@@ -162,11 +135,11 @@ Targets Plex Media Server `1.43.x`; every behaviour noted as verified below was 
 ## [0.0.1] - 25-05-2026
 
 ### Added
-- Initial scaffold targeting Plex Media Server `v1.43.x`.
-- Authentication flows: legacy username and password, and the official PIN link.
-- PMS HTTP client with `X-Plex-*` header injection (client identifier, product, version, device, platform, token).
-- Exception hierarchy with semantic error classification (`auth`, `notFound`, `serverError`, `parse`, `state`, `connection`, `timeout`, `badRequest`, `unknown`).
-- Music endpoints: libraries, sections, items by type, playlists, artwork, audio streaming (universal transcode + direct), playback reporting, search, favorites.
-- Play queue lifecycle with the new `PlexPlayQueue` DTO surfacing the server-assigned queue id, selected item id, shuffle and version state, and initial contents.
-- Notifications transport over both WebSocket (`/:/websockets/notifications`) and Server-Sent Events (`/:/eventsource/notifications`).
-- Typed DTOs across the documented API surface, plus a `raw` escape hatch on every model for fields not yet promoted.
+- Initial release, for Plex Media Server `v1.43.x`.
+- Sign-in with username and password, and the PIN link flow.
+- The PMS HTTP client with the `X-Plex-*` identity headers.
+- `PlexException` with a semantic `PlexErrorType`.
+- Music endpoints: libraries, sections, items by type, playlists, artwork, audio streaming, playback reporting, search and favourites.
+- Play queues, with `PlexPlayQueue`.
+- Notifications over WebSocket and Server-Sent Events.
+- Typed models, each with a `raw` map.
