@@ -56,7 +56,7 @@ Future<void> main() async {
 
   while (DateTime.now().isBefore(pin.expiresAt)) {
     await Future<void>.delayed(const Duration(seconds: 3));
-    final current = await client.account.pollPin(pin.id);
+    final current = await client.account.pollPin(id: pin.id);
     if (current.isAuthenticated) {
       print('');
       print('━━━ Token issued ━━━');

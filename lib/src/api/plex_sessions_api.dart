@@ -85,7 +85,7 @@ class PlexSessionsApi {
   /// path); pass it as a [String] or [int] — Plex accepts the numeric id
   /// either way, mirroring how [deleteHistoryEntry] deals in keys. Returns
   /// the first `Metadata` entry, or `null` when no matching entry exists.
-  Future<Map<String, Object?>?> historyItem(Object historyId) async {
+  Future<Map<String, Object?>?> historyItem({required Object historyId}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/status/sessions/history/$historyId',
     );
@@ -98,7 +98,7 @@ class PlexSessionsApi {
   }
 
   /// Delete a single history entry by its history `key`.
-  Future<void> deleteHistoryEntry(String historyKey) async {
+  Future<void> deleteHistoryEntry({required String historyKey}) async {
     await _http.request<void>(
       historyKey,
       method: 'DELETE',

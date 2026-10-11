@@ -32,12 +32,12 @@ inject an `http.Client` (`MockClient` from `package:http/testing.dart`, or a
 // Cancel what a page started when the page goes away.
 final token = PlexCancelToken();
 final page = plex.withCancelToken(token);
-final albums = await page.library.children(artistKey, start: 0, size: 50, sort: 'year:desc');
+final albums = await page.library.children(ratingKey: artistKey, start: 0, size: 50, sort: 'year:desc');
 token.cancel();
 
 // Counts without rows; an artist's tracks without a request per album.
-final albumCount = await plex.library.countChildren(artistKey);
-final tracks = await plex.library.grandchildren(artistKey, size: 200);
+final albumCount = await plex.library.countChildren(ratingKey: artistKey);
+final tracks = await plex.library.grandchildren(ratingKey: artistKey, size: 200);
 
 // Playlists narrowed on the server.
 final favourites = await plex.playlists.list(
@@ -52,7 +52,7 @@ await plex.playlists.removeItem(playlistId: id, playlistItemId: entry.playlistIt
 final version = track.parentThumbVersion ?? track.thumbVersion;
 
 // Loudness, when the transcode drops ReplayGain tags.
-final gain = (await plex.library.item(track.ratingKey))?.audioStream?.gain;
+final gain = (await plex.library.item(ratingKey: track.ratingKey))?.audioStream?.gain;
 
 // Live updates.
 final socket = await plex.notifications.connectWebSocket();

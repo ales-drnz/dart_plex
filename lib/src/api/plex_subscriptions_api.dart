@@ -93,8 +93,8 @@ class PlexSubscriptionsApi {
   }
 
   /// `GET /media/subscriptions/{subscriptionId}` — one subscription.
-  Future<Map<String, Object?>> get(
-    String subscriptionId, {
+  Future<Map<String, Object?>> get({
+    required String subscriptionId,
     bool includeGrabs = false,
     bool includeStorage = false,
   }) async {
@@ -125,7 +125,7 @@ class PlexSubscriptionsApi {
 
   /// `DELETE /media/subscriptions/{subscriptionId}` — cancel a
   /// subscription (the recordings already on disk stay).
-  Future<void> delete(String subscriptionId) async {
+  Future<void> delete({required String subscriptionId}) async {
     await _http.request<void>(
       '/media/subscriptions/$subscriptionId',
       method: 'DELETE',
@@ -153,7 +153,7 @@ class PlexSubscriptionsApi {
   /// `DELETE /media/grabbers/operations/{operationId}` — cancel an
   /// in-flight grab (i.e. abort a recording that is currently
   /// happening).
-  Future<void> cancelGrab(String operationId) async {
+  Future<void> cancelGrab({required String operationId}) async {
     await _http.request<void>(
       '/media/grabbers/operations/$operationId',
       method: 'DELETE',

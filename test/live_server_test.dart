@@ -62,10 +62,11 @@ void main() {
         );
         expect(albums.items, isNotEmpty);
         final album = albums.items.first;
-        final tracks = await plex.library.children(album.ratingKey, size: 50);
+        final tracks =
+            await plex.library.children(ratingKey: album.ratingKey, size: 50);
         expect(tracks, isNotEmpty);
         expect(
-          await plex.library.countChildren(album.parentRatingKey!),
+          await plex.library.countChildren(ratingKey: album.parentRatingKey!),
           greaterThan(0),
         );
         expect(

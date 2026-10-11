@@ -47,7 +47,7 @@ class PlexLiveTvApi {
 
   /// Helper to drill into the EPG inside a Live TV DVR. The id comes
   /// from [dvrs] → entry's `key` field. Returns the channel listing.
-  Future<List<PlexMetadata>> dvrChannels(String dvrKey) async {
+  Future<List<PlexMetadata>> dvrChannels({required String dvrKey}) async {
     return _http.requestJson(
       '$dvrKey/channels',
       itemsOf('Metadata', PlexMetadata.fromJson),
@@ -60,7 +60,7 @@ class PlexLiveTvApi {
 
   /// `GET /livetv/sessions/{sessionId}` — fetch a single live
   /// session (status, currently-tuned channel, decision).
-  Future<Map<String, Object?>> liveSession(String sessionId) async {
+  Future<Map<String, Object?>> liveSession({required String sessionId}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/livetv/sessions/$sessionId',
     );

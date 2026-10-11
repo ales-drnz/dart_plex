@@ -73,7 +73,7 @@ void main() {
       test('rate -> setFavorite -> clear round trip', () async {
         // rate(6) -> userRating becomes 6.0, but 6 < 10 so not a favorite.
         await plex.playback.rate(ratingKey: trackRatingKey, rating: 6);
-        final afterRate = await plex.library.item(trackRatingKey);
+        final afterRate = await plex.library.item(ratingKey: trackRatingKey);
         expect(afterRate, isNotNull);
         expect(afterRate!.userRating, 6.0);
         expect(afterRate.isFavorite, isFalse);
@@ -83,7 +83,7 @@ void main() {
           ratingKey: trackRatingKey,
           isFavorite: true,
         );
-        final afterFav = await plex.library.item(trackRatingKey);
+        final afterFav = await plex.library.item(ratingKey: trackRatingKey);
         expect(afterFav, isNotNull);
         expect(afterFav!.userRating, 10.0);
         expect(afterFav.isFavorite, isTrue);
@@ -95,7 +95,7 @@ void main() {
         );
         // Final clear to 0; Plex may report a cleared rating as 0.0 or null.
         await plex.playback.rate(ratingKey: trackRatingKey, rating: 0);
-        final afterClear = await plex.library.item(trackRatingKey);
+        final afterClear = await plex.library.item(ratingKey: trackRatingKey);
         expect(afterClear, isNotNull);
         expect(afterClear!.userRating ?? 0.0, 0.0);
         expect(afterClear.isFavorite, isFalse);
@@ -103,19 +103,21 @@ void main() {
 
       test('scrobble -> unscrobble round trip', () async {
         // Plex may report viewCount as null when 0, so normalise with ?? 0.
-        final before = await plex.library.item(trackRatingKey);
+        final before = await plex.library.item(ratingKey: trackRatingKey);
         expect(before, isNotNull);
         final beforeViews = before!.viewCount ?? 0;
 
-        await plex.playback.scrobble(trackRatingKey);
-        final afterScrobble = await plex.library.item(trackRatingKey);
+        await plex.playback.scrobble(ratingKey: trackRatingKey);
+        final afterScrobble =
+            await plex.library.item(ratingKey: trackRatingKey);
         expect(afterScrobble, isNotNull);
         expect(afterScrobble!.viewCount ?? 0, greaterThan(beforeViews));
 
         // Unscrobble marks the item unplayed: the count goes to zero, not
         // back to what it was (other suites may have played it before).
-        await plex.playback.unscrobble(trackRatingKey);
-        final afterUnscrobble = await plex.library.item(trackRatingKey);
+        await plex.playback.unscrobble(ratingKey: trackRatingKey);
+        final afterUnscrobble =
+            await plex.library.item(ratingKey: trackRatingKey);
         expect(afterUnscrobble, isNotNull);
         expect(afterUnscrobble!.viewCount ?? 0, 0);
       });

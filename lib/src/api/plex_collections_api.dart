@@ -77,7 +77,7 @@ class PlexCollectionsApi {
 
   /// `GET /library/collections/{collectionId}/items` — items in a
   /// collection.
-  Future<List<PlexMetadata>> items(String collectionId) async {
+  Future<List<PlexMetadata>> items({required String collectionId}) async {
     return _http.requestJson(
       '/library/collections/$collectionId/items',
       itemsOf('Metadata', PlexMetadata.fromJson),

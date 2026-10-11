@@ -38,20 +38,20 @@ void main() {
           filters: [PlexFilter.titleIs('Test Album')],
         );
         album = albums.items.single;
-        artist = (await plex.library.item(album.parentRatingKey!))!;
-        tracks = await plex.library.children(album.ratingKey);
+        artist = (await plex.library.item(ratingKey: album.parentRatingKey!))!;
+        tracks = await plex.library.children(ratingKey: album.ratingKey);
       });
 
       test('children pages and sorts on the server', () async {
         expect(tracks, hasLength(3));
         final second = await plex.library.children(
-          album.ratingKey,
+          ratingKey: album.ratingKey,
           start: 1,
           size: 1,
         );
         expect(second.single.ratingKey, tracks[1].ratingKey);
         final reversed = await plex.library.children(
-          album.ratingKey,
+          ratingKey: album.ratingKey,
           sort: 'index:desc',
         );
         expect(
@@ -62,10 +62,11 @@ void main() {
 
       test('grandchildren, recentlyAdded, section search, album fields',
           () async {
-        final all = await plex.library.grandchildren(artist.ratingKey);
+        final all =
+            await plex.library.grandchildren(ratingKey: artist.ratingKey);
         expect(all.map((t) => t.ratingKey), tracks.map((t) => t.ratingKey));
         final page = await plex.library.grandchildren(
-          artist.ratingKey,
+          ratingKey: artist.ratingKey,
           size: 1,
         );
         expect(page, hasLength(1));
@@ -83,7 +84,7 @@ void main() {
         expect(found.length, greaterThanOrEqualTo(3));
         expect(found.every((t) => t.type == PlexMetadataType.track), isTrue);
 
-        final detail = (await plex.library.item(album.ratingKey))!;
+        final detail = (await plex.library.item(ratingKey: album.ratingKey))!;
         expect(detail.leafCount, 3);
         expect(detail.librarySectionId, sectionId);
         expect(
@@ -112,7 +113,7 @@ void main() {
           (start, size) {
             requests++;
             return plex.library.grandchildren(
-              artist.ratingKey,
+              ratingKey: artist.ratingKey,
               start: start,
               size: size,
             );
@@ -124,13 +125,16 @@ void main() {
       });
 
       test('countChildren moves no rows and still counts', () async {
-        expect(await plex.library.countChildren(album.ratingKey), 3);
-        expect(await plex.library.countChildren(artist.ratingKey), 1);
+        expect(await plex.library.countChildren(ratingKey: album.ratingKey), 3);
+        expect(
+          await plex.library.countChildren(ratingKey: artist.ratingKey),
+          1,
+        );
       });
 
       test('allLeaves pages', () async {
         final page = await plex.library.allLeaves(
-          artist.ratingKey,
+          ratingKey: artist.ratingKey,
           start: 0,
           size: 2,
         );
@@ -174,26 +178,27 @@ void main() {
             2,
           );
 
-          final entries = await plex.playlists.items(mix.ratingKey);
+          final entries = await plex.playlists.items(playlistId: mix.ratingKey);
           expect(entries, hasLength(2));
           expect(entries.every((e) => e.playlistItemId != null), isTrue);
           await plex.playlists.removeItem(
             playlistId: mix.ratingKey,
             playlistItemId: entries.first.playlistItemId!,
           );
-          final left = await plex.playlists.items(mix.ratingKey);
+          final left = await plex.playlists.items(playlistId: mix.ratingKey);
           expect(left.single.ratingKey, tracks[1].ratingKey);
 
-          final page = await plex.playlists.items(other.ratingKey, size: 1);
+          final page =
+              await plex.playlists.items(playlistId: other.ratingKey, size: 1);
           expect(page, hasLength(1));
         } finally {
-          await plex.playlists.delete(mix.ratingKey);
-          await plex.playlists.delete(other.ratingKey);
+          await plex.playlists.delete(playlistId: mix.ratingKey);
+          await plex.playlists.delete(playlistId: other.ratingKey);
         }
       });
 
       test('a new poster changes the thumb version', () async {
-        final before = (await plex.library.item(album.ratingKey))!;
+        final before = (await plex.library.item(ratingKey: album.ratingKey))!;
         // A second must pass for the timestamp in the path to move.
         await Future<void>.delayed(const Duration(milliseconds: 1100));
         await plex.library.setItemArtwork(
@@ -204,12 +209,13 @@ void main() {
         late PlexMetadata after;
         for (var i = 0; i < 20; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 250));
-          after = (await plex.library.item(album.ratingKey))!;
+          after = (await plex.library.item(ratingKey: album.ratingKey))!;
           if (after.thumbVersion != before.thumbVersion) break;
         }
         expect(after.thumbVersion, isNotNull);
         expect(after.thumbVersion, isNot(before.thumbVersion));
-        final track = (await plex.library.item(tracks.first.ratingKey))!;
+        final track =
+            (await plex.library.item(ratingKey: tracks.first.ratingKey))!;
         expect(track.parentThumbVersion, after.thumbVersion);
       });
 
@@ -319,10 +325,10 @@ void main() {
           expect(mpd.data, contains('<MPD'));
           // DASH sessions start lazily, with the first segment; HLS at once.
           expect(await sessions(), contains(hlsId));
-          await plex.streaming.pingUniversal(hlsId);
+          await plex.streaming.pingUniversal(session: hlsId);
         } finally {
-          await plex.streaming.stopUniversal(hlsId);
-          await plex.streaming.stopUniversal(dashId);
+          await plex.streaming.stopUniversal(session: hlsId);
+          await plex.streaming.stopUniversal(session: dashId);
         }
         // PMS tears the session down asynchronously after the stop.
         for (var i = 0; i < 40 && (await sessions()).contains(hlsId); i++) {
@@ -330,11 +336,12 @@ void main() {
         }
         expect(await sessions(), isNot(contains(hlsId)));
         // Stopping a session that is already gone is not an error.
-        await plex.streaming.stopUniversal(hlsId);
+        await plex.streaming.stopUniversal(session: hlsId);
       });
 
       test('downloadToFile writes the original file', () async {
-        final track = (await plex.library.item(tracks.first.ratingKey))!;
+        final track =
+            (await plex.library.item(ratingKey: tracks.first.ratingKey))!;
         final part = track.media.single.parts.single;
         final (url, ext) = plex.streaming.directFileUrl(partKey: part.key!);
         final dir = await Directory.systemTemp.createTemp('plex_dl');

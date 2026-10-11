@@ -41,7 +41,7 @@ class PlexProvidersApi {
   }
 
   /// `DELETE /media/providers/{provider}` — drop a provider.
-  Future<void> delete(String provider) async {
+  Future<void> delete({required String provider}) async {
     await _http.request<void>(
       '/media/providers/$provider',
       method: 'DELETE',

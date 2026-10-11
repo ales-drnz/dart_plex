@@ -157,7 +157,7 @@ class PlexPlayQueuesApi {
   }
 
   /// `PUT /playQueues/{id}/shuffle` — randomize the queue order.
-  Future<void> shuffle(int playQueueId) async {
+  Future<void> shuffle({required int playQueueId}) async {
     await _http.request<void>(
       '/playQueues/$playQueueId/shuffle',
       method: 'PUT',
@@ -165,7 +165,7 @@ class PlexPlayQueuesApi {
   }
 
   /// `PUT /playQueues/{id}/unshuffle` — restore the original order.
-  Future<void> unshuffle(int playQueueId) async {
+  Future<void> unshuffle({required int playQueueId}) async {
     await _http.request<void>(
       '/playQueues/$playQueueId/unshuffle',
       method: 'PUT',
@@ -175,7 +175,7 @@ class PlexPlayQueuesApi {
   /// `DELETE /playQueues/{id}/items` — clear every item from the
   /// queue. The queue itself stays alive (its id remains valid),
   /// only the contents are removed.
-  Future<void> clear(int playQueueId) async {
+  Future<void> clear({required int playQueueId}) async {
     await _http.request<void>(
       '/playQueues/$playQueueId/items',
       method: 'DELETE',
@@ -185,7 +185,7 @@ class PlexPlayQueuesApi {
   /// `PUT /playQueues/{id}/reset` — rewind the queue so the first
   /// item is the current item again. Does not change the queue
   /// contents.
-  Future<void> reset(int playQueueId) async {
+  Future<void> reset({required int playQueueId}) async {
     await _http.request<void>(
       '/playQueues/$playQueueId/reset',
       method: 'PUT',

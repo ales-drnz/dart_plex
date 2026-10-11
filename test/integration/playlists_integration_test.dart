@@ -53,7 +53,8 @@ void main() {
             );
           }
 
-          var entries = await plex.playlists.items(created.ratingKey);
+          var entries =
+              await plex.playlists.items(playlistId: created.ratingKey);
           expect(entries.length, trackRatingKeys.length);
 
           // Rename and verify by re-reading from list().
@@ -67,7 +68,7 @@ void main() {
           expect(renamed.title, contains('renamed'));
 
           // Remove the last entry by its playlistItemID.
-          entries = await plex.playlists.items(created.ratingKey);
+          entries = await plex.playlists.items(playlistId: created.ratingKey);
           final lastEntry = entries.last;
           final playlistItemId = (lastEntry.raw['playlistItemID'] ??
                   lastEntry.raw['playlistItemId'])
@@ -81,10 +82,10 @@ void main() {
             playlistId: created.ratingKey,
             playlistItemId: playlistItemId!,
           );
-          entries = await plex.playlists.items(created.ratingKey);
+          entries = await plex.playlists.items(playlistId: created.ratingKey);
           expect(entries.length, trackRatingKeys.length - 1);
         } finally {
-          await plex.playlists.delete(created.ratingKey);
+          await plex.playlists.delete(playlistId: created.ratingKey);
         }
 
         // After delete the playlist must be gone from the list().
@@ -103,10 +104,10 @@ void main() {
           machineIdentifier: cache.machineIdentifier,
           itemRatingKeys: [trackRatingKeys.first],
         );
-        await plex.playlists.delete(created.ratingKey);
+        await plex.playlists.delete(playlistId: created.ratingKey);
 
         try {
-          await plex.playlists.delete(created.ratingKey);
+          await plex.playlists.delete(playlistId: created.ratingKey);
         } on PlexException catch (e) {
           expect(
             e.type,

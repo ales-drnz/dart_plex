@@ -334,7 +334,7 @@ class PlexStreamingApi {
   /// DASH session whose segments were never fetched (PMS creates it
   /// lazily) — answers 404; that is the state asked for, so it returns
   /// normally.
-  Future<void> stopUniversal(String session) async {
+  Future<void> stopUniversal({required String session}) async {
     try {
       await _http.request<void>(
         '/video/:/transcode/universal/stop',
@@ -348,7 +348,7 @@ class PlexStreamingApi {
   /// Keep a transcode session alive while the player buffers. Throws a
   /// [PlexException] of type [PlexErrorType.notFound] when the session is
   /// gone (PMS logs "ping without a valid session ID").
-  Future<void> pingUniversal(String session) async {
+  Future<void> pingUniversal({required String session}) async {
     await _http.request<void>(
       '/video/:/transcode/universal/ping',
       queryParameters: {'session': session},

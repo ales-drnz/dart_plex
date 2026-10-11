@@ -64,11 +64,11 @@ void main() {
         }
 
         // Reset is allowed on continuous queues.
-        await plex.playQueues.reset(queueId);
+        await plex.playQueues.reset(playQueueId: queueId);
 
         // Clear strips everything except the currently-selected item;
         // the queue stays alive with that single entry.
-        await plex.playQueues.clear(queueId);
+        await plex.playQueues.clear(playQueueId: queueId);
         entries = await plex.playQueues.items(playQueueId: queueId);
         expect(entries.length, lessThan(trackRatingKeys.length));
       });
@@ -87,8 +87,8 @@ void main() {
         );
         expect(queue.id, greaterThan(0));
 
-        await plex.playQueues.shuffle(queue.id);
-        await plex.playQueues.unshuffle(queue.id);
+        await plex.playQueues.shuffle(playQueueId: queue.id);
+        await plex.playQueues.unshuffle(playQueueId: queue.id);
       });
     },
     skip: bootstrapSkipReason,

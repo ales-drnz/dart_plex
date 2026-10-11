@@ -116,7 +116,7 @@ class PlexClient {
   late final PlexDevicesApi devices;
 
   /// `/livetv/dvrs` — DVR configuration (admin).
-  late final PlexDVRsApi dvrs;
+  late final PlexDvrsApi dvrs;
 
   /// `/media/subscriptions` — DVR recording rules.
   late final PlexSubscriptionsApi subscriptions;
@@ -231,7 +231,7 @@ class PlexClient {
     ultraBlur = PlexUltraBlurApi(_http);
     collections = PlexCollectionsApi(_http);
     devices = PlexDevicesApi(_http);
-    dvrs = PlexDVRsApi(_http);
+    dvrs = PlexDvrsApi(_http);
     subscriptions = PlexSubscriptionsApi(_http);
     downloadQueue = PlexDownloadQueueApi(_http);
     epg = PlexEpgApi(_http);

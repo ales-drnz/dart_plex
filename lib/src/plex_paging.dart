@@ -7,7 +7,7 @@
 /// ```dart
 /// final tracks = PlexPaging.items(
 ///   (start, size) => plex.library.grandchildren(
-///     artistKey,
+///     ratingKey: artistKey,
 ///     start: start,
 ///     size: size,
 ///   ),

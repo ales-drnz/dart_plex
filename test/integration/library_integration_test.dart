@@ -144,7 +144,7 @@ void main() {
         );
         final ratingKey = page.items.first.ratingKey;
         expect(ratingKey, isNotEmpty);
-        final item = await plex.library.item(ratingKey);
+        final item = await plex.library.item(ratingKey: ratingKey);
         expect(item, isNotNull);
         expect(item!.ratingKey, ratingKey);
       });

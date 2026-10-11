@@ -212,7 +212,7 @@ class PlexLibraryApi {
   // -------------------------------------------------------------------------
 
   /// Full metadata for one item (`/library/metadata/{ratingKey}`).
-  Future<PlexMetadata?> item(String ratingKey) async {
+  Future<PlexMetadata?> item({required String ratingKey}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/library/metadata/$ratingKey',
     );
@@ -274,8 +274,8 @@ class PlexLibraryApi {
   /// [sort] takes the section sort syntax, e.g. `'year:desc'` or
   /// `'titleSort'` (verified on PMS 1.43.2). For the number of children
   /// alone use [countChildren].
-  Future<List<PlexMetadata>> children(
-    String ratingKey, {
+  Future<List<PlexMetadata>> children({
+    required String ratingKey,
     int? start,
     int? size,
     String? sort,
@@ -291,7 +291,7 @@ class PlexLibraryApi {
 
   /// How many children an item has (an artist's albums, an album's
   /// tracks), read from `totalSize` of an empty page — no rows travel.
-  Future<int> countChildren(String ratingKey) async {
+  Future<int> countChildren({required String ratingKey}) async {
     final page = await _http.requestJson(
       '/library/metadata/$ratingKey/children',
       queryParameters: containerPage(start: 0, size: 0),
@@ -306,8 +306,8 @@ class PlexLibraryApi {
   /// [size] (with [start], default 0) reads one page. There is no `sort`:
   /// PMS 1.43.2 ignores it on this endpoint (verified) and answers in
   /// library order.
-  Future<List<PlexMetadata>> allLeaves(
-    String ratingKey, {
+  Future<List<PlexMetadata>> allLeaves({
+    required String ratingKey,
     int? start,
     int? size,
   }) {
@@ -323,8 +323,8 @@ class PlexLibraryApi {
   /// — every track of an artist, in album order, without a request per
   /// album. Pages with [size] (and [start], default 0); verified on PMS
   /// 1.43.2.
-  Future<List<PlexMetadata>> grandchildren(
-    String ratingKey, {
+  Future<List<PlexMetadata>> grandchildren({
+    required String ratingKey,
     int? start,
     int? size,
   }) {
@@ -1510,7 +1510,7 @@ class PlexLibraryApi {
   // -------------------------------------------------------------------------
 
   /// `GET /library/people/{personId}` — person details.
-  Future<Map<String, Object?>> person(String personId) async {
+  Future<Map<String, Object?>> person({required String personId}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/library/people/$personId',
     );
@@ -1519,7 +1519,7 @@ class PlexLibraryApi {
 
   /// `GET /library/people/{personId}/media` — items credited to
   /// a person.
-  Future<List<PlexMetadata>> personMedia(String personId) async {
+  Future<List<PlexMetadata>> personMedia({required String personId}) async {
     return _http.requestJson(
       '/library/people/$personId/media',
       itemsOf('Metadata', PlexMetadata.fromJson),

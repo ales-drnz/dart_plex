@@ -100,7 +100,7 @@ class PlexAccountApi {
   ///
   /// The returned pin is the freshest state — once [PlexPin.isAuthenticated]
   /// is true, save [PlexPin.authToken] and stop polling.
-  Future<PlexPin> pollPin(int id) async {
+  Future<PlexPin> pollPin({required int id}) async {
     final res = await _http.request<Map<String, Object?>>(
       '$_plexTv/pins/$id',
       absoluteUrl: true,

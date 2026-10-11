@@ -212,7 +212,8 @@ void _stopUniversalTests() {
     Future<void> stopWith(int status) {
       final adapter = CapturingAdapter()
         ..respond = (_) => CannedResponse(status, const []);
-      return PlexStreamingApi(testConnection(adapter)).stopUniversal('s1');
+      return PlexStreamingApi(testConnection(adapter))
+          .stopUniversal(session: 's1');
     }
 
     test('a session that is already gone (404) is not an error', () async {

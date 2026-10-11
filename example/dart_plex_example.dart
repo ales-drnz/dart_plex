@@ -69,7 +69,8 @@ Future<void> main() async {
       size: 1,
     );
     if (recent.isEmpty) return;
-    final tracks = await plex.library.children(recent.first.ratingKey);
+    final tracks =
+        await plex.library.children(ratingKey: recent.first.ratingKey);
     if (tracks.isEmpty) return;
     final transcode = await plex.streaming.startAudioTranscode(
       ratingKey: tracks.first.ratingKey,
@@ -77,7 +78,7 @@ Future<void> main() async {
       maxBitrateKbps: 128,
     );
     print('Playable: ${transcode.decision.isPlayable}\n${transcode.url}');
-    await plex.streaming.stopUniversal(transcode.session);
+    await plex.streaming.stopUniversal(session: transcode.session);
   } on PlexException catch (e) {
     print('Plex call failed: $e (transient: ${e.isTransient})');
   } finally {

@@ -97,7 +97,8 @@ void main() {
 
         // items() endpoint should respond with a list (may be empty
         // depending on server tag-propagation delay).
-        final items = await plex.collections.items(created.ratingKey);
+        final items =
+            await plex.collections.items(collectionId: created.ratingKey);
         expect(items, isA<List<PlexMetadata>>());
 
         // Cover image URL builder.

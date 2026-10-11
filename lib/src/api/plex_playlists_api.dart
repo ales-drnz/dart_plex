@@ -97,8 +97,8 @@ class PlexPlaylistsApi {
   /// hundreds of KB. Pass it (and [start], default 0) to read a page — for
   /// example the first few rows, when all you need is some cover art. Each
   /// entry carries its [PlexMetadata.playlistItemId].
-  Future<List<PlexMetadata>> items(
-    String playlistId, {
+  Future<List<PlexMetadata>> items({
+    required String playlistId,
     int? start,
     int? size,
   }) async {
@@ -181,7 +181,7 @@ class PlexPlaylistsApi {
   }
 
   /// Delete a playlist.
-  Future<void> delete(String playlistId) async {
+  Future<void> delete({required String playlistId}) async {
     await _http.request<void>('/playlists/$playlistId', method: 'DELETE');
   }
 
@@ -217,7 +217,9 @@ class PlexPlaylistsApi {
   /// `GET /playlists/{playlistId}/generators` — list the smart
   /// generators feeding a smart playlist. Returns raw maps; the
   /// generator id is in each entry's `id` field.
-  Future<List<Map<String, Object?>>> generators(String playlistId) async {
+  Future<List<Map<String, Object?>>> generators({
+    required String playlistId,
+  }) async {
     final res = await _http.request<Map<String, Object?>>(
       '/playlists/$playlistId/generators',
     );

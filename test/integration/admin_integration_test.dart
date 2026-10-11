@@ -34,7 +34,7 @@ void main() {
         final loudness =
             all.firstWhere((s) => s.id == 'LoudnessAnalysisBehavior');
         expect(loudness.enumValues.keys, containsAll(['never', 'asap']));
-        final one = await plex.preferences.byId(loudness.id);
+        final one = await plex.preferences.byId(id: loudness.id);
         expect(one!.id, loudness.id);
         expect(one.value, loudness.value);
       });

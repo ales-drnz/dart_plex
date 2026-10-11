@@ -59,7 +59,7 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers/devices/{deviceId}` — one device's
   /// details.
-  Future<Map<String, Object?>> details(String deviceId) async {
+  Future<Map<String, Object?>> details({required String deviceId}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/media/grabbers/devices/$deviceId',
     );
@@ -67,7 +67,7 @@ class PlexDevicesApi {
   }
 
   /// `DELETE /media/grabbers/devices/{deviceId}` — drop a device.
-  Future<void> remove(String deviceId) async {
+  Future<void> remove({required String deviceId}) async {
     await _http.request<void>(
       '/media/grabbers/devices/$deviceId',
       method: 'DELETE',
@@ -89,7 +89,7 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers/devices/{deviceId}/channels` — channels
   /// the device can see.
-  Future<Map<String, Object?>> channels(String deviceId) async {
+  Future<Map<String, Object?>> channels({required String deviceId}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/media/grabbers/devices/$deviceId/channels',
     );
@@ -159,7 +159,7 @@ class PlexDevicesApi {
 
   /// `DELETE /media/grabbers/devices/{deviceId}/scan` — stop a
   /// running channel scan.
-  Future<void> stopScan(String deviceId) async {
+  Future<void> stopScan({required String deviceId}) async {
     await _http.request<void>(
       '/media/grabbers/devices/$deviceId/scan',
       method: 'DELETE',

@@ -41,13 +41,14 @@ void main() {
 
   group('library.children', () {
     test('without paging asks for every child', () async {
-      await plex.library.children('42');
+      await plex.library.children(ratingKey: '42');
       expect(adapter.lastRequest!.uri.path, '/library/metadata/42/children');
       expect(adapter.lastRequest!.uri.query, isEmpty);
     });
 
     test('a page sends Start and Size together, plus the sort', () async {
-      await plex.library.children('42', start: 50, size: 25, sort: 'year:desc');
+      await plex.library
+          .children(ratingKey: '42', start: 50, size: 25, sort: 'year:desc');
       expect(query(), {
         'X-Plex-Container-Start': '50',
         'X-Plex-Container-Size': '25',
@@ -57,17 +58,20 @@ void main() {
 
     test('size alone still sends Start (PMS ignores Size on its own)',
         () async {
-      await plex.library.children('42', size: 25);
+      await plex.library.children(ratingKey: '42', size: 25);
       expect(query()['X-Plex-Container-Start'], '0');
       expect(query()['X-Plex-Container-Size'], '25');
     });
 
     test('start without size is refused instead of being ignored upstream', () {
-      expect(() => plex.library.children('42', start: 10), throwsArgumentError);
+      expect(
+        () => plex.library.children(ratingKey: '42', start: 10),
+        throwsArgumentError,
+      );
     });
 
     test('countChildren reads totalSize of an empty page', () async {
-      final n = await plex.library.countChildren('42');
+      final n = await plex.library.countChildren(ratingKey: '42');
       expect(n, 7);
       expect(query(), {
         'X-Plex-Container-Start': '0',
@@ -78,7 +82,7 @@ void main() {
 
   group('library.allLeaves', () {
     test('pages with Start and Size', () async {
-      await plex.library.allLeaves('9', start: 100, size: 100);
+      await plex.library.allLeaves(ratingKey: '9', start: 100, size: 100);
       expect(adapter.lastRequest!.uri.path, '/library/metadata/9/allLeaves');
       expect(query(), {
         'X-Plex-Container-Start': '100',
@@ -89,7 +93,7 @@ void main() {
 
   group('library: grandchildren, recentlyAdded, section search', () {
     test('grandchildren pages', () async {
-      await plex.library.grandchildren('1', size: 100);
+      await plex.library.grandchildren(ratingKey: '1', size: 100);
       expect(
         adapter.lastRequest!.uri.path,
         '/library/metadata/1/grandchildren',
@@ -194,7 +198,7 @@ void main() {
     });
 
     test('items with only a size still sends Start', () async {
-      await plex.playlists.items('42', size: 50);
+      await plex.playlists.items(playlistId: '42', size: 50);
       expect(query(), {
         'X-Plex-Container-Start': '0',
         'X-Plex-Container-Size': '50',
@@ -211,7 +215,7 @@ void main() {
           ],
         },
       };
-      final entries = await plex.playlists.items('42');
+      final entries = await plex.playlists.items(playlistId: '42');
       expect(entries.map((e) => e.playlistItemId), ['101', '102']);
       await plex.playlists.removeItem(
         playlistId: '42',
@@ -321,14 +325,14 @@ void main() {
     });
 
     test('scrobble, unscrobble and rate are PUTs', () async {
-      await plex.playback.scrobble('9');
+      await plex.playback.scrobble(ratingKey: '9');
       expect(adapter.lastRequest!.method, 'PUT');
       expect(adapter.lastRequest!.uri.path, '/:/scrobble');
       expect(
         query(),
         {'key': '9', 'identifier': 'com.plexapp.plugins.library'},
       );
-      await plex.playback.unscrobble('9');
+      await plex.playback.unscrobble(ratingKey: '9');
       expect(adapter.lastRequest!.method, 'PUT');
       await plex.playback.rate(ratingKey: '9', rating: 8);
       expect(adapter.lastRequest!.method, 'PUT');

@@ -29,7 +29,7 @@ class PlexPreferencesApi {
   /// Returns the matching `Setting` map (the same shape as an entry
   /// of [all]), unwrapped from the `MediaContainer`/`Setting`
   /// envelope. Returns an empty map when the id is unknown.
-  Future<PlexSetting?> byId(String id) async {
+  Future<PlexSetting?> byId({required String id}) async {
     final settings = await _http.requestJson(
       '/:/prefs/get',
       queryParameters: {'id': id},

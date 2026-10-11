@@ -30,7 +30,7 @@ class PlexDownloadQueueApi {
   }
 
   /// `GET /downloadQueue/{queueId}` — fetch a queue's status.
-  Future<Map<String, Object?>> get(String queueId) async {
+  Future<Map<String, Object?>> get({required String queueId}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue/$queueId',
     );
@@ -51,7 +51,7 @@ class PlexDownloadQueueApi {
   }
 
   /// `GET /downloadQueue/{queueId}/items` — every item in the queue.
-  Future<Map<String, Object?>> items(String queueId) async {
+  Future<Map<String, Object?>> items({required String queueId}) async {
     final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue/$queueId/items',
     );

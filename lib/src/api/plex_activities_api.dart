@@ -27,7 +27,7 @@ class PlexActivitiesApi {
 
   /// `DELETE /activities/{activityId}` — cancel a running activity
   /// (best-effort; some activity types cannot be cancelled).
-  Future<void> cancel(String activityId) async {
+  Future<void> cancel({required String activityId}) async {
     await _http.request<void>(
       '/activities/$activityId',
       method: 'DELETE',

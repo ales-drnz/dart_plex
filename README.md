@@ -344,7 +344,7 @@ Future<void> main() async {
   );
 
   // 4. Play the first track of the first album.
-  final tracks = await plex.library.children(albums.items.first.ratingKey);
+  final tracks = await plex.library.children(ratingKey: albums.items.first.ratingKey);
   final transcode = await plex.streaming.startAudioTranscode(
     ratingKey: tracks.first.ratingKey,
     session: 'a-uuid-per-playback',
@@ -500,7 +500,7 @@ print('Open https://plex.tv/link and enter ${pin.code}');
 // 2. Poll until the user authorises the device.
 while (true) {
   await Future<void>.delayed(const Duration(seconds: 2));
-  final fresh = await plex.account.pollPin(pin.id);
+  final fresh = await plex.account.pollPin(id: pin.id);
   if (fresh.isAuthenticated) {
     plex.setToken(fresh.authToken);
     break;
@@ -637,7 +637,7 @@ for (final a in running) {
 
 final tasks = await plex.butler.tasks(); // List<PlexButlerTask>
 final settings = await plex.preferences.all(); // List<PlexSetting>
-final name = await plex.preferences.byId('FriendlyName');
+final name = await plex.preferences.byId(id: 'FriendlyName');
 print('${tasks.length} tasks, ${settings.length} settings, ${name?.value}');
 ```
 
@@ -756,7 +756,7 @@ what it means there.
 #### 5.4 Single item metadata
 
 ```dart
-final metadata = await plex.library.item('12345');
+final metadata = await plex.library.item(ratingKey: '12345');
 if (metadata != null) {
   print(metadata.title);
   print(metadata.media.first.audioCodec); // e.g. 'flac'
@@ -777,28 +777,28 @@ responses usually leave them out.
 
 ```dart
 // An album's tracks, an artist's albums, a season's episodes.
-final tracks = await plex.library.children(album.ratingKey);
+final tracks = await plex.library.children(ratingKey: album.ratingKey);
 
 // Sorted and paged.
 final albumsNewestFirst = await plex.library.children(
-  artist.ratingKey,
+  ratingKey: artist.ratingKey,
   sort: 'year:desc',
   start: 0,
   size: 20,
 );
 
 // How many, without transferring them.
-final albumCount = await plex.library.countChildren(artist.ratingKey);
+final albumCount = await plex.library.countChildren(ratingKey: artist.ratingKey);
 
 // Every track of an artist in album order, in one request per page.
 final artistTracks = await plex.library.grandchildren(
-  artist.ratingKey,
+  ratingKey: artist.ratingKey,
   start: 0,
   size: 100,
 );
 
 // Every leaf under an item (tracks of an artist, episodes of a show).
-final leaves = await plex.library.allLeaves(artist.ratingKey, size: 100);
+final leaves = await plex.library.allLeaves(ratingKey: artist.ratingKey, size: 100);
 ```
 
 Without `size`, `children()`, `grandchildren()` and `allLeaves()` answer
@@ -950,7 +950,7 @@ await plex.playlists.addItems(
   itemRatingKeys: const ['99999'],
 );
 
-final entries = await plex.playlists.items(playlist.ratingKey);
+final entries = await plex.playlists.items(playlistId: playlist.ratingKey);
 
 // Remove one entry.
 final added = entries.firstWhere((e) => e.ratingKey == '99999');
@@ -976,7 +976,7 @@ read one page of a long playlist.
 
 ```dart
 await plex.playlists.rename(playlistId: '123', title: 'New name');
-await plex.playlists.delete('123');
+await plex.playlists.delete(playlistId: '123');
 ```
 
 ---
@@ -1076,8 +1076,8 @@ to the playback history ([11.2](#112-playback-history)).
 #### 8.3 Scrobble and unscrobble
 
 ```dart
-await plex.playback.scrobble(ratingKey);   // mark as played
-await plex.playback.unscrobble(ratingKey); // mark as unplayed
+await plex.playback.scrobble(ratingKey: ratingKey);   // mark as played
+await plex.playback.unscrobble(ratingKey: ratingKey); // mark as unplayed
 ```
 
 `scrobble()` raises `viewCount` without adding a history entry: use it
@@ -1168,8 +1168,8 @@ artwork from the server, not from the downloaded file.
 #### 9.3 Transcode session lifecycle
 
 ```dart
-await plex.streaming.pingUniversal(sessionId);  // keep alive
-await plex.streaming.stopUniversal(sessionId);  // teardown
+await plex.streaming.pingUniversal(session: sessionId);  // keep alive
+await plex.streaming.stopUniversal(session: sessionId);  // teardown
 ```
 
 Plex reaps inactive sessions after ~2 minutes. Ping every 30 s while a
@@ -1183,7 +1183,7 @@ first segment) is already the state you asked for.
 
 ```dart
 // The lyrics stream is a track's stream with streamType 4.
-final full = await plex.library.item(track.ratingKey);
+final full = await plex.library.item(ratingKey: track.ratingKey);
 final lyricsStream = full!.media.first.parts.first.streams
     .firstWhere((s) => s.isLyrics);
 final lyrics = await plex.streaming.lyrics(streamKey: lyricsStream.key!);
@@ -1202,7 +1202,7 @@ So the string you get back is already text, whatever the file was.
 #### 9.5 Loudness
 
 ```dart
-final full = await plex.library.item(track.ratingKey);
+final full = await plex.library.item(ratingKey: track.ratingKey);
 final audio = full?.audioStream;
 if (audio != null && audio.hasLoudness) {
   print('track gain ${audio.gain} dB, album gain ${audio.albumGain} dB, '
@@ -1528,14 +1528,14 @@ await plex.playQueues.removeItem(
 #### 14.3 Shuffle, unshuffle, reset, clear
 
 ```dart
-await plex.playQueues.shuffle(queueId);
-await plex.playQueues.unshuffle(queueId);
+await plex.playQueues.shuffle(playQueueId: queueId);
+await plex.playQueues.unshuffle(playQueueId: queueId);
 
 // Rewind the queue so the first item is current again.
-await plex.playQueues.reset(queueId);
+await plex.playQueues.reset(playQueueId: queueId);
 
 // Drop every item. The queue id stays valid.
-await plex.playQueues.clear(queueId);
+await plex.playQueues.clear(playQueueId: queueId);
 ```
 
 #### 14.4 Adding a Plex playlist
@@ -1587,7 +1587,7 @@ for (final dvr in dvrs) {
 }
 
 // Drill into the channels grouped under one DVR:
-final channels = await plex.liveTv.dvrChannels(dvrs.first['key']! as String);
+final channels = await plex.liveTv.dvrChannels(dvrKey: dvrs.first['key']! as String);
 ```
 
 #### 15.3 Subscriptions
@@ -1609,7 +1609,7 @@ for (final sub in subs) {
 }
 
 // Delete a subscription by its id.
-await plex.subscriptions.delete('${subs.first['id']}');
+await plex.subscriptions.delete(subscriptionId: '${subs.first['id']}');
 ```
 
 > Live TV (sessions, DVRs) results come back as raw maps
@@ -1865,7 +1865,7 @@ defaults to 0), and throw an `ArgumentError` for a `start` without a
 ```dart
 final tracks = PlexPaging.items(
   (start, size) => plex.library.grandchildren(
-    artist.ratingKey,
+    ratingKey: artist.ratingKey,
     start: start,
     size: size,
   ),

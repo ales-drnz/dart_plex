@@ -129,7 +129,7 @@ class PlexPlaybackApi {
   /// Mark an item as played (`PUT /:/scrobble`): raises `viewCount` by
   /// one without adding a history entry. To report listening, send
   /// [timeline] reports instead (see there for what PMS counts).
-  Future<void> scrobble(String ratingKey) async {
+  Future<void> scrobble({required String ratingKey}) async {
     await _http.request<void>(
       '/:/scrobble',
       method: 'PUT',
@@ -142,7 +142,7 @@ class PlexPlaybackApi {
 
   /// Mark an item as unplayed (`PUT /:/unscrobble`): clears `viewCount`.
   /// The play history is kept.
-  Future<void> unscrobble(String ratingKey) async {
+  Future<void> unscrobble({required String ratingKey}) async {
     await _http.request<void>(
       '/:/unscrobble',
       method: 'PUT',

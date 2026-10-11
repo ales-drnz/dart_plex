@@ -35,12 +35,12 @@ class PlexButlerApi {
   }
 
   /// `POST /butler/{butlerTask}` — start a single task now.
-  Future<void> start(String butlerTask) async {
+  Future<void> start({required String butlerTask}) async {
     await _http.request<void>('/butler/$butlerTask', method: 'POST');
   }
 
   /// `DELETE /butler/{butlerTask}` — stop a single running task.
-  Future<void> stop(String butlerTask) async {
+  Future<void> stop({required String butlerTask}) async {
     await _http.request<void>('/butler/$butlerTask', method: 'DELETE');
   }
 }

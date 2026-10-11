@@ -12,14 +12,14 @@ import 'plex_live_tv_api.dart';
 /// [PlexLiveTvApi]). Admin only. Each DVR groups one or more
 /// devices and a listings lineup; subscriptions schedule
 /// recordings against a DVR.
-class PlexDVRsApi {
+class PlexDvrsApi {
   final PlexConnection _http;
 
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.dvrs].
-  PlexDVRsApi(this._http);
+  PlexDvrsApi(this._http);
 
   /// `GET /livetv/dvrs/{dvrId}` — one DVR's full configuration.
-  Future<Map<String, Object?>> get(String dvrId) async {
+  Future<Map<String, Object?>> get({required String dvrId}) async {
     final res =
         await _http.request<Map<String, Object?>>('/livetv/dvrs/$dvrId');
     return res.data ?? const {};
@@ -27,7 +27,7 @@ class PlexDVRsApi {
 
   /// `DELETE /livetv/dvrs/{dvrId}` — drop a DVR (its recordings
   /// stay on disk).
-  Future<void> delete(String dvrId) async {
+  Future<void> delete({required String dvrId}) async {
     await _http.request<void>('/livetv/dvrs/$dvrId', method: 'DELETE');
   }
 
@@ -84,7 +84,7 @@ class PlexDVRsApi {
 
   /// `POST /livetv/dvrs/{dvrId}/reloadGuide` — force-reload the
   /// program guide.
-  Future<void> reloadGuide(String dvrId) async {
+  Future<void> reloadGuide({required String dvrId}) async {
     await _http.request<void>(
       '/livetv/dvrs/$dvrId/reloadGuide',
       method: 'POST',
@@ -93,7 +93,7 @@ class PlexDVRsApi {
 
   /// `DELETE /livetv/dvrs/{dvrId}/reloadGuide` — abort an in-flight
   /// guide reload.
-  Future<void> stopReloadGuide(String dvrId) async {
+  Future<void> stopReloadGuide({required String dvrId}) async {
     await _http.request<void>(
       '/livetv/dvrs/$dvrId/reloadGuide',
       method: 'DELETE',
@@ -136,3 +136,7 @@ class PlexDVRsApi {
     );
   }
 }
+
+/// The 0.1 name of [PlexDvrsApi].
+@Deprecated('Use PlexDvrsApi. Removed in 0.3.')
+typedef PlexDVRsApi = PlexDvrsApi;

@@ -24,7 +24,7 @@ void main() {
   group('playlists.items', () {
     test('without paging asks for the whole playlist', () async {
       final (client, adapter) = _client();
-      final items = await client.playlists.items('42');
+      final items = await client.playlists.items(playlistId: '42');
 
       expect(items, hasLength(1));
       final q = adapter.lastRequest!.uri.queryParameters;
@@ -35,7 +35,7 @@ void main() {
 
     test('start and size travel as container paging', () async {
       final (client, adapter) = _client();
-      await client.playlists.items('42', start: 0, size: 20);
+      await client.playlists.items(playlistId: '42', start: 0, size: 20);
 
       final q = adapter.lastRequest!.uri.queryParameters;
       expect(q['X-Plex-Container-Start'], '0');

@@ -387,7 +387,7 @@ void main() {
           sectionId: '1',
           type: PlexMetadataType.album,
         ),
-        view.playlists.items('p1'),
+        view.playlists.items(playlistId: 'p1'),
         view.hubs.global(),
       ];
       await Future<void>.delayed(Duration.zero);

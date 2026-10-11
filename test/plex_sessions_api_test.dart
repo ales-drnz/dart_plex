@@ -125,7 +125,7 @@ void main() {
         },
       });
 
-      final item = await ctx.api.historyItem(55);
+      final item = await ctx.api.historyItem(historyId: 55);
 
       final req = ctx.adapter.lastRequest!;
       expect(req.method, 'GET');
@@ -137,7 +137,7 @@ void main() {
     test('returns null when the MediaContainer is missing', () async {
       final ctx = _makeApi(const <String, dynamic>{});
 
-      final item = await ctx.api.historyItem('55');
+      final item = await ctx.api.historyItem(historyId: '55');
 
       expect(item, isNull);
     });
@@ -147,7 +147,7 @@ void main() {
         'MediaContainer': {'size': 0, 'Metadata': <dynamic>[]},
       });
 
-      final item = await ctx.api.historyItem(55);
+      final item = await ctx.api.historyItem(historyId: 55);
 
       expect(item, isNull);
     });
