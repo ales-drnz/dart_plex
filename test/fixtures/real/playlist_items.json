@@ -1,0 +1,124 @@
+{
+ "MediaContainer": {
+  "Metadata": [
+   {
+    "Image": [
+     {
+      "alt": "Track 1",
+      "type": "coverPoster",
+      "url": "/library/metadata/2/thumb/1791712767"
+     }
+    ],
+    "Media": [
+     {
+      "Part": [
+       {
+        "container": "mp3",
+        "duration": 3030,
+        "file": "/data/Music/Test Artist/Test Album/01 - Track 1.mp3",
+        "id": 1,
+        "key": "/library/parts/1/1786527974/file.mp3",
+        "size": 49037
+       }
+      ],
+      "audioChannels": 2,
+      "audioCodec": "mp3",
+      "bitrate": 128,
+      "container": "mp3",
+      "duration": 3030,
+      "id": 1
+     }
+    ],
+    "addedAt": 1786527974,
+    "duration": 3030,
+    "grandparentGuid": "local://1",
+    "grandparentKey": "/library/metadata/1",
+    "grandparentRatingKey": "1",
+    "grandparentTitle": "Test Artist",
+    "guid": "local://3",
+    "index": 1,
+    "key": "/library/metadata/3",
+    "lastRatedAt": 1791712765,
+    "librarySectionID": 1,
+    "librarySectionKey": "/library/sections/1",
+    "librarySectionTitle": "Music",
+    "parentGuid": "local://2",
+    "parentIndex": 1,
+    "parentKey": "/library/metadata/2",
+    "parentRatingKey": "2",
+    "parentThumb": "/library/metadata/2/thumb/1791712767",
+    "parentTitle": "Test Album",
+    "parentYear": 2020,
+    "playlistItemID": 241,
+    "ratingKey": "3",
+    "summary": "",
+    "thumb": "/library/metadata/2/thumb/1791712767",
+    "title": "Track 1",
+    "type": "track",
+    "userRating": 0.0
+   },
+   {
+    "Image": [
+     {
+      "alt": "Track 2",
+      "type": "coverPoster",
+      "url": "/library/metadata/2/thumb/1791712767"
+     }
+    ],
+    "Media": [
+     {
+      "Part": [
+       {
+        "container": "mp3",
+        "duration": 3030,
+        "file": "/data/Music/Test Artist/Test Album/02 - Track 2.mp3",
+        "id": 2,
+        "key": "/library/parts/2/1786527974/file.mp3",
+        "size": 49037
+       }
+      ],
+      "audioChannels": 2,
+      "audioCodec": "mp3",
+      "bitrate": 128,
+      "container": "mp3",
+      "duration": 3030,
+      "id": 2
+     }
+    ],
+    "addedAt": 1786527974,
+    "duration": 3030,
+    "grandparentGuid": "local://1",
+    "grandparentKey": "/library/metadata/1",
+    "grandparentRatingKey": "1",
+    "grandparentTitle": "Test Artist",
+    "guid": "local://4",
+    "index": 2,
+    "key": "/library/metadata/4",
+    "librarySectionID": 1,
+    "librarySectionKey": "/library/sections/1",
+    "librarySectionTitle": "Music",
+    "parentGuid": "local://2",
+    "parentIndex": 1,
+    "parentKey": "/library/metadata/2",
+    "parentRatingKey": "2",
+    "parentThumb": "/library/metadata/2/thumb/1791712767",
+    "parentTitle": "Test Album",
+    "parentYear": 2020,
+    "playlistItemID": 242,
+    "ratingKey": "4",
+    "summary": "",
+    "thumb": "/library/metadata/2/thumb/1791712767",
+    "title": "Track 2",
+    "type": "track"
+   }
+  ],
+  "composite": "/playlists/646/composite/1791712840",
+  "duration": 6,
+  "leafCount": 2,
+  "playlistType": "audio",
+  "ratingKey": "646",
+  "size": 2,
+  "smart": false,
+  "title": "Fixture playlist"
+ }
+}

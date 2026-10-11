@@ -1,0 +1,84 @@
+{
+ "MediaContainer": {
+  "Metadata": [
+   {
+    "Image": [
+     {
+      "alt": "Track 1",
+      "type": "coverPoster",
+      "url": "/library/metadata/2/thumb/1791712767"
+     }
+    ],
+    "Media": [
+     {
+      "Part": [
+       {
+        "Stream": [
+         {
+          "audioChannelLayout": "stereo",
+          "bitrate": 128,
+          "channels": 2,
+          "codec": "mp3",
+          "displayTitle": "MP3 (Stereo)",
+          "extendedDisplayTitle": "MP3 (Stereo)",
+          "id": 1,
+          "index": 0,
+          "samplingRate": 44100,
+          "selected": true,
+          "streamType": 2
+         }
+        ],
+        "container": "mp3",
+        "duration": 3030,
+        "file": "/data/Music/Test Artist/Test Album/01 - Track 1.mp3",
+        "id": 1,
+        "key": "/library/parts/1/1786527974/file.mp3",
+        "size": 49037
+       }
+      ],
+      "audioChannels": 2,
+      "audioCodec": "mp3",
+      "bitrate": 128,
+      "container": "mp3",
+      "duration": 3030,
+      "id": 1
+     }
+    ],
+    "addedAt": 1786527974,
+    "duration": 3030,
+    "grandparentGuid": "local://1",
+    "grandparentKey": "/library/metadata/1",
+    "grandparentRatingKey": "1",
+    "grandparentTitle": "Test Artist",
+    "guid": "local://3",
+    "index": 1,
+    "key": "/library/metadata/3",
+    "lastRatedAt": 1791712765,
+    "librarySectionID": 1,
+    "librarySectionKey": "/library/sections/1",
+    "librarySectionTitle": "Music",
+    "parentGuid": "local://2",
+    "parentIndex": 1,
+    "parentKey": "/library/metadata/2",
+    "parentRatingKey": "2",
+    "parentThumb": "/library/metadata/2/thumb/1791712767",
+    "parentTitle": "Test Album",
+    "parentYear": 2020,
+    "ratingKey": "3",
+    "summary": "",
+    "thumb": "/library/metadata/2/thumb/1791712767",
+    "title": "Track 1",
+    "type": "track",
+    "userRating": 0.0
+   }
+  ],
+  "allowSync": true,
+  "identifier": "com.plexapp.plugins.library",
+  "librarySectionID": 1,
+  "librarySectionTitle": "Music",
+  "librarySectionUUID": "81f70ddf-4789-46c6-8a51-6539ba862969",
+  "mediaTagPrefix": "/system/bundle/media/flags/",
+  "mediaTagVersion": 1777730215,
+  "size": 1
+ }
+}

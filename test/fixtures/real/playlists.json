@@ -1,0 +1,24 @@
+{
+ "MediaContainer": {
+  "Metadata": [
+   {
+    "addedAt": 1791712840,
+    "composite": "/playlists/646/composite/1791712840",
+    "duration": 6000,
+    "guid": "com.plexapp.agents.none://f05b6472-0ccf-4055-80e8-0f40587bc592",
+    "key": "/playlists/646/items",
+    "lastViewedAt": 1791712840,
+    "leafCount": 2,
+    "playlistType": "audio",
+    "ratingKey": "646",
+    "smart": false,
+    "summary": "",
+    "title": "Fixture playlist",
+    "type": "playlist",
+    "updatedAt": 1791712840,
+    "viewCount": 1
+   }
+  ],
+  "size": 1
+ }
+}

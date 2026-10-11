@@ -1,0 +1,179 @@
+{
+ "MediaContainer": {
+  "Metadata": [
+   {
+    "Image": [
+     {
+      "alt": "Track 1",
+      "type": "coverPoster",
+      "url": "/library/metadata/2/thumb/1791712767"
+     }
+    ],
+    "Media": [
+     {
+      "Part": [
+       {
+        "container": "mp3",
+        "duration": 3030,
+        "file": "/data/Music/Test Artist/Test Album/01 - Track 1.mp3",
+        "id": 1,
+        "key": "/library/parts/1/1786527974/file.mp3",
+        "size": 49037
+       }
+      ],
+      "audioChannels": 2,
+      "audioCodec": "mp3",
+      "bitrate": 128,
+      "container": "mp3",
+      "duration": 3030,
+      "id": 1
+     }
+    ],
+    "addedAt": 1786527974,
+    "duration": 3030,
+    "grandparentGuid": "local://1",
+    "grandparentKey": "/library/metadata/1",
+    "grandparentRatingKey": "1",
+    "grandparentTitle": "Test Artist",
+    "guid": "local://3",
+    "index": 1,
+    "key": "/library/metadata/3",
+    "lastRatedAt": 1791712765,
+    "parentGuid": "local://2",
+    "parentIndex": 1,
+    "parentKey": "/library/metadata/2",
+    "parentRatingKey": "2",
+    "parentThumb": "/library/metadata/2/thumb/1791712767",
+    "parentTitle": "Test Album",
+    "parentYear": 2020,
+    "ratingKey": "3",
+    "summary": "",
+    "thumb": "/library/metadata/2/thumb/1791712767",
+    "title": "Track 1",
+    "type": "track",
+    "userRating": 0.0
+   },
+   {
+    "Image": [
+     {
+      "alt": "Track 2",
+      "type": "coverPoster",
+      "url": "/library/metadata/2/thumb/1791712767"
+     }
+    ],
+    "Media": [
+     {
+      "Part": [
+       {
+        "container": "mp3",
+        "duration": 3030,
+        "file": "/data/Music/Test Artist/Test Album/02 - Track 2.mp3",
+        "id": 2,
+        "key": "/library/parts/2/1786527974/file.mp3",
+        "size": 49037
+       }
+      ],
+      "audioChannels": 2,
+      "audioCodec": "mp3",
+      "bitrate": 128,
+      "container": "mp3",
+      "duration": 3030,
+      "id": 2
+     }
+    ],
+    "addedAt": 1786527974,
+    "duration": 3030,
+    "grandparentGuid": "local://1",
+    "grandparentKey": "/library/metadata/1",
+    "grandparentRatingKey": "1",
+    "grandparentTitle": "Test Artist",
+    "guid": "local://4",
+    "index": 2,
+    "key": "/library/metadata/4",
+    "parentGuid": "local://2",
+    "parentIndex": 1,
+    "parentKey": "/library/metadata/2",
+    "parentRatingKey": "2",
+    "parentThumb": "/library/metadata/2/thumb/1791712767",
+    "parentTitle": "Test Album",
+    "parentYear": 2020,
+    "ratingKey": "4",
+    "summary": "",
+    "thumb": "/library/metadata/2/thumb/1791712767",
+    "title": "Track 2",
+    "type": "track"
+   },
+   {
+    "Image": [
+     {
+      "alt": "Track 3",
+      "type": "coverPoster",
+      "url": "/library/metadata/2/thumb/1791712767"
+     }
+    ],
+    "Media": [
+     {
+      "Part": [
+       {
+        "container": "mp3",
+        "duration": 3030,
+        "file": "/data/Music/Test Artist/Test Album/03 - Track 3.mp3",
+        "id": 3,
+        "key": "/library/parts/3/1786527974/file.mp3",
+        "size": 49037
+       }
+      ],
+      "audioChannels": 2,
+      "audioCodec": "mp3",
+      "bitrate": 128,
+      "container": "mp3",
+      "duration": 3030,
+      "id": 3
+     }
+    ],
+    "addedAt": 1786527974,
+    "duration": 3030,
+    "grandparentGuid": "local://1",
+    "grandparentKey": "/library/metadata/1",
+    "grandparentRatingKey": "1",
+    "grandparentTitle": "Test Artist",
+    "guid": "local://5",
+    "index": 3,
+    "key": "/library/metadata/5",
+    "parentGuid": "local://2",
+    "parentIndex": 1,
+    "parentKey": "/library/metadata/2",
+    "parentRatingKey": "2",
+    "parentThumb": "/library/metadata/2/thumb/1791712767",
+    "parentTitle": "Test Album",
+    "parentYear": 2020,
+    "ratingKey": "5",
+    "summary": "",
+    "thumb": "/library/metadata/2/thumb/1791712767",
+    "title": "Track 3",
+    "type": "track"
+   }
+  ],
+  "allowSync": true,
+  "art": "/:/resources/artist-fanart.jpg",
+  "grandparentRatingKey": 1,
+  "grandparentTitle": "Test Artist",
+  "identifier": "com.plexapp.plugins.library",
+  "key": "2",
+  "librarySectionID": 1,
+  "librarySectionTitle": "Music",
+  "librarySectionUUID": "81f70ddf-4789-46c6-8a51-6539ba862969",
+  "mediaTagPrefix": "/system/bundle/media/flags/",
+  "mediaTagVersion": 1777730215,
+  "nocache": true,
+  "parentIndex": 1,
+  "parentTitle": "Test Album",
+  "parentYear": 2020,
+  "size": 3,
+  "thumb": "/library/metadata/2/thumb/1791712767",
+  "title1": "Test Artist",
+  "title2": "Test Album",
+  "viewGroup": "track",
+  "viewMode": 65593
+ }
+}

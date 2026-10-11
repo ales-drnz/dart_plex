@@ -1,0 +1,46 @@
+{
+ "MediaContainer": {
+  "Metadata": [
+   {
+    "accountID": 1,
+    "deviceID": 12,
+    "grandparentTitle": "Probe Artist",
+    "historyKey": "/status/sessions/history/34",
+    "index": 2,
+    "librarySectionID": "1",
+    "parentIndex": 1,
+    "parentTitle": "Probe Album",
+    "title": "Probe 2",
+    "type": "track",
+    "viewedAt": 1791659642
+   },
+   {
+    "accountID": 1,
+    "deviceID": 14,
+    "grandparentTitle": "Probe Artist",
+    "historyKey": "/status/sessions/history/35",
+    "index": 1,
+    "librarySectionID": "1",
+    "parentIndex": 1,
+    "parentTitle": "Probe Album",
+    "title": "Probe 1",
+    "type": "track",
+    "viewedAt": 1791659719
+   },
+   {
+    "accountID": 1,
+    "deviceID": 15,
+    "grandparentTitle": "Probe Artist",
+    "historyKey": "/status/sessions/history/36",
+    "index": 1,
+    "librarySectionID": "1",
+    "parentIndex": 1,
+    "parentTitle": "Probe Album",
+    "title": "Probe 1",
+    "type": "track",
+    "viewedAt": 1791659781
+   }
+  ],
+  "size": 3
+ }
+}

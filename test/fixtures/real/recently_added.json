@@ -1,0 +1,56 @@
+{
+ "MediaContainer": {
+  "Metadata": [
+   {
+    "Genre": [
+     {
+      "tag": "Rock"
+     }
+    ],
+    "Image": [
+     {
+      "alt": "Test Album",
+      "type": "coverPoster",
+      "url": "/library/metadata/2/thumb/1791712767"
+     }
+    ],
+    "UltraBlurColors": {
+     "bottomLeft": "067203",
+     "bottomRight": "037203",
+     "topLeft": "003900",
+     "topRight": "067203"
+    },
+    "addedAt": 1786528061,
+    "allowSync": true,
+    "guid": "local://2",
+    "index": 1,
+    "key": "/library/metadata/2/children",
+    "lastViewedAt": 1791712765,
+    "leafCount": 3,
+    "librarySectionID": 1,
+    "librarySectionTitle": "Music",
+    "librarySectionUUID": "81f70ddf-4789-46c6-8a51-6539ba862969",
+    "originallyAvailableAt": "2020-01-01",
+    "parentGuid": "local://1",
+    "parentKey": "/library/metadata/1",
+    "parentRatingKey": "1",
+    "parentTitle": "Test Artist",
+    "ratingKey": "2",
+    "summary": "",
+    "thumb": "/library/metadata/2/thumb/1791712767",
+    "title": "Test Album",
+    "type": "album",
+    "updatedAt": 1791712767,
+    "viewCount": 28,
+    "viewedLeafCount": 0,
+    "year": 2020
+   }
+  ],
+  "allowSync": false,
+  "identifier": "com.plexapp.plugins.library",
+  "mediaTagPrefix": "/system/bundle/media/flags/",
+  "mediaTagVersion": 1777730215,
+  "mixedParents": true,
+  "size": 1
+ }
+}

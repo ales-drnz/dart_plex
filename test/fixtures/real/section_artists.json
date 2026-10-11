@@ -1,0 +1,33 @@
+{
+ "MediaContainer": {
+  "Metadata": [
+   {
+    "addedAt": 1786528061,
+    "guid": "local://1",
+    "index": 1,
+    "key": "/library/metadata/1/children",
+    "lastViewedAt": 1791712765,
+    "ratingKey": "1",
+    "summary": "",
+    "title": "Test Artist",
+    "type": "artist",
+    "viewCount": 28
+   }
+  ],
+  "allowSync": true,
+  "art": "/:/resources/artist-fanart.jpg",
+  "identifier": "com.plexapp.plugins.library",
+  "librarySectionID": 1,
+  "librarySectionTitle": "Music",
+  "librarySectionUUID": "81f70ddf-4789-46c6-8a51-6539ba862969",
+  "mediaTagPrefix": "/system/bundle/media/flags/",
+  "mediaTagVersion": 1777730215,
+  "nocache": true,
+  "size": 1,
+  "thumb": "/:/resources/artist.png",
+  "title1": "Music",
+  "title2": "All Artists",
+  "viewGroup": "artist",
+  "viewMode": 65592
+ }
+}

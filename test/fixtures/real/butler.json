@@ -1,0 +1,146 @@
+{
+ "ButlerTasks": {
+  "ButlerTask": [
+   {
+    "enabled": false,
+    "interval": 1,
+    "name": "AutomaticUpdates",
+    "scheduleRandomized": false
+   },
+   {
+    "description": "Create a backup copy of the server's database in the configured backup directory",
+    "enabled": true,
+    "interval": 3,
+    "name": "BackupDatabase",
+    "scheduleRandomized": false,
+    "title": "Backup Database"
+   },
+   {
+    "enabled": false,
+    "interval": 1,
+    "name": "ButlerTaskCleanSupplementalLogFiles",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "ButlerTaskGenerateAdMarkers",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "ButlerTaskGenerateCreditsMarkers",
+    "scheduleRandomized": true
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "ButlerTaskGenerateIntroMarkers",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": false,
+    "interval": 1,
+    "name": "ButlerTaskGenerateVoiceActivity",
+    "scheduleRandomized": true
+   },
+   {
+    "enabled": true,
+    "interval": 7,
+    "name": "CleanOldBundles",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 7,
+    "name": "CleanOldCacheFiles",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "DeepMediaAnalysis",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 7,
+    "name": "GarbageCollectBlobs",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "GarbageCollectLibraryMedia",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "GenerateChapterThumbs",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": false,
+    "interval": 1,
+    "name": "GenerateMediaIndexFiles",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "LoudnessAnalysis",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "MusicAnalysis",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 7,
+    "name": "OptimizeDatabase",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "ProcessAssets",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "RefreshEpgGuides",
+    "scheduleRandomized": true
+   },
+   {
+    "enabled": false,
+    "interval": 1,
+    "name": "RefreshLibraries",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 3,
+    "name": "RefreshLocalMedia",
+    "scheduleRandomized": false
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "RefreshPeriodicMetadata",
+    "scheduleRandomized": true
+   },
+   {
+    "enabled": true,
+    "interval": 1,
+    "name": "UpgradeMediaAnalysis",
+    "scheduleRandomized": false
+   }
+  ]
+ }
+}
