@@ -11,6 +11,9 @@
 # about an unknown tag.
 tags:
   integration:
+  # Read-only checks against a server named by environment variables
+  # (see test/live_server_test.dart).
+  live:
 
 presets:
   integration:
