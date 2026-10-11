@@ -157,11 +157,14 @@ final class PlexMediaContainer<T> {
   /// Caller-typed payload — what's inside the container.
   final List<T> items;
 
-  /// The raw envelope, accessible for fields not lifted into [items].
+  /// The envelope's own fields (`librarySectionID`, `title1`, …), for
+  /// those not lifted into this class. The entry array is left out: it is
+  /// [items], parsed, and keeping the JSON of a large page alongside its
+  /// models would double what it holds.
   final Map<String, Object?> raw;
 
-  /// Creates a container with already-parsed [items] and a copy of the
-  /// envelope in [raw].
+  /// Creates a container with already-parsed [items] and the envelope's
+  /// other fields in [raw].
   const PlexMediaContainer({
     required this.totalSize,
     required this.size,
@@ -195,7 +198,10 @@ final class PlexMediaContainer<T> {
         for (final e in list)
           if (e is Map<String, Object?>) parser(e),
       ],
-      raw: container,
+      raw: {
+        for (final e in container.entries)
+          if (e.key != arrayKey) e.key: e.value,
+      },
     );
   }
 }
@@ -874,6 +880,12 @@ final class PlexMetadata {
   /// Style tags (typically music-only).
   final List<String> styles;
 
+  /// The `Role` tags: performers, one name per entry, in the server's
+  /// order. On a track these are its artists when there is more than one
+  /// (a featured artist, a collaboration); empty when the server sent
+  /// none, which is the usual case for a single-artist track.
+  final List<String> roles;
+
   /// Release date (`originallyAvailableAt`, a calendar date), when known.
   final DateTime? originallyAvailableAt;
 
@@ -991,6 +1003,7 @@ final class PlexMetadata {
     this.distance,
     this.score,
     this.ultraBlurColors,
+    this.roles = const [],
   });
 
   /// Parses one `<Video>` / `<Track>` / `<Directory>` metadata entry. The
@@ -1035,6 +1048,7 @@ final class PlexMetadata {
       genres: _tagList(json['Genre']),
       moods: _tagList(json['Mood']),
       styles: _tagList(json['Style']),
+      roles: _tagList(json['Role']),
       playlistItemId: _str(json['playlistItemID']),
       originallyAvailableAt: _date(json['originallyAvailableAt']),
       parentYear: _int(json['parentYear']),

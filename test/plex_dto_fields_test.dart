@@ -71,7 +71,7 @@ const _trackMetadataJson = r'''
   "grandparentThumb": "/library/metadata/1/thumb/170",
   "summary": "",
   "index": 1,
-  "parentIndex": 1,
+  "parentIndex": 2,
   "userRating": 10.0,
   "rating": 8.5,
   "viewCount": 4,
@@ -122,7 +122,11 @@ const _trackMetadataJson = r'''
   "Mood": [
     {"id": 1, "tag": "Energetic"}
   ],
-  "Style": []
+  "Style": [],
+  "Role": [
+    {"id": 7, "tag": "Guest Singer", "filter": "actor=7"},
+    {"id": 8, "tag": "Second Artist", "filter": "actor=8"}
+  ]
 }
 ''';
 
@@ -304,7 +308,8 @@ void main() {
       expect(m.parentKey, '/library/metadata/2');
       expect(m.parentTitle, 'Test Album');
       expect(m.parentThumb, '/library/metadata/2/thumb/170');
-      expect(m.parentIndex, 1);
+      // Disc 2, track 1: the two must not be read from the same key.
+      expect(m.parentIndex, 2);
       expect(m.grandparentRatingKey, '1');
       expect(m.grandparentTitle, 'Test Artist');
       expect(m.grandparentThumb, '/library/metadata/1/thumb/170');
@@ -350,6 +355,7 @@ void main() {
       // Tag lists (Genre/Mood/Style come as `{tag: ...}` maps, not strings)
       expect(m.genres, ['Rock']);
       expect(m.moods, ['Energetic']);
+      expect(m.roles, ['Guest Singer', 'Second Artist']);
       expect(m.styles, isEmpty);
     });
 
@@ -373,6 +379,7 @@ void main() {
       });
       expect(m.media, isEmpty);
       expect(m.genres, isEmpty);
+      expect(m.roles, isEmpty);
       expect(m.year, isNull);
       expect(m.userRating, isNull);
       expect(m.lastViewedAt, isNull);
