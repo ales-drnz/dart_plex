@@ -550,6 +550,141 @@ void main() {
     });
   });
 
+  group('retry policy', () {
+    const fast = PlexRetryPolicy(
+      initialDelay: Duration(milliseconds: 1),
+      maxDelay: Duration(milliseconds: 20),
+    );
+
+    (PlexConnection, List<String>) flaky(
+      List<int> statuses, {
+      PlexRetryPolicy policy = fast,
+      Map<String, String> headers = const {},
+    }) {
+      final seen = <String>[];
+      var i = 0;
+      final conn = PlexConnection(
+        credentials: _credentials,
+        httpClient: _FnClient((r) async {
+          seen.add(r.method);
+          final status =
+              statuses[i < statuses.length ? i : statuses.length - 1];
+          i++;
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('{}')),
+            status,
+            headers: {'content-type': 'application/json', ...headers},
+          );
+        }),
+        retryPolicy: policy,
+      )..baseUrl = 'https://h.test';
+      return (conn, seen);
+    }
+
+    test('off by default', () async {
+      final seen = <int>[];
+      final conn = _connection(
+        _FnClient((r) async {
+          seen.add(1);
+          return http.StreamedResponse(const Stream.empty(), 503);
+        }),
+      );
+      await expectLater(
+        conn.request<void>('/x'),
+        throwsA(isA<PlexException>()),
+      );
+      expect(seen, hasLength(1));
+    });
+
+    test('a GET is resent after 502/503/504/429 until it succeeds', () async {
+      final (conn, seen) = flaky([503, 502, 200]);
+      final res = await conn.request<Map<String, dynamic>>('/x');
+      expect(res.statusCode, 200);
+      expect(seen, ['GET', 'GET', 'GET']);
+      final (conn2, seen2) = flaky([429, 504, 200]);
+      await conn2.request<void>('/x');
+      expect(seen2, hasLength(3));
+    });
+
+    test('it stops at maxAttempts and throws the last failure', () async {
+      final (conn, seen) = flaky([503]);
+      await expectLater(
+        conn.request<void>('/x'),
+        throwsA(
+          isA<PlexException>().having((e) => e.statusCode, 'status', 503),
+        ),
+      );
+      expect(seen, hasLength(3));
+    });
+
+    test('a 500, a 4xx and a non-idempotent request are not resent', () async {
+      for (final (status, method) in [
+        (500, 'GET'),
+        (404, 'GET'),
+        (503, 'POST'),
+      ]) {
+        final (conn, seen) = flaky([status, 200]);
+        await expectLater(
+          conn.request<void>('/x', method: method),
+          throwsA(isA<PlexException>()),
+        );
+        expect(seen, hasLength(1), reason: '$status $method');
+      }
+    });
+
+    test('network failures are resent too', () async {
+      var calls = 0;
+      final conn = PlexConnection(
+        credentials: _credentials,
+        httpClient: _FnClient((r) async {
+          if (calls++ == 0) throw http.ClientException('reset', r.url);
+          return http.StreamedResponse(Stream.value(utf8.encode('{}')), 200);
+        }),
+        retryPolicy: fast,
+      )..baseUrl = 'https://h.test';
+      await conn.request<void>('/x');
+      expect(calls, 2);
+    });
+
+    test('Retry-After is read and capped at maxDelay', () async {
+      final (conn, _) = flaky([503], headers: {'retry-after': '7'});
+      try {
+        await conn.request<void>('/x');
+      } on PlexException catch (e) {
+        expect(e.retryAfter, const Duration(seconds: 7));
+      }
+      const e = PlexException(
+        'x',
+        type: PlexErrorType.serverError,
+        statusCode: 503,
+        retryAfter: Duration(seconds: 7),
+      );
+      expect(
+        fast.delayAfter(e, attempt: 1, method: 'GET'),
+        const Duration(milliseconds: 20),
+      );
+    });
+
+    test('cancelling during the wait ends the retries', () async {
+      final (conn, seen) = flaky(
+        [503, 200],
+        policy: const PlexRetryPolicy(initialDelay: Duration(seconds: 30)),
+        headers: {'retry-after': '30'},
+      );
+      final token = PlexCancelToken();
+      final call = conn.request<void>('/x', cancelToken: token);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      token.cancel();
+      await expectLater(
+        call,
+        throwsA(
+          isA<PlexException>().having((e) => e.isCancelled, 'cancelled', true),
+        ),
+      );
+      expect(seen, hasLength(1));
+    });
+  });
+
   group('client ownership', () {
     test('an injected client is not closed', () {
       final client = _FnClient((_) => throw UnimplementedError());

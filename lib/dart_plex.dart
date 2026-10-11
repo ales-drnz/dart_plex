@@ -79,3 +79,4 @@ export 'src/plex_models.dart';
 export 'src/plex_server_models.dart';
 export 'src/transport/plex_cancel_token.dart';
 export 'src/transport/plex_response.dart';
+export 'src/transport/plex_retry_policy.dart';

@@ -37,6 +37,7 @@ import 'plex_connection.dart';
 import 'plex_credentials.dart';
 import 'transport/plex_cancel_token.dart';
 import 'transport/plex_response.dart';
+import 'transport/plex_retry_policy.dart';
 
 /// Stateful façade over the Plex API.
 ///
@@ -157,18 +158,23 @@ class PlexClient {
   ///
   /// Responses of [jsonIsolateThreshold] bytes or more are decoded, and
   /// for the typed calls parsed into models, on a background isolate.
+  ///
+  /// [retryPolicy] resends idempotent requests after transient failures;
+  /// it is off ([PlexRetryPolicy.none]) unless you pass one.
   PlexClient({
     required PlexCredentials credentials,
     http.Client? httpClient,
     Duration connectTimeout = const Duration(seconds: 15),
     Duration receiveTimeout = const Duration(seconds: 30),
     int jsonIsolateThreshold = PlexConnection.defaultJsonIsolateThreshold,
+    PlexRetryPolicy retryPolicy = PlexRetryPolicy.none,
   }) : _http = PlexConnection(
           credentials: credentials,
           httpClient: httpClient,
           connectTimeout: connectTimeout,
           receiveTimeout: receiveTimeout,
           jsonIsolateThreshold: jsonIsolateThreshold,
+          retryPolicy: retryPolicy,
         ) {
     _wire(PlexNotificationsApi(_http));
   }

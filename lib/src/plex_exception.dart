@@ -34,6 +34,10 @@ class PlexException implements Exception {
   /// The underlying error, if any (DioException, FormatException, …).
   final Object? cause;
 
+  /// How long the server asked the client to wait (`Retry-After`, on a
+  /// `429` or `503`), when it said.
+  final Duration? retryAfter;
+
   /// The originating stack trace, when captured. Preserves the async stack
   /// across catch-and-rethrow so crash reporters can pinpoint the failure.
   final StackTrace? stackTrace;
@@ -46,6 +50,7 @@ class PlexException implements Exception {
     this.path,
     this.cause,
     this.stackTrace,
+    this.retryAfter,
   });
 
   /// No answer from the server at all: the connection failed or timed out.
