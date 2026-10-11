@@ -307,7 +307,7 @@ class PlexClient {
   Future<PlexResponse<T>> request<T>(
     String path, {
     String method = 'GET',
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Object? data,
     Map<String, String>? extraHeaders,
     bool absoluteUrl = false,
@@ -329,7 +329,7 @@ class PlexClient {
   /// held in memory; use [requestStream] for media downloads.
   Future<PlexResponse<Uint8List>> requestBytes(
     String url, {
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     bool absoluteUrl = true,
     PlexCancelToken? cancelToken,
   }) =>
@@ -348,7 +348,7 @@ class PlexClient {
   /// unless [stallTimeout] is `false`.
   Future<PlexStreamedResponse> requestStream(
     String url, {
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Map<String, String>? extraHeaders,
     bool absoluteUrl = true,
     bool stallTimeout = true,
@@ -371,7 +371,7 @@ class PlexClient {
   /// Issue a `GET` via [request].
   Future<PlexResponse<T>> get<T>(
     String path, {
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Map<String, String>? extraHeaders,
     PlexCancelToken? cancelToken,
   }) =>
@@ -386,7 +386,7 @@ class PlexClient {
   Future<PlexResponse<T>> post<T>(
     String path, {
     Object? data,
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Map<String, String>? extraHeaders,
     PlexCancelToken? cancelToken,
   }) =>
@@ -403,7 +403,7 @@ class PlexClient {
   Future<PlexResponse<T>> put<T>(
     String path, {
     Object? data,
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Map<String, String>? extraHeaders,
     PlexCancelToken? cancelToken,
   }) =>
@@ -419,7 +419,7 @@ class PlexClient {
   /// Issue a `DELETE` via [request].
   Future<PlexResponse<T>> delete<T>(
     String path, {
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Map<String, String>? extraHeaders,
     PlexCancelToken? cancelToken,
   }) =>

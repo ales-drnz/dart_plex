@@ -25,7 +25,7 @@ final class PlexServerIdentity {
   final bool claimed;
 
   /// The decoded `MediaContainer`.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Builds an identity from already-parsed components.
   const PlexServerIdentity({
@@ -37,7 +37,7 @@ final class PlexServerIdentity {
   });
 
   /// Decodes the `/identity` `MediaContainer`.
-  factory PlexServerIdentity.fromJson(Map<String, dynamic> json) =>
+  factory PlexServerIdentity.fromJson(Map<String, Object?> json) =>
       PlexServerIdentity(
         machineIdentifier: _str(json['machineIdentifier']) ?? '',
         version: _str(json['version']),
@@ -93,7 +93,7 @@ final class PlexServerInfo {
   final DateTime? updatedAt;
 
   /// The decoded `MediaContainer`.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Builds server info from already-parsed components.
   const PlexServerInfo({
@@ -115,7 +115,7 @@ final class PlexServerInfo {
   });
 
   /// Decodes the `/` `MediaContainer`.
-  factory PlexServerInfo.fromJson(Map<String, dynamic> json) => PlexServerInfo(
+  factory PlexServerInfo.fromJson(Map<String, Object?> json) => PlexServerInfo(
         friendlyName: _str(json['friendlyName']),
         machineIdentifier: _str(json['machineIdentifier']) ?? '',
         version: _str(json['version']),
@@ -167,7 +167,7 @@ final class PlexHistoryEntry {
   final String? librarySectionId;
 
   /// The decoded entry.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Builds a history entry from already-parsed components.
   const PlexHistoryEntry({
@@ -185,7 +185,7 @@ final class PlexHistoryEntry {
   });
 
   /// Decodes a history `Metadata` entry.
-  factory PlexHistoryEntry.fromJson(Map<String, dynamic> json) =>
+  factory PlexHistoryEntry.fromJson(Map<String, Object?> json) =>
       PlexHistoryEntry(
         historyKey: _str(json['historyKey']) ?? '',
         ratingKey: _str(json['ratingKey']),
@@ -226,7 +226,7 @@ final class PlexActivity {
   final String? librarySectionId;
 
   /// The decoded entry.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Builds an activity from already-parsed components.
   const PlexActivity({
@@ -241,7 +241,7 @@ final class PlexActivity {
   });
 
   /// Decodes an `Activity` entry.
-  factory PlexActivity.fromJson(Map<String, dynamic> json) {
+  factory PlexActivity.fromJson(Map<String, Object?> json) {
     final context = json['Context'];
     return PlexActivity(
       uuid: _str(json['uuid']) ?? '',
@@ -250,7 +250,7 @@ final class PlexActivity {
       subtitle: _str(json['subtitle']),
       progress: _int(json['progress']),
       cancellable: json['cancellable'] == true,
-      librarySectionId: context is Map<String, dynamic>
+      librarySectionId: context is Map<String, Object?>
           ? _str(context['librarySectionID'])
           : null,
       raw: json,
@@ -279,7 +279,7 @@ final class PlexButlerTask {
   final bool scheduleRandomized;
 
   /// The decoded entry.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Builds a butler task from already-parsed components.
   const PlexButlerTask({
@@ -293,7 +293,7 @@ final class PlexButlerTask {
   });
 
   /// Decodes a `ButlerTask` entry.
-  factory PlexButlerTask.fromJson(Map<String, dynamic> json) => PlexButlerTask(
+  factory PlexButlerTask.fromJson(Map<String, Object?> json) => PlexButlerTask(
         name: _str(json['name']) ?? '',
         title: _str(json['title']),
         description: _str(json['description']),
@@ -338,7 +338,7 @@ final class PlexSetting {
   final Map<String, String> enumValues;
 
   /// The decoded entry.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Builds a setting from already-parsed components.
   const PlexSetting({
@@ -356,7 +356,7 @@ final class PlexSetting {
   });
 
   /// Decodes a `Setting` entry.
-  factory PlexSetting.fromJson(Map<String, dynamic> json) {
+  factory PlexSetting.fromJson(Map<String, Object?> json) {
     final enums = <String, String>{};
     final rawEnums = json['enumValues'];
     if (rawEnums is String && rawEnums.isNotEmpty) {

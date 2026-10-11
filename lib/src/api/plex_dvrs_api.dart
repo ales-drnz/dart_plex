@@ -19,9 +19,9 @@ class PlexDVRsApi {
   PlexDVRsApi(this._http);
 
   /// `GET /livetv/dvrs/{dvrId}` — one DVR's full configuration.
-  Future<Map<String, dynamic>> get(String dvrId) async {
+  Future<Map<String, Object?>> get(String dvrId) async {
     final res =
-        await _http.request<Map<String, dynamic>>('/livetv/dvrs/$dvrId');
+        await _http.request<Map<String, Object?>>('/livetv/dvrs/$dvrId');
     return res.data ?? const {};
   }
 
@@ -43,10 +43,10 @@ class PlexDVRsApi {
   /// would override the explicit [name] argument.
   Future<void> setPreferences({
     required String dvrId,
-    Map<String, dynamic>? prefs,
+    Map<String, Object?>? prefs,
     String? name,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (name != null) qp['name'] = name;
     if (prefs != null) qp.addAll(prefs);
     await _http.request<void>(

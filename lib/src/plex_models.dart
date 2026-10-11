@@ -158,7 +158,7 @@ final class PlexMediaContainer<T> {
   final List<T> items;
 
   /// The raw envelope, accessible for fields not lifted into [items].
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a container with already-parsed [items] and a copy of the
   /// envelope in [raw].
@@ -175,12 +175,12 @@ final class PlexMediaContainer<T> {
   /// Plex responses use different array keys depending on the endpoint:
   /// `Metadata`, `Directory`, `Hub`, `Playlist`, `Pivot`, …
   factory PlexMediaContainer.fromJson(
-    Map<String, dynamic> json,
+    Map<String, Object?> json,
     String arrayKey,
-    T Function(Map<String, dynamic>) parser,
+    T Function(Map<String, Object?>) parser,
   ) {
     final container = json['MediaContainer'];
-    if (container is! Map<String, dynamic>) {
+    if (container is! Map<String, Object?>) {
       throw const PlexException(
         'Missing MediaContainer in response',
         type: PlexErrorType.parse,
@@ -193,7 +193,7 @@ final class PlexMediaContainer<T> {
       size: _int(container['size']) ?? list.length,
       items: [
         for (final e in list)
-          if (e is Map<String, dynamic>) parser(e),
+          if (e is Map<String, Object?>) parser(e),
       ],
       raw: container,
     );
@@ -240,10 +240,10 @@ final class PlexUser {
 
   /// Parses either the flat `/api/v2/user` shape or the legacy
   /// `{"user": {...}}` envelope returned by `/users/sign_in.json`.
-  factory PlexUser.fromJson(Map<String, dynamic> json) {
+  factory PlexUser.fromJson(Map<String, Object?> json) {
     // Legacy /users/sign_in.json wraps it in {"user": {...}}; v2 returns flat.
-    final src = json['user'] is Map<String, dynamic>
-        ? json['user'] as Map<String, dynamic>
+    final src = json['user'] is Map<String, Object?>
+        ? json['user'] as Map<String, Object?>
         : json;
     final subs = src['subscription'];
     return PlexUser(
@@ -337,7 +337,7 @@ final class PlexResource {
 
   /// Parses one resource entry from `plex.tv/api/v2/resources`, including
   /// its nested `connections` array.
-  factory PlexResource.fromJson(Map<String, dynamic> json) {
+  factory PlexResource.fromJson(Map<String, Object?> json) {
     final conns = json['connections'];
     return PlexResource(
       name: _str(json['name']) ?? '',
@@ -362,7 +362,7 @@ final class PlexResource {
       connections: [
         if (conns is List)
           for (final c in conns)
-            if (c is Map<String, dynamic>) PlexServerConnection.fromJson(c),
+            if (c is Map<String, Object?>) PlexServerConnection.fromJson(c),
       ],
     );
   }
@@ -428,7 +428,7 @@ final class PlexServerConnection {
   });
 
   /// Parses one `<Connection>` entry from a `/api/v2/resources` payload.
-  factory PlexServerConnection.fromJson(Map<String, dynamic> json) =>
+  factory PlexServerConnection.fromJson(Map<String, Object?> json) =>
       PlexServerConnection(
         protocol: _str(json['protocol']) ?? '',
         address: _str(json['address']) ?? '',
@@ -483,7 +483,7 @@ final class PlexPin {
   bool get isExpired => DateTime.now().toUtc().isAfter(expiresAt);
 
   /// Parses the response of `POST /api/v2/pins` or `GET /api/v2/pins/{id}`.
-  factory PlexPin.fromJson(Map<String, dynamic> json) => PlexPin(
+  factory PlexPin.fromJson(Map<String, Object?> json) => PlexPin(
         id: _int(json['id']) ?? 0,
         code: _str(json['code']) ?? '',
         clientIdentifier: _str(json['clientIdentifier']) ?? '',
@@ -530,7 +530,7 @@ final class PlexLibrarySection {
   final List<String> locations;
 
   /// Full raw JSON of the section for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a section record.
   const PlexLibrarySection({
@@ -548,7 +548,7 @@ final class PlexLibrarySection {
   });
 
   /// Parses one `<Directory>` entry from `/library/sections`.
-  factory PlexLibrarySection.fromJson(Map<String, dynamic> json) {
+  factory PlexLibrarySection.fromJson(Map<String, Object?> json) {
     final locs = json['Location'];
     final out = <String>[];
     if (locs is List) {
@@ -636,7 +636,7 @@ final class PlexLibraryFilter {
 
   /// Full raw JSON of the facet, including the `Pivot` array of
   /// pre-built sub-views (A-Z index, folder view).
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a facet descriptor.
   const PlexLibraryFilter({
@@ -649,7 +649,7 @@ final class PlexLibraryFilter {
 
   /// Parses one `<Directory>` entry from
   /// `/library/sections/{id}/filters`.
-  factory PlexLibraryFilter.fromJson(Map<String, dynamic> json) =>
+  factory PlexLibraryFilter.fromJson(Map<String, Object?> json) =>
       PlexLibraryFilter(
         field: _str(json['filter']) ?? '',
         title: _str(json['title']) ?? '',
@@ -693,7 +693,7 @@ final class PlexTag {
   final String? fastKey;
 
   /// Full raw JSON of the tag.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a tag value.
   const PlexTag({
@@ -710,7 +710,7 @@ final class PlexTag {
   ///
   /// [field] is the facet the entry came from, used when the response
   /// carries no [fastKey] to derive it from.
-  factory PlexTag.fromJson(Map<String, dynamic> json, {String? field}) {
+  factory PlexTag.fromJson(Map<String, Object?> json, {String? field}) {
     final key = _str(json['key']);
     final fastKey = _str(json['fastKey']);
     final resolved = _resolveTagFilter(json, key, fastKey);
@@ -730,7 +730,7 @@ final class PlexTag {
 /// (`/library/sections/3/all?genre=42&type=9`), a bare id (`42`), and a
 /// path ending in the id (`/library/sections/3/genre/42`).
 ({int? id, String? field}) _resolveTagFilter(
-  Map<String, dynamic> json,
+  Map<String, Object?> json,
   String? key,
   String? fastKey,
 ) {
@@ -937,7 +937,7 @@ final class PlexMetadata {
 
   /// Full raw map — keep around for fields not lifted onto strongly
   /// typed properties yet.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a metadata item; only [ratingKey], [key], [type], [title],
   /// [media], [genres], [moods], [styles] and [raw] are required.
@@ -996,7 +996,7 @@ final class PlexMetadata {
   /// Parses one `<Video>` / `<Track>` / `<Directory>` metadata entry. The
   /// input is the inner item map — caller is responsible for unwrapping the
   /// `MediaContainer` envelope first.
-  factory PlexMetadata.fromJson(Map<String, dynamic> json) {
+  factory PlexMetadata.fromJson(Map<String, Object?> json) {
     return PlexMetadata(
       ratingKey: _str(json['ratingKey']) ?? '',
       key: _str(json['key']) ?? '',
@@ -1030,7 +1030,7 @@ final class PlexMetadata {
       media: [
         if (json['Media'] is List)
           for (final m in json['Media'] as List)
-            if (m is Map<String, dynamic>) PlexMedia.fromJson(m),
+            if (m is Map<String, Object?>) PlexMedia.fromJson(m),
       ],
       genres: _tagList(json['Genre']),
       moods: _tagList(json['Mood']),
@@ -1049,9 +1049,9 @@ final class PlexMetadata {
       grandparentGuid: _str(json['grandparentGuid']),
       distance: _double(json['distance']),
       score: _double(json['score']),
-      ultraBlurColors: json['UltraBlurColors'] is Map<String, dynamic>
+      ultraBlurColors: json['UltraBlurColors'] is Map<String, Object?>
           ? PlexUltraBlurColors.fromJson(
-              json['UltraBlurColors'] as Map<String, dynamic>,
+              json['UltraBlurColors'] as Map<String, Object?>,
             )
           : null,
       raw: json,
@@ -1139,7 +1139,7 @@ final class PlexMedia {
   final List<PlexPart> parts;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a media variant; only [parts] and [raw] are required.
   const PlexMedia({
@@ -1159,7 +1159,7 @@ final class PlexMedia {
   });
 
   /// Parses one `<Media>` node from a [PlexMetadata] entry.
-  factory PlexMedia.fromJson(Map<String, dynamic> json) => PlexMedia(
+  factory PlexMedia.fromJson(Map<String, Object?> json) => PlexMedia(
         id: _int(json['id']),
         durationMs: _int(json['duration']),
         bitrate: _int(json['bitrate']),
@@ -1174,7 +1174,7 @@ final class PlexMedia {
         parts: [
           if (json['Part'] is List)
             for (final p in json['Part'] as List)
-              if (p is Map<String, dynamic>) PlexPart.fromJson(p),
+              if (p is Map<String, Object?>) PlexPart.fromJson(p),
         ],
         raw: json,
       );
@@ -1204,7 +1204,7 @@ final class PlexPart {
   final List<PlexStream> streams;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a part record; only [streams] and [raw] are required.
   const PlexPart({
@@ -1219,7 +1219,7 @@ final class PlexPart {
   });
 
   /// Parses one `<Part>` node from a [PlexMedia].
-  factory PlexPart.fromJson(Map<String, dynamic> json) => PlexPart(
+  factory PlexPart.fromJson(Map<String, Object?> json) => PlexPart(
         id: _int(json['id']),
         key: _str(json['key']),
         durationMs: _int(json['duration']),
@@ -1229,7 +1229,7 @@ final class PlexPart {
         streams: [
           if (json['Stream'] is List)
             for (final s in json['Stream'] as List)
-              if (s is Map<String, dynamic>) PlexStream.fromJson(s),
+              if (s is Map<String, Object?>) PlexStream.fromJson(s),
         ],
         raw: json,
       );
@@ -1304,7 +1304,7 @@ final class PlexStream {
   final double? lra;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a stream record; only [raw] is required.
   const PlexStream({
@@ -1331,7 +1331,7 @@ final class PlexStream {
   });
 
   /// Parses one `<Stream>` node from a [PlexPart].
-  factory PlexStream.fromJson(Map<String, dynamic> json) => PlexStream(
+  factory PlexStream.fromJson(Map<String, Object?> json) => PlexStream(
         id: _int(json['id']),
         streamType: _int(json['streamType']),
         codec: _str(json['codec']),
@@ -1408,7 +1408,7 @@ final class PlexHub {
   final List<PlexMetadata> items;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a hub record; [type] is optional.
   const PlexHub({
@@ -1424,7 +1424,7 @@ final class PlexHub {
   });
 
   /// Parses one `<Hub>` entry from `/hubs` or `/hubs/search`.
-  factory PlexHub.fromJson(Map<String, dynamic> json) => PlexHub(
+  factory PlexHub.fromJson(Map<String, Object?> json) => PlexHub(
         key: _str(json['key']) ?? '',
         hubKey: _str(json['hubKey']) ?? '',
         hubIdentifier: _str(json['hubIdentifier']) ?? '',
@@ -1435,7 +1435,7 @@ final class PlexHub {
         items: [
           if (json['Metadata'] is List)
             for (final m in json['Metadata'] as List)
-              if (m is Map<String, dynamic>) PlexMetadata.fromJson(m),
+              if (m is Map<String, Object?>) PlexMetadata.fromJson(m),
         ],
         raw: json,
       );
@@ -1474,7 +1474,7 @@ final class PlexPlayQueue {
   final List<PlexMetadata> items;
 
   /// Raw MediaContainer envelope, for fields not promoted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a play queue snapshot.
   const PlexPlayQueue({
@@ -1489,9 +1489,9 @@ final class PlexPlayQueue {
   /// Parses a `POST /playQueues` (or fetch) response, lifting the queue
   /// identity off the `MediaContainer` envelope and the items out of the
   /// nested `Metadata` array.
-  factory PlexPlayQueue.fromJson(Map<String, dynamic> json) {
+  factory PlexPlayQueue.fromJson(Map<String, Object?> json) {
     final container = json['MediaContainer'];
-    if (container is! Map<String, dynamic>) {
+    if (container is! Map<String, Object?>) {
       throw const PlexException(
         'Missing MediaContainer in play queue response',
         type: PlexErrorType.parse,
@@ -1507,7 +1507,7 @@ final class PlexPlayQueue {
       items: [
         if (metadata is List)
           for (final m in metadata)
-            if (m is Map<String, dynamic>) PlexMetadata.fromJson(m),
+            if (m is Map<String, Object?>) PlexMetadata.fromJson(m),
       ],
       raw: container,
     );
@@ -1543,10 +1543,10 @@ final class PlexSession {
 
   /// `TranscodeSession.key`, `videoDecision`, `audioDecision`,
   /// `protocol`, `progress`. Null on direct-play sessions.
-  final Map<String, dynamic>? transcodeSession;
+  final Map<String, Object?>? transcodeSession;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a session record.
   const PlexSession({
@@ -1562,21 +1562,21 @@ final class PlexSession {
 
   /// Parses one item from `/status/sessions` along with its nested
   /// `Player`, `User`, `Session` and `TranscodeSession` sub-nodes.
-  factory PlexSession.fromJson(Map<String, dynamic> json) {
+  factory PlexSession.fromJson(Map<String, Object?> json) {
     final session = json['Session'];
     return PlexSession(
       metadata: PlexMetadata.fromJson(json),
       viewOffsetMs: _int(json['viewOffset']),
-      player: json['Player'] is Map<String, dynamic>
-          ? PlexSessionPlayer.fromJson(json['Player'] as Map<String, dynamic>)
+      player: json['Player'] is Map<String, Object?>
+          ? PlexSessionPlayer.fromJson(json['Player'] as Map<String, Object?>)
           : null,
-      user: json['User'] is Map<String, dynamic>
-          ? PlexSessionUser.fromJson(json['User'] as Map<String, dynamic>)
+      user: json['User'] is Map<String, Object?>
+          ? PlexSessionUser.fromJson(json['User'] as Map<String, Object?>)
           : null,
       sessionId: session is Map ? _str(session['id']) : null,
       bandwidth: session is Map ? _int(session['bandwidth']) : null,
-      transcodeSession: json['TranscodeSession'] is Map<String, dynamic>
-          ? json['TranscodeSession'] as Map<String, dynamic>
+      transcodeSession: json['TranscodeSession'] is Map<String, Object?>
+          ? json['TranscodeSession'] as Map<String, Object?>
           : null,
       raw: json,
     );
@@ -1608,7 +1608,7 @@ final class PlexSessionPlayer {
   final String? address;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a player descriptor; only [raw] is required.
   const PlexSessionPlayer({
@@ -1623,7 +1623,7 @@ final class PlexSessionPlayer {
   });
 
   /// Parses a `<Player>` sub-node.
-  factory PlexSessionPlayer.fromJson(Map<String, dynamic> json) =>
+  factory PlexSessionPlayer.fromJson(Map<String, Object?> json) =>
       PlexSessionPlayer(
         title: _str(json['title']),
         product: _str(json['product']),
@@ -1649,7 +1649,7 @@ final class PlexSessionUser {
   final String? thumb;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates a session-user record.
   const PlexSessionUser({
@@ -1660,7 +1660,7 @@ final class PlexSessionUser {
   });
 
   /// Parses a `<User>` sub-node.
-  factory PlexSessionUser.fromJson(Map<String, dynamic> json) =>
+  factory PlexSessionUser.fromJson(Map<String, Object?> json) =>
       PlexSessionUser(
         id: _str(json['id']) ?? '',
         title: _str(json['title']) ?? '',
@@ -1690,7 +1690,7 @@ final class PlexUltraBlurColors {
   final String? bottomRight;
 
   /// Full raw JSON for fields not lifted above.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Creates an UltraBlur colour quad; all swatches are optional.
   const PlexUltraBlurColors({
@@ -1702,7 +1702,7 @@ final class PlexUltraBlurColors {
   });
 
   /// Parses the response of `/services/ultrablur/colors`.
-  factory PlexUltraBlurColors.fromJson(Map<String, dynamic> json) =>
+  factory PlexUltraBlurColors.fromJson(Map<String, Object?> json) =>
       PlexUltraBlurColors(
         topLeft: _str(json['topLeft']),
         topRight: _str(json['topRight']),

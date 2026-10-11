@@ -182,7 +182,7 @@ final class PlexConnection {
   Future<PlexResponse<T>> request<T>(
     String path, {
     String method = 'GET',
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Object? data,
     Map<String, String>? extraHeaders,
     bool absoluteUrl = false,
@@ -235,7 +235,7 @@ final class PlexConnection {
     String path,
     R Function(Object? json) parse, {
     String method = 'GET',
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Object? data,
     Map<String, String>? extraHeaders,
     bool absoluteUrl = false,
@@ -275,7 +275,7 @@ final class PlexConnection {
   /// held in memory; use [requestStream] for media.
   Future<PlexResponse<Uint8List>> requestBytes(
     String url, {
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     bool absoluteUrl = true,
     PlexCancelToken? cancelToken,
   }) =>
@@ -296,7 +296,7 @@ final class PlexConnection {
   /// streams that may stay quiet for minutes.
   Future<PlexStreamedResponse> requestStream(
     String url, {
-    Map<String, dynamic>? queryParameters,
+    Map<String, Object?>? queryParameters,
     Map<String, String>? extraHeaders,
     bool absoluteUrl = true,
     bool stallTimeout = true,
@@ -345,7 +345,7 @@ final class PlexConnection {
   Future<_Exchange> _exchange(
     String path, {
     required String method,
-    required Map<String, dynamic>? queryParameters,
+    required Map<String, Object?>? queryParameters,
     required Object? data,
     required Map<String, String>? extraHeaders,
     required bool absoluteUrl,
@@ -399,7 +399,7 @@ final class PlexConnection {
   Future<_Exchange> _exchangeOnce(
     String path, {
     required String method,
-    required Map<String, dynamic>? queryParameters,
+    required Map<String, Object?>? queryParameters,
     required Object? data,
     required Map<String, String>? extraHeaders,
     required bool absoluteUrl,
@@ -433,7 +433,7 @@ final class PlexConnection {
   Future<_Opened> _open(
     String path, {
     required String method,
-    required Map<String, dynamic>? queryParameters,
+    required Map<String, Object?>? queryParameters,
     required Object? data,
     required Map<String, String>? extraHeaders,
     required bool absoluteUrl,
@@ -659,7 +659,7 @@ final class PlexConnection {
   /// form-encoded (`encodeQueryComponent`), a list repeats its key once per
   /// element, and a `null` value sends the bare key.
   @visibleForTesting
-  static Uri buildUri(String url, Map<String, dynamic>? queryParameters) {
+  static Uri buildUri(String url, Map<String, Object?>? queryParameters) {
     final qp = queryParameters;
     if (qp == null || qp.isEmpty) return Uri.parse(url).normalizePath();
     final parts = <String>[];

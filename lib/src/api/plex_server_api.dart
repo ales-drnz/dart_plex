@@ -46,14 +46,14 @@ class PlexServerApi {
   /// [source] is required by the server: omitting it (or passing an empty
   /// string) always yields a 400. [refresh] is sent as the BoolInt `1`/`0`
   /// the API expects.
-  Future<Map<String, dynamic>> securityResources({
+  Future<Map<String, Object?>> securityResources({
     required String source,
     bool? refresh,
   }) async {
     assert(source.isNotEmpty, 'source must not be empty');
-    final qp = <String, dynamic>{'source': source};
+    final qp = <String, Object?>{'source': source};
     if (refresh != null) qp['refresh'] = refresh ? 1 : 0;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/security/resources',
       queryParameters: qp,
     );
@@ -69,23 +69,23 @@ class PlexServerApi {
   /// transient token string from `MediaContainer.token` (the token is valid
   /// for up to 48 hours), or `null` if the response carries no token.
   Future<String?> transientToken() async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/security/token',
       method: 'POST',
       queryParameters: const {'type': 'delegation', 'scope': 'all'},
     );
-    final data = res.data ?? const <String, dynamic>{};
+    final data = res.data ?? const <String, Object?>{};
     final container = data['MediaContainer'];
     final token =
-        container is Map<String, dynamic> ? container['token'] : data['token'];
+        container is Map<String, Object?> ? container['token'] : data['token'];
     return token is String ? token : null;
   }
 
   /// `GET /status/sessions/background` — list background tasks
   /// currently running on the server (library scans, intro
   /// detection, etc.).
-  Future<Map<String, dynamic>> backgroundTasks() async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> backgroundTasks() async {
+    final res = await _http.request<Map<String, Object?>>(
       '/status/sessions/background',
     );
     return res.data ?? const {};
@@ -93,8 +93,8 @@ class PlexServerApi {
 }
 
 /// The `MediaContainer` of [json], or [json] itself when it has none.
-Map<String, dynamic> _container(Object? json) {
-  if (json is! Map<String, dynamic>) return const <String, dynamic>{};
+Map<String, Object?> _container(Object? json) {
+  if (json is! Map<String, Object?>) return const <String, Object?>{};
   final c = json['MediaContainer'];
-  return c is Map<String, dynamic> ? c : json;
+  return c is Map<String, Object?> ? c : json;
 }

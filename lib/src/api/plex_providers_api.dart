@@ -16,14 +16,14 @@ class PlexProvidersApi {
   PlexProvidersApi(this._http);
 
   /// `GET /media/providers` — list every registered provider.
-  Future<Map<String, dynamic>> list() async {
-    final res = await _http.request<Map<String, dynamic>>('/media/providers');
+  Future<Map<String, Object?>> list() async {
+    final res = await _http.request<Map<String, Object?>>('/media/providers');
     return res.data ?? const {};
   }
 
   /// `POST /media/providers?url={url}` — add a new provider.
-  Future<Map<String, dynamic>> add({required String url}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> add({required String url}) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/media/providers',
       method: 'POST',
       queryParameters: {'url': url},

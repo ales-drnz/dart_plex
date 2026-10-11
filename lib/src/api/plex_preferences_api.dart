@@ -41,7 +41,7 @@ class PlexPreferencesApi {
   /// `PUT /:/prefs?{name}={value}&...` — set one or more
   /// preferences. The keys in [values] are preference ids; the
   /// values are the new values (string-coerced).
-  Future<void> set(Map<String, dynamic> values) async {
+  Future<void> set(Map<String, Object?> values) async {
     await _http.request<void>(
       '/:/prefs',
       method: 'PUT',

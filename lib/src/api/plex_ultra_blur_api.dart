@@ -31,17 +31,17 @@ class PlexUltraBlurApi {
   /// The container's `UltraBlurColors` array is normally a single
   /// element; the returned [List] keeps the upstream shape verbatim.
   Future<List<PlexUltraBlurColors>> colors({required String sourceUrl}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/services/ultrablur/colors',
       queryParameters: {'url': sourceUrl},
     );
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
+    if (container is! Map<String, Object?>) return const [];
     final raw = container['UltraBlurColors'];
     if (raw is! List) return const [];
     return [
       for (final e in raw)
-        if (e is Map<String, dynamic>) PlexUltraBlurColors.fromJson(e),
+        if (e is Map<String, Object?>) PlexUltraBlurColors.fromJson(e),
     ];
   }
 

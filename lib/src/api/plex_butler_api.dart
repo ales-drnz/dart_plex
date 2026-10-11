@@ -48,11 +48,11 @@ class PlexButlerApi {
 /// `/butler` answers `{ButlerTasks: {ButlerTask: [...]}}`, not a
 /// `MediaContainer`.
 List<PlexButlerTask> _butlerTasks(Object? json) {
-  final outer = json is Map<String, dynamic> ? json['ButlerTasks'] : null;
-  final list = outer is Map<String, dynamic> ? outer['ButlerTask'] : null;
+  final outer = json is Map<String, Object?> ? json['ButlerTasks'] : null;
+  final list = outer is Map<String, Object?> ? outer['ButlerTask'] : null;
   return [
     if (list is List)
       for (final e in list)
-        if (e is Map<String, dynamic>) PlexButlerTask.fromJson(e),
+        if (e is Map<String, Object?>) PlexButlerTask.fromJson(e),
   ];
 }

@@ -75,7 +75,7 @@ class PlexPlaylistsApi {
     return page.totalSize;
   }
 
-  Map<String, dynamic> _query({
+  Map<String, Object?> _query({
     required String? type,
     required bool? smart,
     String? sort,
@@ -126,13 +126,13 @@ class PlexPlaylistsApi {
         ? null
         : 'server://$machineIdentifier/com.plexapp.plugins.library'
             '/library/metadata/${itemRatingKeys.join(',')}';
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'type': type,
       'title': title,
       'smart': 0,
       if (uri != null) 'uri': uri,
     };
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/playlists',
       method: 'POST',
       queryParameters: qp,
@@ -217,17 +217,17 @@ class PlexPlaylistsApi {
   /// `GET /playlists/{playlistId}/generators` — list the smart
   /// generators feeding a smart playlist. Returns raw maps; the
   /// generator id is in each entry's `id` field.
-  Future<List<Map<String, dynamic>>> generators(String playlistId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<List<Map<String, Object?>>> generators(String playlistId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/playlists/$playlistId/generators',
     );
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
+    if (container is! Map<String, Object?>) return const [];
     final list = container['PlayQueueGenerator'];
     if (list is! List) return const [];
     return [
       for (final e in list)
-        if (e is Map<String, dynamic>) e,
+        if (e is Map<String, Object?>) e,
     ];
   }
 

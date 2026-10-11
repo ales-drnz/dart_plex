@@ -32,7 +32,7 @@ class PlexNotificationsApi {
 
   WebSocketChannel? _wsChannel;
   StreamController<PlexNotification>? _wsController;
-  StreamSubscription<dynamic>? _wsSub;
+  StreamSubscription<Object?>? _wsSub;
 
   StreamController<PlexNotification>? _sseController;
   StreamSubscription<String>? _sseSub;
@@ -261,10 +261,10 @@ class PlexNotificationsApi {
   PlexNotification? _decode(String message) {
     try {
       final decoded = jsonDecode(message);
-      if (decoded is Map<String, dynamic>) {
+      if (decoded is Map<String, Object?>) {
         // Plex wraps under "NotificationContainer".
         final container = decoded['NotificationContainer'];
-        if (container is Map<String, dynamic>) {
+        if (container is Map<String, Object?>) {
           return PlexNotification.fromJson(container);
         }
         return PlexNotification.fromJson(decoded);
@@ -311,7 +311,7 @@ final class PlexNotification {
 
   /// The raw frame, useful when the notification type's payload is
   /// not yet promoted to a typed accessor.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Wraps a notification frame with its [type] discriminator and [raw] payload.
   const PlexNotification({
@@ -321,7 +321,7 @@ final class PlexNotification {
   });
 
   /// Parse a single notification frame from its server-side JSON representation.
-  factory PlexNotification.fromJson(Map<String, dynamic> json) {
+  factory PlexNotification.fromJson(Map<String, Object?> json) {
     final t = json['type']?.toString() ?? 'unknown';
     final sz = json['size'];
     return PlexNotification(

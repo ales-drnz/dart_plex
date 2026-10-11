@@ -120,7 +120,7 @@ class PlexHubsApi {
     required String metadataId,
     bool? onlyTransient,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
     return _http.requestJson(
       '/hubs/metadata/$metadataId/postplay',
@@ -135,7 +135,7 @@ class PlexHubsApi {
     required String metadataId,
     bool? onlyTransient,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
     return _http.requestJson(
       '/hubs/metadata/$metadataId/related',
@@ -156,7 +156,7 @@ class PlexHubsApi {
     bool? onlyTransient,
     int? count,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
     if (count != null) qp['count'] = count;
     return _http.requestJson(
@@ -177,7 +177,7 @@ class PlexHubsApi {
     required String sectionId,
     String? metadataItemId,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (metadataItemId != null) qp['metadataItemId'] = metadataItemId;
     return _http.requestJson(
       '/hubs/sections/$sectionId/manage',
@@ -217,7 +217,7 @@ class PlexHubsApi {
     bool? promotedToOwnHome,
     bool? promotedToSharedHome,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (promotedToRecommended != null) {
       qp['promotedToRecommended'] = promotedToRecommended ? 1 : 0;
     }

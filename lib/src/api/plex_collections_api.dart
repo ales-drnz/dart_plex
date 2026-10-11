@@ -51,12 +51,12 @@ class PlexCollectionsApi {
       smart != true || seedUri != null,
       'seedUri is required when smart is true',
     );
-    final qp = <String, dynamic>{'sectionId': sectionId};
+    final qp = <String, Object?>{'sectionId': sectionId};
     if (title != null) qp['title'] = title;
     if (type != null) qp['type'] = type;
     if (smart != null) qp['smart'] = smart ? '1' : '0';
     if (seedUri != null) qp['uri'] = seedUri;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/collections',
       method: 'POST',
       queryParameters: qp,

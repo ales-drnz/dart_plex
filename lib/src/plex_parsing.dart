@@ -18,20 +18,20 @@ import 'plex_models.dart';
 /// Parses a `MediaContainer` envelope whose entries sit under [arrayKey].
 PlexMediaContainer<T> Function(Object? json) containerOf<T>(
   String arrayKey,
-  T Function(Map<String, dynamic>) parser,
+  T Function(Map<String, Object?>) parser,
 ) =>
     (json) => PlexMediaContainer.fromJson(_map(json), arrayKey, parser);
 
 /// Like [containerOf], keeping only the entries.
 List<T> Function(Object? json) itemsOf<T>(
   String arrayKey,
-  T Function(Map<String, dynamic>) parser,
+  T Function(Map<String, Object?>) parser,
 ) =>
     (json) => PlexMediaContainer.fromJson(_map(json), arrayKey, parser).items;
 
-Map<String, dynamic> _map(Object? json) {
-  if (json == null) return const <String, dynamic>{};
-  if (json is Map<String, dynamic>) return json;
+Map<String, Object?> _map(Object? json) {
+  if (json == null) return const <String, Object?>{};
+  if (json is Map<String, Object?>) return json;
   throw PlexException(
     'Expected a JSON object, got ${json.runtimeType}',
     type: PlexErrorType.parse,

@@ -59,7 +59,7 @@ class PlexPlayQueuesApi {
     bool includeChapters = false,
     int? playQueueItemId,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'type': type,
       'uri': uri,
       'shuffle': shuffle ? 1 : 0,
@@ -71,7 +71,7 @@ class PlexPlayQueuesApi {
     if (key != null) qp['key'] = key;
     // Non-spec param honoured by Plex servers.
     if (playQueueItemId != null) qp['playQueueItemID'] = playQueueItemId;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/playQueues',
       method: 'POST',
       queryParameters: qp,
@@ -86,7 +86,7 @@ class PlexPlayQueuesApi {
     int? center,
     int? window,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'includeChapters': includeChapters ? 1 : 0,
     };
     if (center != null) qp['center'] = center;
@@ -114,7 +114,7 @@ class PlexPlayQueuesApi {
       (uri == null) != (playlistId == null),
       'Pass exactly one of uri or playlistId.',
     );
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       if (uri != null) 'uri': uri,
       if (playlistId != null) 'playlistID': playlistId,
       if (playNext) 'next': 1,

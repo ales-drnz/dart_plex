@@ -16,8 +16,8 @@ class PlexUpdaterApi {
 
   /// `GET /updater/status` — current update state (last check,
   /// downloaded version, install ready).
-  Future<Map<String, dynamic>> status() async {
-    final res = await _http.request<Map<String, dynamic>>('/updater/status');
+  Future<Map<String, Object?>> status() async {
+    final res = await _http.request<Map<String, Object?>>('/updater/status');
     return res.data ?? const {};
   }
 

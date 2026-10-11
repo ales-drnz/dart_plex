@@ -45,7 +45,7 @@ class PlexSessionsApi {
     int size = 50,
     String? sort,
   }) {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size,
     };
@@ -85,16 +85,16 @@ class PlexSessionsApi {
   /// path); pass it as a [String] or [int] — Plex accepts the numeric id
   /// either way, mirroring how [deleteHistoryEntry] deals in keys. Returns
   /// the first `Metadata` entry, or `null` when no matching entry exists.
-  Future<Map<String, dynamic>?> historyItem(Object historyId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>?> historyItem(Object historyId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/status/sessions/history/$historyId',
     );
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return null;
+    if (container is! Map<String, Object?>) return null;
     final list = container['Metadata'];
     if (list is! List || list.isEmpty) return null;
     final first = list.first;
-    return first is Map<String, dynamic> ? first : null;
+    return first is Map<String, Object?> ? first : null;
   }
 
   /// Delete a single history entry by its history `key`.

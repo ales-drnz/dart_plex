@@ -107,7 +107,7 @@ class PlexPlaybackApi {
       );
     }
     final queueItem = playQueueItemID?.toString() ?? playQueueItemId;
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'ratingKey': ratingKey,
       'key': '/library/metadata/$ratingKey',
       'state': wireState,

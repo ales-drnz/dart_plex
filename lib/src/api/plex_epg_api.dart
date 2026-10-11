@@ -18,29 +18,29 @@ class PlexEpgApi {
   PlexEpgApi(this._http);
 
   /// `GET /livetv/epg/countries` — every country with EPG support.
-  Future<Map<String, dynamic>> countries() async {
+  Future<Map<String, Object?>> countries() async {
     final res =
-        await _http.request<Map<String, dynamic>>('/livetv/epg/countries');
+        await _http.request<Map<String, Object?>>('/livetv/epg/countries');
     return res.data ?? const {};
   }
 
   /// `GET /livetv/epg/languages` — every language with EPG support.
-  Future<Map<String, dynamic>> languages() async {
+  Future<Map<String, Object?>> languages() async {
     final res =
-        await _http.request<Map<String, dynamic>>('/livetv/epg/languages');
+        await _http.request<Map<String, Object?>>('/livetv/epg/languages');
     return res.data ?? const {};
   }
 
   /// `GET /livetv/epg/countries/{country}/{epgId}/lineups?postalCode={zip}` —
   /// lineups (channel packages) for one country.
-  Future<Map<String, dynamic>> countryLineups({
+  Future<Map<String, Object?>> countryLineups({
     required String country,
     required String epgId,
     String? postalCode,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (postalCode != null) qp['postalCode'] = postalCode;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/epg/countries/$country/$epgId/lineups',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -49,11 +49,11 @@ class PlexEpgApi {
 
   /// `GET /livetv/epg/countries/{country}/{epgId}/regions` — admin
   /// regions inside a country (used to refine lineup lookup).
-  Future<Map<String, dynamic>> countryRegions({
+  Future<Map<String, Object?>> countryRegions({
     required String country,
     required String epgId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/epg/countries/$country/$epgId/regions',
     );
     return res.data ?? const {};
@@ -61,12 +61,12 @@ class PlexEpgApi {
 
   /// `GET /livetv/epg/countries/{country}/{epgId}/regions/{region}/lineups`
   /// — lineups available inside one admin region.
-  Future<Map<String, dynamic>> regionLineups({
+  Future<Map<String, Object?>> regionLineups({
     required String country,
     required String epgId,
     required String region,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/epg/countries/$country/$epgId/regions/$region/lineups',
     );
     return res.data ?? const {};
@@ -77,11 +77,11 @@ class PlexEpgApi {
   ///
   /// Both [device] and [lineupGroup] are required by the server; omitting
   /// either yields a 404.
-  Future<Map<String, dynamic>> bestLineup({
+  Future<Map<String, Object?>> bestLineup({
     required String device,
     required String lineupGroup,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/epg/lineup',
       queryParameters: {'device': device, 'lineupGroup': lineupGroup},
     );
@@ -90,11 +90,11 @@ class PlexEpgApi {
 
   /// `GET /livetv/epg/channelmap?device={d}&lineup={l}` — best
   /// mapping between device channels and EPG lineup entries.
-  Future<Map<String, dynamic>> channelMap({
+  Future<Map<String, Object?>> channelMap({
     required String device,
     required String lineup,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/epg/channelmap',
       queryParameters: {'device': device, 'lineup': lineup},
     );
@@ -102,8 +102,8 @@ class PlexEpgApi {
   }
 
   /// `GET /livetv/epg/channels?lineup={l}` — channels in a lineup.
-  Future<Map<String, dynamic>> channels({required String lineup}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> channels({required String lineup}) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/epg/channels',
       queryParameters: {'lineup': lineup},
     );
@@ -115,11 +115,11 @@ class PlexEpgApi {
   ///
   /// [lineup] is the list of lineup URIs to fetch; it is serialized as
   /// repeated `lineup=` query parameters. Must not be empty.
-  Future<Map<String, dynamic>> lineupChannels({
+  Future<Map<String, Object?>> lineupChannels({
     required List<String> lineup,
   }) async {
     assert(lineup.isNotEmpty, 'lineup must contain at least one URI');
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/epg/lineupchannels',
       queryParameters: {'lineup': lineup},
     );

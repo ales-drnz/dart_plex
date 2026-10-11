@@ -32,7 +32,7 @@ import 'plex_models.dart';
 /// ```
 sealed class PlexEvent {
   /// The entry as the server sent it.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   const PlexEvent(this.raw);
 
@@ -41,12 +41,12 @@ sealed class PlexEvent {
   /// the frame body (the `NotificationContainer`).
   static List<PlexEvent> fromFrame(
     String type,
-    Map<String, dynamic> container,
+    Map<String, Object?> container,
   ) {
-    List<Map<String, dynamic>> entries(String key) => [
+    List<Map<String, Object?>> entries(String key) => [
           if (container[key] is List)
             for (final e in container[key] as List)
-              if (e is Map<String, dynamic>) e,
+              if (e is Map<String, Object?>) e,
         ];
 
     switch (type) {
@@ -237,13 +237,13 @@ final class PlexActivityEvent extends PlexEvent {
   final String? librarySectionId;
 
   /// Decodes an `ActivityNotification` entry.
-  factory PlexActivityEvent.fromJson(Map<String, dynamic> raw) {
-    final activity = raw['Activity'] is Map<String, dynamic>
-        ? raw['Activity'] as Map<String, dynamic>
-        : const <String, dynamic>{};
-    final context = activity['Context'] is Map<String, dynamic>
-        ? activity['Context'] as Map<String, dynamic>
-        : const <String, dynamic>{};
+  factory PlexActivityEvent.fromJson(Map<String, Object?> raw) {
+    final activity = raw['Activity'] is Map<String, Object?>
+        ? raw['Activity'] as Map<String, Object?>
+        : const <String, Object?>{};
+    final context = activity['Context'] is Map<String, Object?>
+        ? activity['Context'] as Map<String, Object?>
+        : const <String, Object?>{};
     return PlexActivityEvent._(
       raw,
       event: _str(raw['event']) ?? '',

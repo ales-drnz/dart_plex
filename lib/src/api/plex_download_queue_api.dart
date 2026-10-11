@@ -21,8 +21,8 @@ class PlexDownloadQueueApi {
   PlexDownloadQueueApi(this._http);
 
   /// `POST /downloadQueue` — create a new download queue.
-  Future<Map<String, dynamic>> create() async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> create() async {
+    final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue',
       method: 'POST',
     );
@@ -30,8 +30,8 @@ class PlexDownloadQueueApi {
   }
 
   /// `GET /downloadQueue/{queueId}` — fetch a queue's status.
-  Future<Map<String, dynamic>> get(String queueId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> get(String queueId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue/$queueId',
     );
     return res.data ?? const {};
@@ -51,8 +51,8 @@ class PlexDownloadQueueApi {
   }
 
   /// `GET /downloadQueue/{queueId}/items` — every item in the queue.
-  Future<Map<String, dynamic>> items(String queueId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> items(String queueId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue/$queueId/items',
     );
     return res.data ?? const {};
@@ -60,11 +60,11 @@ class PlexDownloadQueueApi {
 
   /// `GET /downloadQueue/{queueId}/items/{itemId}` — one queued
   /// item.
-  Future<Map<String, dynamic>> item({
+  Future<Map<String, Object?>> item({
     required String queueId,
     required String itemId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue/$queueId/items/$itemId',
     );
     return res.data ?? const {};
@@ -98,11 +98,11 @@ class PlexDownloadQueueApi {
   /// `GET /downloadQueue/{queueId}/item/{itemId}/decision` — the
   /// decision document for a queued item (which media source, what
   /// transcode profile).
-  Future<Map<String, dynamic>> itemDecision({
+  Future<Map<String, Object?>> itemDecision({
     required String queueId,
     required String itemId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue/$queueId/item/$itemId/decision',
     );
     return res.data ?? const {};
@@ -110,11 +110,11 @@ class PlexDownloadQueueApi {
 
   /// `GET /downloadQueue/{queueId}/item/{itemId}/media` — the media
   /// payload (used by the mobile downloader to fetch bytes).
-  Future<Map<String, dynamic>> itemMedia({
+  Future<Map<String, Object?>> itemMedia({
     required String queueId,
     required String itemId,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/downloadQueue/$queueId/item/$itemId/media',
     );
     return res.data ?? const {};

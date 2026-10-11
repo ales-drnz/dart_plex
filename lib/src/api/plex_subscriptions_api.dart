@@ -17,11 +17,11 @@ class PlexSubscriptionsApi {
   PlexSubscriptionsApi(this._http);
 
   /// `GET /media/subscriptions` — list every subscription.
-  Future<Map<String, dynamic>> list({
+  Future<Map<String, Object?>> list({
     bool includeGrabs = false,
     bool includeStorage = false,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/media/subscriptions',
       queryParameters: {
         'includeGrabs': includeGrabs ? 1 : 0,
@@ -35,15 +35,15 @@ class PlexSubscriptionsApi {
   ///
   /// [type] is the Plex metadata type to subscribe to (e.g. `2` for
   /// show/season), matching the spec's integer `type` parameter.
-  Future<Map<String, dynamic>> create({
+  Future<Map<String, Object?>> create({
     required int targetLibrarySectionID,
     int? targetSectionLocationID,
     int? type,
-    Map<String, dynamic>? hints,
-    Map<String, dynamic>? prefs,
-    Map<String, dynamic>? params,
+    Map<String, Object?>? hints,
+    Map<String, Object?>? prefs,
+    Map<String, Object?>? params,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'targetLibrarySectionID': targetLibrarySectionID,
     };
     if (targetSectionLocationID != null) {
@@ -53,7 +53,7 @@ class PlexSubscriptionsApi {
     if (hints != null) qp['hints'] = hints;
     if (prefs != null) qp['prefs'] = prefs;
     if (params != null) qp['params'] = params;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/media/subscriptions',
       method: 'POST',
       queryParameters: qp,
@@ -73,8 +73,8 @@ class PlexSubscriptionsApi {
 
   /// `GET /media/subscriptions/scheduled` — every recording the DVR
   /// plans to make, grouped by start time.
-  Future<Map<String, dynamic>> scheduledRecordings() async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> scheduledRecordings() async {
+    final res = await _http.request<Map<String, Object?>>(
       '/media/subscriptions/scheduled',
     );
     return res.data ?? const {};
@@ -82,8 +82,8 @@ class PlexSubscriptionsApi {
 
   /// `GET /media/subscriptions/template?guid={guid}` — fetch the
   /// default subscription template for a program.
-  Future<Map<String, dynamic>> template({required String guid}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> template({required String guid}) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/media/subscriptions/template',
       queryParameters: {'guid': guid},
     );
@@ -91,12 +91,12 @@ class PlexSubscriptionsApi {
   }
 
   /// `GET /media/subscriptions/{subscriptionId}` — one subscription.
-  Future<Map<String, dynamic>> get(
+  Future<Map<String, Object?>> get(
     String subscriptionId, {
     bool includeGrabs = false,
     bool includeStorage = false,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/media/subscriptions/$subscriptionId',
       queryParameters: {
         'includeGrabs': includeGrabs ? 1 : 0,
@@ -110,9 +110,9 @@ class PlexSubscriptionsApi {
   /// a subscription's preferences.
   Future<void> editPreferences({
     required String subscriptionId,
-    Map<String, dynamic>? prefs,
+    Map<String, Object?>? prefs,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (prefs != null) qp['prefs'] = prefs;
     await _http.request<void>(
       '/media/subscriptions/$subscriptionId',

@@ -14,7 +14,7 @@ import 'plex_filter.dart';
 /// Two conditions on the same field *and* operator cannot both be
 /// expressed — one would overwrite the other and the call would come back
 /// wider than asked for — so that is refused loudly instead.
-void applyFilters(Map<String, dynamic> qp, List<PlexFilter> filters) {
+void applyFilters(Map<String, Object?> qp, List<PlexFilter> filters) {
   for (final filter in filters) {
     final name = filter.parameterName;
     if (qp.containsKey(name)) {
@@ -36,7 +36,7 @@ void applyFilters(Map<String, dynamic> qp, List<PlexFilter> filters) {
 /// `X-Plex-Container-Size=50` on its own is ignored and the whole list
 /// comes back — a silent widening. So [start] defaults to 0, and a [start]
 /// with no [size] is refused rather than sent to be ignored.
-Map<String, dynamic> containerPage({int? start, int? size}) {
+Map<String, Object?> containerPage({int? start, int? size}) {
   if (size == null) {
     if (start != null) {
       throw ArgumentError.value(
@@ -45,7 +45,7 @@ Map<String, dynamic> containerPage({int? start, int? size}) {
         'Plex pages only with a size; pass size too',
       );
     }
-    return <String, dynamic>{};
+    return <String, Object?>{};
   }
   return {'X-Plex-Container-Start': start ?? 0, 'X-Plex-Container-Size': size};
 }

@@ -24,7 +24,7 @@ class PlexSearchApi {
     int limit = 10,
     bool includeCollections = true,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'query': query,
       'limit': limit,
       'includeCollections': includeCollections ? 1 : 0,
@@ -85,7 +85,7 @@ class PlexSearchApi {
     PlexMetadataType? type,
     int limit = 10,
   }) async {
-    final qp = <String, dynamic>{'query': query, 'limit': limit};
+    final qp = <String, Object?>{'query': query, 'limit': limit};
     if (type != null) qp['type'] = type.value;
     return _http.requestJson(
       '/hubs/search/voice',

@@ -28,7 +28,7 @@ class PlexLibraryApi {
   /// served. Music apps typically pick the first
   /// [PlexLibraryType.music] entry.
   Future<List<PlexLibrarySection>> sections() async {
-    final res = await _http.request<Map<String, dynamic>>('/library/sections');
+    final res = await _http.request<Map<String, Object?>>('/library/sections');
     final c = PlexMediaContainer.fromJson(
       res.data ?? const {},
       'Directory',
@@ -66,7 +66,7 @@ class PlexLibraryApi {
     String? sort,
     List<PlexFilter> filters = const [],
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'type': type.value,
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size,
@@ -125,9 +125,9 @@ class PlexLibraryApi {
     required String sectionId,
     int? type,
     String? filterExpression,
-    required Map<String, dynamic> changes,
+    required Map<String, Object?> changes,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (type != null) qp['type'] = type;
     if (filterExpression != null) qp['filters'] = filterExpression;
     qp.addAll(changes);
@@ -184,7 +184,7 @@ class PlexLibraryApi {
       );
     }
     final uri = Uri.parse(key);
-    final qp = <String, dynamic>{...uri.queryParameters};
+    final qp = <String, Object?>{...uri.queryParameters};
     if (type != null) qp['type'] = type.value;
     return _tagIndex(
       path: uri.path,
@@ -198,7 +198,7 @@ class PlexLibraryApi {
   Future<List<PlexTag>> _tagIndex({
     required String path,
     required String field,
-    required Map<String, dynamic> queryParameters,
+    required Map<String, Object?> queryParameters,
   }) async {
     return _http.requestJson(
       path,
@@ -213,7 +213,7 @@ class PlexLibraryApi {
 
   /// Full metadata for one item (`/library/metadata/{ratingKey}`).
   Future<PlexMetadata?> item(String ratingKey) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/metadata/$ratingKey',
     );
     final c = PlexMediaContainer.fromJson(
@@ -235,7 +235,7 @@ class PlexLibraryApi {
   /// discriminator, mirroring plexapi's `Movie.edit`.
   Future<void> editItem({
     required String ids,
-    required Map<String, dynamic> args,
+    required Map<String, Object?> args,
     PlexMetadataType? type,
   }) async {
     await _http.request<void>(
@@ -257,7 +257,7 @@ class PlexLibraryApi {
     required String ids,
     bool? proxy,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (proxy != null) qp['proxy'] = proxy ? 1 : 0;
     await _http.request<void>(
       '/library/metadata/$ids',
@@ -369,7 +369,7 @@ class PlexLibraryApi {
     required String ratingKey,
     int? count,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (count != null) qp['count'] = count;
     return _http.requestJson(
       '/library/metadata/$ratingKey/similar',
@@ -407,7 +407,7 @@ class PlexLibraryApi {
     final parent = excludeParentRatingKey ?? excludeParentID?.toString();
     final grandparent =
         excludeGrandparentRatingKey ?? excludeGrandparentID?.toString();
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (limit != null) qp['limit'] = limit;
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
     if (parent != null) qp['excludeParentID'] = parent;
@@ -447,7 +447,7 @@ class PlexLibraryApi {
     int start = 0,
     int size = 50,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size,
     };
@@ -536,7 +536,7 @@ class PlexLibraryApi {
   /// "primary library" entry point.
   Future<List<PlexLibrarySection>> sectionsAll() async {
     final res =
-        await _http.request<Map<String, dynamic>>('/library/sections/all');
+        await _http.request<Map<String, Object?>>('/library/sections/all');
     return PlexMediaContainer.fromJson(
       res.data ?? const {},
       'Directory',
@@ -560,11 +560,11 @@ class PlexLibraryApi {
     required List<String> locations,
     String? metadataAgentProviderGroupId,
     String? language,
-    Map<String, dynamic>? prefs,
+    Map<String, Object?>? prefs,
     bool? relative,
     bool? importFromiTunes,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'name': name,
       'type': type,
       'scanner': scanner,
@@ -628,17 +628,17 @@ class PlexLibraryApi {
   }
 
   /// `GET /library/tags` — every tag value across the library.
-  Future<Map<String, dynamic>> tags() async {
-    final res = await _http.request<Map<String, dynamic>>('/library/tags');
+  Future<Map<String, Object?>> tags() async {
+    final res = await _http.request<Map<String, Object?>>('/library/tags');
     return res.data ?? const {};
   }
 
   /// `GET /library/randomArtwork?sections={ids}` — random backdrop
   /// across the supplied sections. Useful as a screensaver source.
-  Future<Map<String, dynamic>> randomArtwork({String? sections}) async {
-    final qp = <String, dynamic>{};
+  Future<Map<String, Object?>> randomArtwork({String? sections}) async {
+    final qp = <String, Object?>{};
     if (sections != null) qp['sections'] = sections;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/randomArtwork',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -646,8 +646,8 @@ class PlexLibraryApi {
   }
 
   /// `GET /library/matches` — query the metadata-agent match cache.
-  Future<Map<String, dynamic>> matches(Map<String, dynamic> filters) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> matches(Map<String, Object?> filters) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/library/matches',
       queryParameters: filters,
     );
@@ -656,19 +656,19 @@ class PlexLibraryApi {
 
   /// `POST /library/file?url={path}&virtualFilePath={...}` — ingest
   /// a file from disk without first scanning it via a section.
-  Future<Map<String, dynamic>> ingestTransientItem({
+  Future<Map<String, Object?>> ingestTransientItem({
     required String url,
     String? virtualFilePath,
     bool? computeHashes,
     bool? ingestNonMatches,
   }) async {
-    final qp = <String, dynamic>{'url': url};
+    final qp = <String, Object?>{'url': url};
     if (virtualFilePath != null) qp['virtualFilePath'] = virtualFilePath;
     if (computeHashes != null) qp['computeHashes'] = computeHashes ? 1 : 0;
     if (ingestNonMatches != null) {
       qp['ingestNonMatches'] = ingestNonMatches ? 1 : 0;
     }
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/file',
       method: 'POST',
       queryParameters: qp,
@@ -678,14 +678,14 @@ class PlexLibraryApi {
 
   /// `GET /library/sections/prefs?type={t}&agent={a}` — default
   /// section preferences for a media type + agent combination.
-  Future<Map<String, dynamic>> defaultSectionPrefs({
+  Future<Map<String, Object?>> defaultSectionPrefs({
     String? type,
     String? agent,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (type != null) qp['type'] = type;
     if (agent != null) qp['agent'] = agent;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/sections/prefs',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -698,13 +698,13 @@ class PlexLibraryApi {
 
   /// `GET /library/sections/{sectionId}?includeDetails={bool}` —
   /// full section details.
-  Future<Map<String, dynamic>> sectionDetails({
+  Future<Map<String, Object?>> sectionDetails({
     required String sectionId,
     bool? includeDetails,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (includeDetails != null) qp['includeDetails'] = includeDetails ? 1 : 0;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/sections/$sectionId',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -724,9 +724,9 @@ class PlexLibraryApi {
     String? metadataAgentProviderGroupId,
     String? language,
     List<String>? locations,
-    Map<String, dynamic>? prefs,
+    Map<String, Object?>? prefs,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (name != null) qp['name'] = name;
     if (scanner != null) qp['scanner'] = scanner;
     if (agent != null) qp['agent'] = agent;
@@ -763,7 +763,7 @@ class PlexLibraryApi {
     bool force = false,
     String? path,
   }) async {
-    final qp = <String, dynamic>{'force': force ? 1 : 0};
+    final qp = <String, Object?>{'force': force ? 1 : 0};
     if (path != null) qp['path'] = path;
     await _http.request<void>(
       '/library/sections/$sectionId/refresh',
@@ -818,13 +818,13 @@ class PlexLibraryApi {
   }
 
   /// `GET /library/sections/{sectionId}/prefs` — section preferences.
-  Future<Map<String, dynamic>> sectionPreferences({
+  Future<Map<String, Object?>> sectionPreferences({
     required String sectionId,
     String? agent,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (agent != null) qp['agent'] = agent;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/sections/$sectionId/prefs',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -835,7 +835,7 @@ class PlexLibraryApi {
   /// section preferences.
   Future<void> setSectionPreferences({
     required String sectionId,
-    required Map<String, dynamic> prefs,
+    required Map<String, Object?> prefs,
   }) async {
     await _http.request<void>(
       '/library/sections/$sectionId/prefs',
@@ -846,15 +846,15 @@ class PlexLibraryApi {
 
   /// `GET /library/sections/{sectionId}/autocomplete?type=...&field.query=...`
   /// — autocomplete suggestions for a search field.
-  Future<Map<String, dynamic>> autocomplete({
+  Future<Map<String, Object?>> autocomplete({
     required String sectionId,
     String? type,
-    Map<String, dynamic>? fieldQuery,
+    Map<String, Object?>? fieldQuery,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (type != null) qp['type'] = type;
     if (fieldQuery != null) qp.addAll(fieldQuery);
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/sections/$sectionId/autocomplete',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -868,7 +868,7 @@ class PlexLibraryApi {
     String? type,
     String? sort,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (type != null) qp['type'] = type;
     if (sort != null) qp['sort'] = sort;
     return _http.requestJson(
@@ -900,13 +900,13 @@ class PlexLibraryApi {
 
   /// `GET /library/sections/{sectionId}/common?type=...` — common
   /// fields across items (shared genres, ratings, etc.).
-  Future<Map<String, dynamic>> sectionCommon({
+  Future<Map<String, Object?>> sectionCommon({
     required String sectionId,
     String? type,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (type != null) qp['type'] = type;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/sections/$sectionId/common',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -947,7 +947,7 @@ class PlexLibraryApi {
     String? agent,
     bool? markUpdated,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (agent != null) qp['agent'] = agent;
     if (markUpdated != null) qp['markUpdated'] = markUpdated ? 1 : 0;
     await _http.request<void>(
@@ -963,7 +963,7 @@ class PlexLibraryApi {
     int? thumbOffset,
     int? artOffset,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (thumbOffset != null) qp['thumbOffset'] = thumbOffset;
     if (artOffset != null) qp['artOffset'] = artOffset;
     await _http.request<void>(
@@ -980,7 +980,7 @@ class PlexLibraryApi {
     bool force = false,
     double? threshold,
   }) async {
-    final qp = <String, dynamic>{'force': force ? 1 : 0};
+    final qp = <String, Object?>{'force': force ? 1 : 0};
     if (threshold != null) qp['threshold'] = threshold;
     await _http.request<void>(
       '/library/metadata/$ids/intro',
@@ -1066,7 +1066,7 @@ class PlexLibraryApi {
     String? name,
     int? year,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (guid != null) qp['guid'] = guid;
     if (name != null) qp['name'] = name;
     if (year != null) qp['year'] = year;
@@ -1079,7 +1079,7 @@ class PlexLibraryApi {
 
   /// `PUT /library/metadata/{ids}/matches?title=...&year=...&...` —
   /// list candidate matches for an item.
-  Future<Map<String, dynamic>> listMatches({
+  Future<Map<String, Object?>> listMatches({
     required String ids,
     String? title,
     String? parentTitle,
@@ -1088,14 +1088,14 @@ class PlexLibraryApi {
     int? year,
     bool? manual,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (title != null) qp['title'] = title;
     if (parentTitle != null) qp['parentTitle'] = parentTitle;
     if (agent != null) qp['agent'] = agent;
     if (language != null) qp['language'] = language;
     if (year != null) qp['year'] = year;
     if (manual != null) qp['manual'] = manual ? 1 : 0;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/metadata/$ids/matches',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
@@ -1137,7 +1137,7 @@ class PlexLibraryApi {
   /// locks/overrides.
   Future<void> setItemPreferences({
     required String ids,
-    required Map<String, dynamic> args,
+    required Map<String, Object?> args,
   }) async {
     await _http.request<void>(
       '/library/metadata/$ids/prefs',
@@ -1188,8 +1188,8 @@ class PlexLibraryApi {
 
   /// `GET /library/metadata/{ids}/tree` — items as a hierarchical
   /// tree (parents → children).
-  Future<Map<String, dynamic>> itemTree({required String ids}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> itemTree({required String ids}) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/library/metadata/$ids/tree',
     );
     return res.data ?? const {};
@@ -1197,8 +1197,8 @@ class PlexLibraryApi {
 
   /// `GET /library/metadata/{ids}/users/top` — top listeners /
   /// viewers for this item.
-  Future<Map<String, dynamic>> topUsers({required String ids}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> topUsers({required String ids}) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/library/metadata/$ids/users/top',
     );
     return res.data ?? const {};
@@ -1216,7 +1216,7 @@ class PlexLibraryApi {
     bool? forced,
     bool? hearingImpaired,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'title': title,
       'language': language,
       'url': url,
@@ -1280,9 +1280,9 @@ class PlexLibraryApi {
     required String type,
     required int startTimeOffset,
     required int endTimeOffset,
-    Map<String, dynamic>? attributes,
+    Map<String, Object?>? attributes,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'type': type,
       'startTimeOffset': startTimeOffset,
       'endTimeOffset': endTimeOffset,
@@ -1302,9 +1302,9 @@ class PlexLibraryApi {
     String? type,
     int? startTimeOffset,
     int? endTimeOffset,
-    Map<String, dynamic>? attributes,
+    Map<String, Object?>? attributes,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (type != null) qp['type'] = type;
     if (startTimeOffset != null) qp['startTimeOffset'] = startTimeOffset;
     if (endTimeOffset != null) qp['endTimeOffset'] = endTimeOffset;
@@ -1335,7 +1335,7 @@ class PlexLibraryApi {
     required String mediaItem,
     bool? proxy,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (proxy != null) qp['proxy'] = proxy ? 1 : 0;
     await _http.request<void>(
       '/library/metadata/$ids/media/$mediaItem',
@@ -1406,13 +1406,13 @@ class PlexLibraryApi {
 
   /// `GET /library/streams/{streamId}/loudness?subsample={n}` —
   /// loudness curve for an audio stream.
-  Future<Map<String, dynamic>> streamLoudness({
+  Future<Map<String, Object?>> streamLoudness({
     required String streamId,
     int? subsample,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (subsample != null) qp['subsample'] = subsample;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/streams/$streamId/loudness',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -1421,13 +1421,13 @@ class PlexLibraryApi {
 
   /// `GET /library/streams/{streamId}/levels?subsample={n}` —
   /// level samples (used for the waveform display).
-  Future<Map<String, dynamic>> streamLevels({
+  Future<Map<String, Object?>> streamLevels({
     required String streamId,
     int? subsample,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (subsample != null) qp['subsample'] = subsample;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/streams/$streamId/levels',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -1446,7 +1446,7 @@ class PlexLibraryApi {
     String? subtitleStreamID,
     bool? allParts,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (audioStreamID != null) qp['audioStreamID'] = audioStreamID;
     if (subtitleStreamID != null) qp['subtitleStreamID'] = subtitleStreamID;
     if (allParts != null) qp['allParts'] = allParts ? 1 : 0;
@@ -1477,14 +1477,14 @@ class PlexLibraryApi {
 
   /// `GET /library/parts/{partId}/indexes/{index}` — BIF index
   /// metadata for a media part.
-  Future<Map<String, dynamic>> partIndex({
+  Future<Map<String, Object?>> partIndex({
     required String partId,
     required String index,
     int? interval,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (interval != null) qp['interval'] = interval;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/library/parts/$partId/indexes/$index',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -1508,8 +1508,8 @@ class PlexLibraryApi {
   // -------------------------------------------------------------------------
 
   /// `GET /library/people/{personId}` — person details.
-  Future<Map<String, dynamic>> person(String personId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> person(String personId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/library/people/$personId',
     );
     return res.data ?? const {};
@@ -1533,7 +1533,7 @@ class PlexLibraryApi {
     required String endId,
     double? maxDistance,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'startID': startId,
       'endID': endId,
     };
@@ -1560,7 +1560,7 @@ class PlexLibraryApi {
     int? limit,
     double? maxDistance,
   }) async {
-    final qp = <String, dynamic>{
+    final qp = <String, Object?>{
       'type': type,
       'values': values.join(','),
     };

@@ -20,28 +20,28 @@ class PlexLiveTvApi {
   PlexLiveTvApi(this._http);
 
   /// `GET /livetv/sessions` — currently-streaming Live TV sessions.
-  Future<List<Map<String, dynamic>>> sessions() async {
-    final res = await _http.request<Map<String, dynamic>>('/livetv/sessions');
+  Future<List<Map<String, Object?>>> sessions() async {
+    final res = await _http.request<Map<String, Object?>>('/livetv/sessions');
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
+    if (container is! Map<String, Object?>) return const [];
     final list = container['Metadata'];
     if (list is! List) return const [];
     return [
       for (final e in list)
-        if (e is Map<String, dynamic>) e,
+        if (e is Map<String, Object?>) e,
     ];
   }
 
   /// `GET /livetv/dvrs` — configured DVR backends.
-  Future<List<Map<String, dynamic>>> dvrs() async {
-    final res = await _http.request<Map<String, dynamic>>('/livetv/dvrs');
+  Future<List<Map<String, Object?>>> dvrs() async {
+    final res = await _http.request<Map<String, Object?>>('/livetv/dvrs');
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
+    if (container is! Map<String, Object?>) return const [];
     final list = container['Dvr'];
     if (list is! List) return const [];
     return [
       for (final e in list)
-        if (e is Map<String, dynamic>) e,
+        if (e is Map<String, Object?>) e,
     ];
   }
 
@@ -60,8 +60,8 @@ class PlexLiveTvApi {
 
   /// `GET /livetv/sessions/{sessionId}` — fetch a single live
   /// session (status, currently-tuned channel, decision).
-  Future<Map<String, dynamic>> liveSession(String sessionId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> liveSession(String sessionId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/livetv/sessions/$sessionId',
     );
     return res.data ?? const {};

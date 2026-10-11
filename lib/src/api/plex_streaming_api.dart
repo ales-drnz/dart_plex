@@ -188,17 +188,17 @@ class PlexStreamingApi {
   /// (a per-call override of the global profile declared in
   /// [PlexCredentials.clientProfileExtra]).
   Future<PlexTranscodeDecision> decisionUniversal({
-    required Map<String, dynamic> params,
+    required Map<String, Object?> params,
     String transcodeType = 'video',
     Map<String, String>? extraHeaders,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/$transcodeType/:/transcode/universal/decision',
       queryParameters: params,
       extraHeaders: extraHeaders,
     );
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) {
+    if (container is! Map<String, Object?>) {
       return const PlexTranscodeDecision(code: null, raw: {});
     }
     final codeRaw = container['generalDecisionCode'];
@@ -383,7 +383,7 @@ final class PlexTranscodeDecision {
   final int? code;
 
   /// The raw `MediaContainer` for fields not promoted here.
-  final Map<String, dynamic> raw;
+  final Map<String, Object?> raw;
 
   /// Wraps a transcode decision response with its numeric [code] and [raw] container.
   const PlexTranscodeDecision({required this.code, required this.raw});

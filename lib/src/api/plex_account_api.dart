@@ -38,7 +38,7 @@ class PlexAccountApi {
     required String username,
     required String password,
   }) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '$_plexTvLegacy/users/sign_in.json',
       method: 'POST',
       absoluteUrl: true,
@@ -79,7 +79,7 @@ class PlexAccountApi {
   ///
   /// When [strong] is true (default), Plex issues a JWT-grade token.
   Future<PlexPin> createPin({bool strong = true}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '$_plexTv/pins',
       method: 'POST',
       absoluteUrl: true,
@@ -100,7 +100,7 @@ class PlexAccountApi {
   /// The returned pin is the freshest state — once [PlexPin.isAuthenticated]
   /// is true, save [PlexPin.authToken] and stop polling.
   Future<PlexPin> pollPin(int id) async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '$_plexTv/pins/$id',
       absoluteUrl: true,
     );
@@ -120,7 +120,7 @@ class PlexAccountApi {
 
   /// Fetch the currently authenticated user's profile.
   Future<PlexUser> currentUser() async {
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '$_plexTv/user',
       absoluteUrl: true,
     );
@@ -159,7 +159,7 @@ class PlexAccountApi {
     bool includeIPv6 = true,
     bool serverOnly = true,
   }) async {
-    final res = await _http.request<List<dynamic>>(
+    final res = await _http.request<List<Object?>>(
       '$_plexTv/resources',
       absoluteUrl: true,
       queryParameters: {
@@ -171,7 +171,7 @@ class PlexAccountApi {
     final list = res.data ?? const [];
     final all = <PlexResource>[
       for (final e in list)
-        if (e is Map<String, dynamic>) PlexResource.fromJson(e),
+        if (e is Map<String, Object?>) PlexResource.fromJson(e),
     ];
     if (!serverOnly) return all;
     return all.where((r) => r.isServer).toList(growable: false);
@@ -179,21 +179,21 @@ class PlexAccountApi {
 
   /// `GET /user` — details for the access token currently in use
   /// (issued from the PMS, not from plex.tv).
-  Future<Map<String, dynamic>> tokenDetails() async {
-    final res = await _http.request<Map<String, dynamic>>('/user');
+  Future<Map<String, Object?>> tokenDetails() async {
+    final res = await _http.request<Map<String, Object?>>('/user');
     return res.data ?? const {};
   }
 
   /// `GET /users` — list every connected user (admin only).
-  Future<List<Map<String, dynamic>>> connectedUsers() async {
-    final res = await _http.request<Map<String, dynamic>>('/users');
+  Future<List<Map<String, Object?>>> connectedUsers() async {
+    final res = await _http.request<Map<String, Object?>>('/users');
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, dynamic>) return const [];
+    if (container is! Map<String, Object?>) return const [];
     final list = container['User'];
     if (list is! List) return const [];
     return [
       for (final e in list)
-        if (e is Map<String, dynamic>) e,
+        if (e is Map<String, Object?>) e,
     ];
   }
 }

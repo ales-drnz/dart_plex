@@ -19,10 +19,10 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers?protocol={...}` — available grabber
   /// protocols (HDHomeRun, M3U, etc.).
-  Future<Map<String, dynamic>> grabbers({String? protocol}) async {
-    final qp = <String, dynamic>{};
+  Future<Map<String, Object?>> grabbers({String? protocol}) async {
+    final qp = <String, Object?>{};
     if (protocol != null) qp['protocol'] = protocol;
-    final res = await _http.request<Map<String, dynamic>>(
+    final res = await _http.request<Map<String, Object?>>(
       '/media/grabbers',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -30,16 +30,16 @@ class PlexDevicesApi {
   }
 
   /// `GET /media/grabbers/devices` — every registered device.
-  Future<Map<String, dynamic>> list() async {
+  Future<Map<String, Object?>> list() async {
     final res =
-        await _http.request<Map<String, dynamic>>('/media/grabbers/devices');
+        await _http.request<Map<String, Object?>>('/media/grabbers/devices');
     return res.data ?? const {};
   }
 
   /// `POST /media/grabbers/devices?uri={uri}` — add a device by URI
   /// (e.g. `hdhomerun://1A2B3C4D` or an M3U URL).
-  Future<Map<String, dynamic>> add({required String uri}) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> add({required String uri}) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/media/grabbers/devices',
       method: 'POST',
       queryParameters: {'uri': uri},
@@ -49,8 +49,8 @@ class PlexDevicesApi {
 
   /// `POST /media/grabbers/devices/discover` — tell every grabber
   /// to probe the LAN for new devices.
-  Future<Map<String, dynamic>> discover() async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> discover() async {
+    final res = await _http.request<Map<String, Object?>>(
       '/media/grabbers/devices/discover',
       method: 'POST',
     );
@@ -59,8 +59,8 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers/devices/{deviceId}` — one device's
   /// details.
-  Future<Map<String, dynamic>> details(String deviceId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> details(String deviceId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/media/grabbers/devices/$deviceId',
     );
     return res.data ?? const {};
@@ -89,8 +89,8 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers/devices/{deviceId}/channels` — channels
   /// the device can see.
-  Future<Map<String, dynamic>> channels(String deviceId) async {
-    final res = await _http.request<Map<String, dynamic>>(
+  Future<Map<String, Object?>> channels(String deviceId) async {
+    final res = await _http.request<Map<String, Object?>>(
       '/media/grabbers/devices/$deviceId/channels',
     );
     return res.data ?? const {};
@@ -113,7 +113,7 @@ class PlexDevicesApi {
     Map<String, Object>? channelMappingByKey,
     List<String>? channelsEnabled,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     channelMapping?.forEach((k, v) => qp['channelMapping[$k]'] = v);
     channelMappingByKey?.forEach((k, v) => qp['channelMappingByKey[$k]'] = v);
     if (channelsEnabled != null) {
@@ -131,10 +131,10 @@ class PlexDevicesApi {
   /// parameters; [name] renames the device.
   Future<void> setPreferences({
     required String deviceId,
-    Map<String, dynamic>? prefs,
+    Map<String, Object?>? prefs,
     String? name,
   }) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (name != null) qp['name'] = name;
     if (prefs != null) qp.addAll(prefs);
     await _http.request<void>(
@@ -148,7 +148,7 @@ class PlexDevicesApi {
   /// channel scan on the device. [source] is grabber-specific
   /// (e.g. `'antenna'`, `'cable'`).
   Future<void> startScan({required String deviceId, String? source}) async {
-    final qp = <String, dynamic>{};
+    final qp = <String, Object?>{};
     if (source != null) qp['source'] = source;
     await _http.request<void>(
       '/media/grabbers/devices/$deviceId/scan',
