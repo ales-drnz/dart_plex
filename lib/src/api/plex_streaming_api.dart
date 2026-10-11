@@ -23,6 +23,109 @@ class PlexStreamingApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.streaming].
   PlexStreamingApi(this._http);
 
+  /// Starts a server-side audio transcode the way PMS accepts it, and
+  /// returns the URL to play.
+  ///
+  /// One request: `/music/:/transcode/universal/decision` for [session],
+  /// then the `start` URL is built with the very same parameters. What PMS
+  /// 1.43.2 was measured to require, and this method does:
+  ///
+  /// * **a decision first** — a `start` for a session with no decision is
+  ///   refused with 400 ("session lacking decision");
+  /// * **a client profile** — the base profile is picked from
+  ///   `X-Plex-Platform`, and there is none for `Linux` or `macOS` (400,
+  ///   "Unable to find client profile"); [clientProfileName] (`Generic`
+  ///   by default) names one explicitly, so any platform works;
+  /// * **a transcode target** in `X-Plex-Client-Profile-Extra`
+  ///   (`add-transcode-target(type=musicProfile&…&audioCodec=…)`);
+  /// * **the bitrate cap as a profile limitation** — [maxBitrateKbps]
+  ///   becomes `add-limitation(…name=audio.bitrate…)`: 96 gave a 96 kbps
+  ///   stream. A plain `maxAudioBitrate` query parameter has no effect.
+  ///   The cap cannot go above the profile's own ceiling (256 kbps AAC for
+  ///   `Generic`).
+  ///
+  /// The URL carries the token and the client identity in its query, since
+  /// the player opens it without this client's headers. [protocol] is
+  /// `hls` (an `.m3u8`, default) or `dash` (an `.mpd`). Keep [session]
+  /// for [pingUniversal] and [stopUniversal].
+  ///
+  /// Check [PlexAudioTranscode.decision]: when it is not playable the URL
+  /// will not work either.
+  ///
+  /// Stop sessions you no longer play ([stopUniversal]): PMS ties one
+  /// client's transcodes together, and in the integration suite a new
+  /// session's bitrate cap was not applied while other transcodes of the
+  /// same client were still open.
+  Future<PlexAudioTranscode> startAudioTranscode({
+    required String ratingKey,
+    required String session,
+    String protocol = 'hls',
+    String audioCodec = 'aac',
+    int? maxBitrateKbps,
+    int offsetSeconds = 0,
+    int mediaIndex = 0,
+    int partIndex = 0,
+    String? clientProfileName = 'Generic',
+  }) async {
+    _requireConnected();
+    final (container, ext) = switch (protocol) {
+      'hls' => ('mpegts', 'm3u8'),
+      'dash' => ('mp4', 'mpd'),
+      _ => throw ArgumentError.value(protocol, 'protocol', 'hls or dash'),
+    };
+    final creds = _http.credentials;
+    final qp = <String, String>{
+      'path': '/library/metadata/$ratingKey',
+      'mediaIndex': '$mediaIndex',
+      'partIndex': '$partIndex',
+      'protocol': protocol,
+      'directPlay': '0',
+      'directStream': '0',
+      'fastSeek': '1',
+      'offset': '$offsetSeconds',
+      'session': session,
+      'X-Plex-Client-Identifier': creds.clientIdentifier,
+      'X-Plex-Product': creds.product,
+      'X-Plex-Version': creds.version,
+      'X-Plex-Platform': creds.platform,
+      'X-Plex-Device': creds.device,
+      'X-Plex-Device-Name': creds.deviceName,
+      if (clientProfileName != null)
+        'X-Plex-Client-Profile-Name': clientProfileName,
+      'X-Plex-Client-Profile-Extra': musicProfileExtra(
+        protocol: protocol,
+        container: container,
+        audioCodec: audioCodec,
+        maxBitrateKbps: maxBitrateKbps,
+      ),
+    };
+    final decision = await decisionUniversal(
+      params: qp,
+      transcodeType: 'music',
+    );
+    final token = _http.token;
+    final url = '${_http.baseUrl}/music/:/transcode/universal/start.$ext?'
+        '${_encode({...qp, if (token != null) 'X-Plex-Token': token})}';
+    return PlexAudioTranscode(decision: decision, url: url, session: session);
+  }
+
+  /// The `X-Plex-Client-Profile-Extra` value that asks for a music
+  /// transcode to [audioCodec] in [container] over [protocol], capped at
+  /// [maxBitrateKbps] when given (see [startAudioTranscode]).
+  static String musicProfileExtra({
+    required String protocol,
+    required String container,
+    required String audioCodec,
+    int? maxBitrateKbps,
+  }) {
+    final target = 'add-transcode-target(type=musicProfile&context=streaming'
+        '&protocol=$protocol&container=$container&audioCodec=$audioCodec)';
+    if (maxBitrateKbps == null) return target;
+    return '$target+add-limitation(scope=musicCodec&scopeName=$audioCodec'
+        '&type=upperBound&name=audio.bitrate&value=$maxBitrateKbps'
+        '&isRequired=false)';
+  }
+
   /// Build a `/music/:/transcode/universal/start.{ext}` URL.
   ///
   /// - [protocol] is `'hls'` (default — segments wrapped in MPEG-TS) or
@@ -34,6 +137,11 @@ class PlexStreamingApi {
   ///   can be passed as `'aac,mp3'`.
   /// - [session] is a stable UUID the caller picks — Plex uses it to
   ///   correlate ping / stop calls.
+  ///
+  /// Deprecated: on PMS 1.43.2 this URL alone is refused (400) — a start
+  /// needs a prior decision for its session and a client profile — and
+  /// [maxAudioBitrate] has no effect. Use [startAudioTranscode].
+  @Deprecated('Use startAudioTranscode, which makes the decision PMS requires')
   String universalAudioUrl({
     required String ratingKey,
     String protocol = 'hls',
@@ -208,15 +316,28 @@ class PlexStreamingApi {
     return PlexTranscodeDecision(code: codeInt, raw: container);
   }
 
-  /// Tell the server a transcode session can be stopped.
+  /// Tell the server a transcode session can be stopped
+  /// (`/video/:/transcode/universal/stop`, which also stops music
+  /// sessions — verified on PMS 1.43.2).
+  ///
+  /// A session that no longer exists — already stopped, timed out, or a
+  /// DASH session whose segments were never fetched (PMS creates it
+  /// lazily) — answers 404; that is the state asked for, so it returns
+  /// normally.
   Future<void> stopUniversal(String session) async {
-    await _http.request<void>(
-      '/video/:/transcode/universal/stop',
-      queryParameters: {'session': session},
-    );
+    try {
+      await _http.request<void>(
+        '/video/:/transcode/universal/stop',
+        queryParameters: {'session': session},
+      );
+    } on PlexException catch (e) {
+      if (!e.isNotFound) rethrow;
+    }
   }
 
-  /// Keep a transcode session alive while the player buffers.
+  /// Keep a transcode session alive while the player buffers. Throws a
+  /// [PlexException] of type [PlexErrorType.notFound] when the session is
+  /// gone (PMS logs "ping without a valid session ID").
   Future<void> pingUniversal(String session) async {
     await _http.request<void>(
       '/video/:/transcode/universal/ping',
@@ -413,4 +534,24 @@ final class PlexTranscodeDecision {
     final raw = this.raw[key];
     return raw is int ? raw : (raw is String ? int.tryParse(raw) : null);
   }
+}
+
+/// A started audio transcode: the server's [decision] and the [url] to
+/// play (see [PlexStreamingApi.startAudioTranscode]).
+final class PlexAudioTranscode {
+  /// What the server decided for the session.
+  final PlexTranscodeDecision decision;
+
+  /// The `start` URL to hand to the player. Valid while [session] lives.
+  final String url;
+
+  /// The session id, for `pingUniversal` / `stopUniversal`.
+  final String session;
+
+  /// Wraps a started transcode.
+  const PlexAudioTranscode({
+    required this.decision,
+    required this.url,
+    required this.session,
+  });
 }

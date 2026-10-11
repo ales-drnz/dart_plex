@@ -861,7 +861,9 @@ class PlexLibraryApi {
     return res.data ?? const {};
   }
 
-  /// `GET /library/sections/{sectionId}/firstCharacters?type=...&sort=...`
+  /// `GET /library/sections/{sectionId}/firstCharacter?type=...&sort=...` (singular:
+  /// `firstCharacters`, as the community API document spells it, answers
+  /// 404 on PMS 1.43.2)
   /// — A-Z scrubber index.
   Future<List<PlexMetadata>> firstCharacters({
     required String sectionId,
@@ -872,7 +874,7 @@ class PlexLibraryApi {
     if (type != null) qp['type'] = type;
     if (sort != null) qp['sort'] = sort;
     return _http.requestJson(
-      '/library/sections/$sectionId/firstCharacters',
+      '/library/sections/$sectionId/firstCharacter',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Directory', PlexMetadata.fromJson),
     );

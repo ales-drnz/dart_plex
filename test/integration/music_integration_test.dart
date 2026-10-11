@@ -259,6 +259,75 @@ void main() {
         }
       });
 
+      test('startAudioTranscode makes the decision PMS requires', () async {
+        Future<Set<String>> sessions() async {
+          final res = await plex.request<Map<String, Object?>>(
+            '/transcode/sessions',
+          );
+          final c = res.data!['MediaContainer']! as Map<String, Object?>;
+          return {
+            for (final s in (c['TranscodeSession'] as List<Object?>?) ?? [])
+              ((s! as Map<String, Object?>)['key']! as String).split('/').last,
+          };
+        }
+
+        // Fresh ids: a session left over from an interrupted run keeps the
+        // decision it was started with.
+        final run = DateTime.now().microsecondsSinceEpoch;
+        final hlsId = 'it-hls-$run';
+        final dashId = 'it-dash-$run';
+        // A client of its own: other suites transcode as the shared test
+        // client, and PMS ties a client's transcodes together.
+        final cache = PlexBootstrapCache.load();
+        final player = PlexClient(
+          credentials: PlexCredentials(
+            clientIdentifier: 'dart-plex-it-transcode-$run',
+            product: 'dart_plex integration tests',
+            version: '0.0.1',
+            device: 'integration-tests',
+            deviceName: 'dart_plex transcode test',
+            platform: 'Test',
+          ),
+        )..connect(cache.baseUrl, accessToken: cache.token);
+        final hls = await player.streaming.startAudioTranscode(
+          ratingKey: tracks.first.ratingKey,
+          session: hlsId,
+          maxBitrateKbps: 96,
+        );
+        final dash = await player.streaming.startAudioTranscode(
+          ratingKey: tracks.first.ratingKey,
+          session: dashId,
+          protocol: 'dash',
+        );
+        try {
+          expect(hls.decision.isPlayable, isTrue);
+          expect(hls.decision.isTranscode, isTrue);
+          final playlist = await plex.request<String>(
+            hls.url,
+            absoluteUrl: true,
+            responseType: PlexResponseType.plain,
+          );
+          expect(playlist.data, startsWith('#EXTM3U'));
+          expect(playlist.data, contains('BANDWIDTH=96000'));
+          final mpd = await plex.request<String>(
+            dash.url,
+            absoluteUrl: true,
+            responseType: PlexResponseType.plain,
+          );
+          expect(mpd.data, contains('<MPD'));
+          // DASH sessions start lazily, with the first segment; HLS at once.
+          expect(await sessions(), contains(hlsId));
+          await plex.streaming.pingUniversal(hlsId);
+        } finally {
+          await plex.streaming.stopUniversal(hlsId);
+          await plex.streaming.stopUniversal(dashId);
+        }
+        await Future<void>.delayed(const Duration(seconds: 1));
+        expect(await sessions(), isNot(contains(hlsId)));
+        // Stopping a session that is already gone is not an error.
+        await plex.streaming.stopUniversal(hlsId);
+      });
+
       test('a timeline report with no duration is refused locally', () {
         expect(
           () => plex.playback.timeline(
