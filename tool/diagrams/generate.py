@@ -92,17 +92,17 @@ def architecture(t):
     d.node(170, 105, 230, 64, 'Your code', 'widgets, services', role='app', mono=False)
     d.node(450, 105, 230, 64, 'PlexClient', 'one sub-API per domain', role='lib')
     d.node(730, 105, 230, 64, 'Typed models', 'each with its raw map', role='lib', mono=False)
-    d.arrow('M285,105 L333,105'); d.text(310, 94, 'calls', size=11)
-    d.arrow('M730,73 L730,55 L170,55 L170,71', kind='sec'); d.text(450, 47, 'answers', size=11)
+    d.arrow('M285,105 L333,105'); d.text(310, 92, 'calls', size=11)
+    d.arrow('M730,73 L730,55 L170,55 L170,71', kind='sec'); d.text(450, 43, 'answers', size=11)
     d.band(20, 200, 860, 110, 'Transport, the same in dart_plex and dart_jellyfin')
     d.node(170, 265, 230, 60, 'http.Client', 'dart:io, cupertino, cronet', role='neutral', mono=False)
-    d.node(450, 265, 230, 60, 'PlexConnection', 'cancel token, retry policy', role='lib')
+    d.node(450, 265, 210, 60, 'PlexConnection', 'cancel token, retry policy', role='lib')
     d.node(730, 265, 230, 60, 'Parsing isolate', 'gunzip, JSON, models', role='lib', mono=False)
-    d.arrow('M450,137 L450,233'); d.text(458, 190, 'requests', anchor='start', size=11)
-    d.arrow('M335,265 L287,265'); d.text(311, 255, 'send', size=11)
-    d.arrow('M565,265 L613,265'); d.text(589, 255, '50 KB+', size=11)
-    d.arrow('M730,233 L730,139', kind='sec'); d.text(738, 190, 'models', anchor='start', size=11)
-    d.text(450, 305, 'smaller answers are parsed in place', size=11)
+    d.arrow('M450,137 L450,233'); d.text(462, 190, 'requests', anchor='start', size=11)
+    d.arrow('M345,265 L287,265'); d.text(316, 252, 'send', size=11)
+    d.arrow('M555,265 L613,265'); d.text(584, 252, '50 KB+', size=11)
+    d.arrow('M730,233 L730,139', kind='sec'); d.text(742, 190, 'models', anchor='start', size=11)
+    d.text(450, 322, 'smaller answers are parsed in place', size=11)
     d.node(170, 400, 230, 56, 'Plex Media Server', 'your server', role='neutral', mono=False)
     d.arrow('M170,297 L170,370', kind='sec')
     d.node(450, 400, 230, 56, 'plex.tv', 'sign-in, server list', role='neutral', mono=False)
@@ -125,10 +125,9 @@ def sign_in_flow(t):
     d.band(20, 20, 680, 120, 'plex.tv')
     d.node(140, 85, 190, 60, 'createPin()', 'a 4-character code', role='lib')
     d.node(360, 85, 190, 60, 'plex.tv/link', 'the user enters it', role='neutral', mono=False)
-    d.node(580, 85, 190, 60, 'pollPin(id:)', 'until authToken', role='lib')
+    d.node(580, 85, 190, 60, 'pollPin(id:)', 'polled until authToken', role='lib')
     d.node(790, 85, 150, 60, 'setToken()', role='app')
     d.arrow('M235,85 L263,85'); d.arrow('M455,85 L483,85'); d.arrow('M675,85 L713,85')
-    d.arrow('M610,115 L610,128 L550,128 L550,117', kind='sec'); d.text(580, 136, 'every few seconds', size=11)
     d.node(140, 235, 190, 60, 'fetchResources()', 'owned and shared servers', role='lib')
     d.node(470, 235, 330, 60, 'bestConnection()', 'local, then https, then direct, then relay', role='lib')
     d.node(790, 235, 150, 60, 'connect()', 'server and token', role='app', size=14)
@@ -141,9 +140,9 @@ def play_reporting(t):
     d = D('play_reporting', 900, 300, t, 'Timeline reports over one track')
     x0, x1 = 120, 860
     d.add(f'<line x1="{x0}" y1="150" x2="{x1}" y2="150" stroke="{d.c["line"]}" stroke-width="2"/>')
-    d.text(x0, 175, '0', size=11); d.text(x1, 175, 'duration', size=11); d.text((x0 + x1) / 2, 175, 'about half', size=11)
+    d.text(x0, 182, '0', size=11); d.text(x1, 182, 'duration', size=11); d.text((x0 + x1) / 2, 182, 'about half', size=11)
     d.add(f'<line x1="{(x0 + x1) / 2}" y1="60" x2="{(x0 + x1) / 2}" y2="160" stroke="{d.c["main"]}" stroke-width="1.5" stroke-dasharray="4 5"/>')
-    d.text((x0 + x1) / 2 + 8, 70, 'the play counts', anchor='start', size=12, color='main', weight=600)
+    d.text((x0 + x1) / 2 + 12, 70, 'the play counts', anchor='start', size=12, color='main', weight=600)
     reports = [(120, 'playing'), (230, 'playing'), (340, 'paused'), (420, 'playing'), (560, 'playing'), (700, 'playing'), (820, 'stopped')]
     for x, s in reports:
         col = d.c['main'] if s != 'paused' else d.c['line']
@@ -168,7 +167,10 @@ def audio_transcode(t):
              (150, 450, 370, 'stopUniversal(session:)', 'main'), (450, 750, 395, 'a 404 is fine: gone', 'sec')]
     for a, b, y, label, kind in steps:
         d.arrow(f'M{a},{y} L{b + (8 if b < a else -8)},{y}', kind=kind)
-        d.text((a + b) / 2, y - 9, label, mono='(' in label, color='label', size=12)
+        # The lifeline of the middle column crosses a label that spans the
+        # whole width: centre that one between the first two columns.
+        lx = (a + b) / 2 if abs(b - a) < 600 else (cols[0][0] + cols[1][0]) / 2
+        d.text(lx, y - 12, label, mono='(' in label, color='label', size=12)
     return d
 
 
@@ -176,14 +178,14 @@ def events(t):
     d = D('events', 900, 320, t, 'Notification frames decoded into typed events')
     d.node(180, 60, 280, 60, 'connectWebSocket()', 'or connectEventSource()', role='lib')
     d.node(560, 60, 260, 60, 'PlexNotification', 'one frame, raw', role='lib')
-    d.arrow('M320,60 L428,60'); d.text(374, 50, 'frames', size=11)
+    d.arrow('M320,60 L428,60'); d.text(374, 47, 'frames', size=11)
     items = [(100, 'PlexPlaySessionEvent', 'play states', 'lib'), (280, 'PlexLibraryItemEvent', 'added, changed, deleted', 'lib'),
              (460, 'PlexActivityEvent', 'scans, refreshes', 'lib'), (640, 'PlexStatusEvent', 'server status', 'lib'),
              (815, 'PlexUnknownEvent', 'anything else', 'ghost')]
     for x, a, b, role in items:
         d.node(x, 215, 168, 64, a, b, role=role, size=12)
         d.arrow(f'M560,92 L560,140 L{x},140 L{x},181', kind='main' if role == 'lib' else 'sec')
-    d.text(568, 125, 'events()', anchor='start', mono=True, size=12, color='label')
+    d.text(572, 125, 'events()', anchor='start', mono=True, size=12, color='label')
     d.text(450, 290, 'switch over the sealed PlexEvent', size=12)
     return d
 
