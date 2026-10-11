@@ -58,6 +58,40 @@ void main() {
         );
       });
 
+      test('grandchildren, recentlyAdded, section search, album fields',
+          () async {
+        final all = await plex.library.grandchildren(artist.ratingKey);
+        expect(all.map((t) => t.ratingKey), tracks.map((t) => t.ratingKey));
+        final page = await plex.library.grandchildren(
+          artist.ratingKey,
+          size: 1,
+        );
+        expect(page, hasLength(1));
+
+        final recent = await plex.library.recentlyAdded(sectionId: sectionId);
+        expect(recent.any((a) => a.ratingKey == album.ratingKey), isTrue);
+        final global = await plex.library.recentlyAdded(size: 5);
+        expect(global, isNotEmpty);
+
+        final found = await plex.search.section(
+          sectionId: sectionId,
+          query: 'Track',
+          type: PlexMetadataType.track,
+        );
+        expect(found.length, greaterThanOrEqualTo(3));
+        expect(found.every((t) => t.type == PlexMetadataType.track), isTrue);
+
+        final detail = (await plex.library.item(album.ratingKey))!;
+        expect(detail.leafCount, 3);
+        expect(detail.librarySectionId, sectionId);
+        expect(
+          recent.firstWhere((a) => a.ratingKey == album.ratingKey).leafCount,
+          3,
+        );
+        expect(detail.originallyAvailableAt, isNotNull);
+        expect(tracks.first.parentYear, detail.year);
+      });
+
       test('countChildren moves no rows and still counts', () async {
         expect(await plex.library.countChildren(album.ratingKey), 3);
         expect(await plex.library.countChildren(artist.ratingKey), 1);

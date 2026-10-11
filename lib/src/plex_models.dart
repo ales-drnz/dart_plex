@@ -869,6 +869,57 @@ class PlexMetadata {
   /// Style tags (typically music-only).
   final List<String> styles;
 
+  /// Release date (`originallyAvailableAt`, a calendar date), when known.
+  final DateTime? originallyAvailableAt;
+
+  /// The parent's year — a track's album year (`parentYear`).
+  final int? parentYear;
+
+  /// Number of leaves under the item (`leafCount`): an album's tracks.
+  /// On PMS 1.43.2 it comes with the item details and
+  /// [PlexLibraryApi.recentlyAdded], not with section listings or
+  /// `/children`.
+  final int? leafCount;
+
+  /// How many of those leaves were played (`viewedLeafCount`).
+  final int? viewedLeafCount;
+
+  /// Number of children (`childCount`): an artist's albums, when the
+  /// response carries it. On PMS 1.43.2 search hubs do; section listings
+  /// and the artist's own details do not — use
+  /// [PlexLibraryApi.countChildren] there.
+  final int? childCount;
+
+  /// How many times the item was skipped (`skipCount`).
+  final int? skipCount;
+
+  /// When the user last rated the item (`lastRatedAt`).
+  final DateTime? lastRatedAt;
+
+  /// The library section the item belongs to (`librarySectionID`); in
+  /// item details, not in section listings.
+  final String? librarySectionId;
+
+  /// That section's title (`librarySectionTitle`).
+  final String? librarySectionTitle;
+
+  /// The parent's `guid`.
+  final String? parentGuid;
+
+  /// The grandparent's `guid`.
+  final String? grandparentGuid;
+
+  /// Sonic distance from the seed, on items from
+  /// [PlexLibraryApi.nearestToTrack] (`distance`; smaller is closer).
+  final double? distance;
+
+  /// Search relevance, on items from search (`score`).
+  final double? score;
+
+  /// Corner colours for an UltraBlur background, when the item details
+  /// carry them (`UltraBlurColors`).
+  final PlexUltraBlurColors? ultraBlurColors;
+
   /// The entry id inside a regular playlist (`playlistItemID`), present
   /// only on items read from `/playlists/{id}/items`.
   ///
@@ -921,6 +972,20 @@ class PlexMetadata {
     this.addedAt,
     this.updatedAt,
     this.playlistItemId,
+    this.originallyAvailableAt,
+    this.parentYear,
+    this.leafCount,
+    this.viewedLeafCount,
+    this.childCount,
+    this.skipCount,
+    this.lastRatedAt,
+    this.librarySectionId,
+    this.librarySectionTitle,
+    this.parentGuid,
+    this.grandparentGuid,
+    this.distance,
+    this.score,
+    this.ultraBlurColors,
   });
 
   /// Parses one `<Video>` / `<Track>` / `<Directory>` metadata entry. The
@@ -966,6 +1031,24 @@ class PlexMetadata {
       moods: _tagList(json['Mood']),
       styles: _tagList(json['Style']),
       playlistItemId: _str(json['playlistItemID']),
+      originallyAvailableAt: _date(json['originallyAvailableAt']),
+      parentYear: _int(json['parentYear']),
+      leafCount: _int(json['leafCount']),
+      viewedLeafCount: _int(json['viewedLeafCount']),
+      childCount: _int(json['childCount']),
+      skipCount: _int(json['skipCount']),
+      lastRatedAt: _epochSec(json['lastRatedAt']),
+      librarySectionId: _str(json['librarySectionID']),
+      librarySectionTitle: _str(json['librarySectionTitle']),
+      parentGuid: _str(json['parentGuid']),
+      grandparentGuid: _str(json['grandparentGuid']),
+      distance: _double(json['distance']),
+      score: _double(json['score']),
+      ultraBlurColors: json['UltraBlurColors'] is Map<String, dynamic>
+          ? PlexUltraBlurColors.fromJson(
+              json['UltraBlurColors'] as Map<String, dynamic>,
+            )
+          : null,
       raw: json,
     );
   }
@@ -1683,6 +1766,15 @@ DateTime? _dt(Object? v) {
   if (v == null) return null;
   if (v is String) return DateTime.tryParse(v)?.toUtc();
   return null;
+}
+
+/// A `YYYY-MM-DD` calendar date as UTC midnight; tolerant of a full
+/// timestamp.
+DateTime? _date(Object? v) {
+  if (v is! String || v.isEmpty) return null;
+  final d = DateTime.tryParse(v);
+  if (d == null) return null;
+  return d.isUtc ? d : DateTime.utc(d.year, d.month, d.day);
 }
 
 DateTime? _epochSec(Object? v) {

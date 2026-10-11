@@ -9,8 +9,15 @@ import 'package:yaml/yaml.dart';
 /// Soft floor for [computePlexLocalCoverage] used as a regression
 /// tripwire by `test/spec_drift_watchdog_test.dart`.
 ///
-/// Measured coverage is ~0.98 (192/196 spec paths) as of the last
-/// audit. This floor sits ~5% below that so ordinary churn does not
+/// Measured coverage is ~0.59 (203/344 spec paths) against the spec
+/// pinned at LukeHagar/plex-api-spec@3f0fb272b29c (2026-10-11), which grew
+/// from 196 to 344 paths. Most of what is unwrapped is player remote
+/// control, sync, account and Live TV management, out of scope for this
+/// package; several music routes the spec lists answer 404 on PMS 1.43.2
+/// (`/library/metadata/{id}/parent`, `/grandparent`,
+/// `/library/sections/{id}/hubs`, `/artists`, `/byDecade`, `/playlists`)
+/// and are left out on purpose. This floor sits ~5% below that so
+/// ordinary churn does not
 /// trip it, but deleting a meaningful chunk of the typed wrappers
 /// (which halves coverage) fails the suite — the "sudden drop is the
 /// signal" mechanism that was previously only `print`ed.
@@ -18,7 +25,7 @@ import 'package:yaml/yaml.dart';
 /// Raise this number deliberately when real coverage climbs; never
 /// lower it to make a failing build pass without first confirming the
 /// wrappers were intentionally removed.
-const double plexLocalCoverageFloor = 0.93;
+const double plexLocalCoverageFloor = 0.55;
 
 /// Compute approximate static coverage of the pinned Plex spec by
 /// the library's typed wrappers. Returns `(matched, total)` where
@@ -30,11 +37,18 @@ const double plexLocalCoverageFloor = 0.93;
 /// `test/integration/`, which exercise the library against a real
 /// Plex Media Server running in Docker.
 ({int matched, int total}) computePlexLocalCoverage() {
+  final (:matched, :total, missing: _) = plexSpecCoverage();
+  return (matched: matched, total: total);
+}
+
+/// Like [computePlexLocalCoverage], also listing the spec paths no
+/// wrapper mentions — the to-do list when the pinned spec is refreshed.
+({int matched, int total, List<String> missing}) plexSpecCoverage() {
   final specRaw = File('docs/plex-api-spec.yaml').readAsStringSync();
   final spec = loadYaml(specRaw);
-  if (spec is! Map) return (matched: 0, total: 0);
+  if (spec is! Map) return (matched: 0, total: 0, missing: const <String>[]);
   final paths = spec['paths'];
-  if (paths is! Map) return (matched: 0, total: 0);
+  if (paths is! Map) return (matched: 0, total: 0, missing: const <String>[]);
 
   final specPaths = <String>{};
   paths.forEach((path, ops) {
@@ -51,10 +65,15 @@ const double plexLocalCoverageFloor = 0.93;
   final libCanon = _scanLibraryPaths('lib/src/api');
 
   var matched = 0;
+  final missing = <String>[];
   for (final p in specPaths) {
-    if (libCanon.contains(_canonicalize(p))) matched++;
+    if (libCanon.contains(_canonicalize(p))) {
+      matched++;
+    } else {
+      missing.add(p);
+    }
   }
-  return (matched: matched, total: specPaths.length);
+  return (matched: matched, total: specPaths.length, missing: missing..sort());
 }
 
 Set<String> _scanLibraryPaths(String dir) {

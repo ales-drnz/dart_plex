@@ -33,7 +33,7 @@ const String _upstreamUrl =
 /// Fetching `main` instead pulls a much larger spec (343 paths as of
 /// 2026-08) and drops measured coverage below the floor — the drop is
 /// upstream growth, not deleted wrappers.
-const String pinnedSpecCommit = '6af6b1af6f82';
+const String pinnedSpecCommit = '3f0fb272b29c';
 const String _pinnedPath = 'docs/plex-api-spec.yaml';
 const String _cacheDir = 'test/.spec_cache';
 const Duration _cacheTtl = Duration(hours: 24);

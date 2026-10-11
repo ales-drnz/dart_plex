@@ -318,6 +318,45 @@ class PlexLibraryApi {
     );
   }
 
+  /// Grandchildren of an item (`/library/metadata/{ratingKey}/grandchildren`)
+  /// — every track of an artist, in album order, without a request per
+  /// album. Pages with [size] (and [start], default 0); verified on PMS
+  /// 1.43.2.
+  Future<List<PlexMetadata>> grandchildren(
+    String ratingKey, {
+    int? start,
+    int? size,
+  }) {
+    final qp = containerPage(start: start, size: size);
+    return _http.requestJson(
+      '/library/metadata/$ratingKey/grandchildren',
+      queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
+    );
+  }
+
+  /// Recently added items, newest first — of one section when [sectionId]
+  /// is given (`/library/sections/{id}/recentlyAdded`), else of every
+  /// section (`/library/recentlyAdded`).
+  ///
+  /// In a music section the server answers *albums* (verified on PMS
+  /// 1.43.2, which ignores a `type` asking for tracks), so there is no
+  /// type parameter. Pages with [size] (and [start], default 0).
+  Future<List<PlexMetadata>> recentlyAdded({
+    String? sectionId,
+    int? start,
+    int? size,
+  }) {
+    final qp = containerPage(start: start, size: size);
+    return _http.requestJson(
+      sectionId == null
+          ? '/library/recentlyAdded'
+          : '/library/sections/$sectionId/recentlyAdded',
+      queryParameters: qp.isEmpty ? null : qp,
+      itemsOf('Metadata', PlexMetadata.fromJson),
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Similar / sonic radio
   // -------------------------------------------------------------------------

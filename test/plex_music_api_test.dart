@@ -87,6 +87,43 @@ void main() {
     });
   });
 
+  group('library: grandchildren, recentlyAdded, section search', () {
+    test('grandchildren pages', () async {
+      await plex.library.grandchildren('1', size: 100);
+      expect(
+        adapter.lastRequest!.uri.path,
+        '/library/metadata/1/grandchildren',
+      );
+      expect(query(), {
+        'X-Plex-Container-Start': '0',
+        'X-Plex-Container-Size': '100',
+      });
+    });
+
+    test('recentlyAdded is global or per section', () async {
+      await plex.library.recentlyAdded();
+      expect(adapter.lastRequest!.uri.path, '/library/recentlyAdded');
+      expect(adapter.lastRequest!.uri.query, isEmpty);
+      await plex.library.recentlyAdded(sectionId: '1', size: 20);
+      expect(
+        adapter.lastRequest!.uri.path,
+        '/library/sections/1/recentlyAdded',
+      );
+      expect(query()['X-Plex-Container-Size'], '20');
+    });
+
+    test('search.section sends the type it needs', () async {
+      await plex.search.section(
+        sectionId: '1',
+        query: 'Rock & Roll',
+        type: PlexMetadataType.track,
+        limit: 10,
+      );
+      expect(adapter.lastRequest!.uri.path, '/library/sections/1/search');
+      expect(query(), {'query': 'Rock & Roll', 'type': '10', 'limit': '10'});
+    });
+  });
+
   group('library.nearestToTrack', () {
     test('excludes by ratingKey strings', () async {
       await plex.library.nearestToTrack(
@@ -314,6 +351,44 @@ void main() {
       expect(m.parentThumbVersion, '1791659978');
       expect(m.grandparentThumbVersion, '1791650000');
       expect(m.artVersion, '1791650001');
+    });
+
+    test('album and track fields from PMS 1.43.2 responses', () {
+      final album = PlexMetadata.fromJson(const {
+        'ratingKey': '2',
+        'type': 'album',
+        'leafCount': 3,
+        'viewedLeafCount': 1,
+        'originallyAvailableAt': '2020-01-01',
+        'librarySectionID': 1,
+        'librarySectionTitle': 'Music',
+        'parentGuid': 'local://1',
+        'score': '0.72000',
+        'UltraBlurColors': {'topLeft': '003900', 'bottomRight': '067203'},
+      });
+      expect(album.leafCount, 3);
+      expect(album.viewedLeafCount, 1);
+      expect(album.originallyAvailableAt, DateTime.utc(2020));
+      expect(album.librarySectionId, '1');
+      expect(album.librarySectionTitle, 'Music');
+      expect(album.parentGuid, 'local://1');
+      expect(album.score, 0.72);
+      expect(album.ultraBlurColors?.topLeft, '003900');
+
+      final track = PlexMetadata.fromJson(const {
+        'ratingKey': '3',
+        'type': 'track',
+        'parentYear': 2020,
+        'lastRatedAt': 1791659455,
+        'skipCount': 2,
+        'distance': 0.12,
+        'grandparentGuid': 'local://1',
+      });
+      expect(track.parentYear, 2020);
+      expect(track.lastRatedAt?.year, 2026);
+      expect(track.skipCount, 2);
+      expect(track.distance, 0.12);
+      expect(track.grandparentGuid, 'local://1');
     });
 
     test('PlexArtwork.versionOf ignores paths without a version', () {

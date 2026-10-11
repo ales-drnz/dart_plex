@@ -48,6 +48,29 @@ class PlexSearchApi {
     );
   }
 
+  /// Search one section for one kind of item
+  /// (`/library/sections/{sectionId}/search?query=…&type=…`).
+  ///
+  /// [type] is required: PMS 1.43.2 answers 400 without it (verified).
+  /// Unlike [hubs] the answer is a flat list of [type] only, so it suits
+  /// a "tracks matching…" list.
+  Future<List<PlexMetadata>> section({
+    required String sectionId,
+    required String query,
+    required PlexMetadataType type,
+    int? limit,
+  }) {
+    return _http.requestJson(
+      '/library/sections/$sectionId/search',
+      queryParameters: {
+        'query': query,
+        'type': type.value,
+        if (limit != null) 'limit': limit,
+      },
+      itemsOf('Metadata', PlexMetadata.fromJson),
+    );
+  }
+
   /// `GET /hubs/search/voice` — voice-search variant of [hubs].
   /// Same response shape as `hubs()`; the server treats the query
   /// as a free-form natural-language phrase rather than a token
