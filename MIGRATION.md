@@ -10,9 +10,14 @@
 | `plex.request(path, cancelToken: CancelToken())` | `plex.request(path, cancelToken: PlexCancelToken())` — or `plex.withCancelToken(token).library…` for every call |
 | `on DioException` / `PlexException.fromDio` | `on PlexException` only; `e.isNetworkFailure`, `e.isTransient`, `e.isNotFound`, `e.isCancelled` |
 | `plex.fetchBytes(url)` | `plex.requestBytes(url)` |
+| `plex.library.item(key)`, `plex.playlists.items(id)`, `plex.playback.scrobble(key)`, … | `plex.library.item(ratingKey: key)`, `plex.playlists.items(playlistId: id)`, `plex.playback.scrobble(ratingKey: key)` — every id is a named parameter |
+| `plex.library.autocomplete(sectionId: s, fieldQuery: q)` | `autocomplete(sectionId: s, type: PlexMetadataType.track, fieldQuery: q)` — PMS answers 400 without a type |
 | `(await plex.server.identity())['machineIdentifier']` | `(await plex.server.identity()).machineIdentifier` |
 | `plex.sessions.history()` → `List<Map>` | → `PlexMediaContainer<PlexHistoryEntry>`; read `.items`, `.totalSize` |
-| `activities.list()`, `butler.tasks()`, `preferences.all()/byId()` → maps | `PlexActivity`, `PlexButlerTask`, `PlexSetting` (`.raw` keeps the map) |
+| `activities.list()`, `butler.tasks()`, `preferences.all()/byId()` → maps | `PlexActivity`, `PlexButlerTask`, `PlexSetting` (`.raw` keeps the map); `byId` answers `null` for an unknown id |
+| `container.raw['Metadata']` | `container.items` — `raw` no longer repeats the entry array |
+| `e.isRetriable` | `e.isNetworkFailure` (or `e.isTransient` to include 5xx and 429) |
+| `PlexDVRsApi` | `PlexDvrsApi` (the old name is a deprecated typedef) |
 | `timeline(state: 'playing', …)` | `timeline(playState: PlexPlayState.playing, …)` (the `String` still works, deprecated) |
 | `timeline(durationMs: 0, …)` | throws `ArgumentError`: PMS never counts such a play — send the real length |
 | `timeline(playQueueItemId: '7')` | `timeline(playQueueItemID: 7)` |
@@ -21,6 +26,8 @@
 | `streaming.universalAudioUrl(…)` | `await streaming.startAudioTranscode(…)` → `.url`, `.decision`, `.session` |
 | `raw['a']['b']` (dynamic access) | `(raw['a'] as Map<String, Object?>)['b']` |
 | `class Fake extends PlexMetadata` | models are `final`; build them with `PlexMetadata.fromJson` |
+| `class FakeClient implements PlexClient` | add the new members (`close`, `withCancelToken`, `requestStream`, …) or use `noSuchMethod` |
+| `plex.request(path, data: {...}, extraHeaders: {'Content-Type': 'application/x-www-form-urlencoded'})` | unchanged: a map with a form content type is still sent form-encoded |
 
 Tests that injected a Dio `HttpClientAdapter` to inspect the outgoing URI now
 inject an `http.Client` (`MockClient` from `package:http/testing.dart`, or a
@@ -45,7 +52,7 @@ final favourites = await plex.playlists.list(
   filters: [PlexFilter.rated(), PlexFilter.titleContains(query)],
 );
 
-// One entry of a playlist, not every copy of the track.
+// One entry of a playlist, by its own id rather than the track's.
 await plex.playlists.removeItem(playlistId: id, playlistItemId: entry.playlistItemId!);
 
 // Artwork cache key that changes when the cover does.

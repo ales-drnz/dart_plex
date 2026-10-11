@@ -3,22 +3,35 @@
 Targets Plex Media Server `1.43.x`; every behaviour noted as verified below was checked against PMS `1.43.2` in the integration stack.
 
 ### Breaking
-- **The transport is `package:http`, not Dio.** `PlexClient(dio:)` is gone: pass any `http.Client` as `httpClient:` (a `CupertinoClient` or `CronetClient` for HTTP/2 and the system proxy, a `MockClient` in tests), or none for the default `dart:io` one. `request()` / `get()` / `post()` / `put()` / `delete()` return a `PlexResponse<T>` (`.data`, `.statusCode`, `.headers`, `.contentType`) instead of Dio's `Response<T>`, take a `PlexResponseType` instead of Dio's `ResponseType`, and a `PlexCancelToken` instead of Dio's `CancelToken`. `requestBytes()` answers a `PlexResponse<Uint8List>`. `PlexException.fromDio` and the deprecated `fetchBytes()` are gone. The query string, body and headers on the wire are unchanged.
-- **Typed answers instead of maps**: `server.identity()` → `PlexServerIdentity`, `server.info()` → `PlexServerInfo`, `sessions.history()` → `PlexMediaContainer<PlexHistoryEntry>` (with `totalSize`), `activities.list()` → `List<PlexActivity>`, `butler.tasks()` → `List<PlexButlerTask>`, `preferences.all()` / `byId()` → `PlexSetting`. Each keeps the body in `raw`, so `identity()['machineIdentifier']` becomes `identity().machineIdentifier` (or `.raw['machineIdentifier']`).
+- **The transport is `package:http`, not Dio.** `PlexClient(dio:)` is gone: pass any `http.Client` as `httpClient:` (a `CupertinoClient` or `CronetClient` for HTTP/2 and the system proxy, a `MockClient` in tests), or none for the default `dart:io` one. `request()` / `get()` / `post()` / `put()` / `delete()` return a `PlexResponse<T>` (`.data`, `.statusCode`, `.headers`, `.contentType`) instead of Dio's `Response<T>`, take a `PlexResponseType` instead of Dio's `ResponseType`, and a `PlexCancelToken` instead of Dio's `CancelToken`. `requestBytes()` answers a `PlexResponse<Uint8List>`. `PlexException.fromDio` and the deprecated `fetchBytes()` are gone; `PlexException.cause` is the transport's `ClientException` (or `null`), not a `DioException`.
+- **What the typed API sends is what 0.1 sent** — same query string, bodies and headers, checked request by request against 0.1.3. The differences are in the raw `request()` escape hatch and in edge cases:
+  - a query value that is not a `String` (a `DateTime`, a number) is now form-encoded like a string, so a `+` in it no longer reaches the server as a space; a `Set` repeats its key like a `List`;
+  - a `List<int>` body travels as bytes (0.1 sent the text `"[1, 2]"` — `library.setItemArtwork(data:)` uploads real bytes now), a `List` of other values as JSON;
+  - an empty answer with no JSON content type is `null` in `PlexResponse.data`, not `""`;
+  - the wait for the response headers is bounded by `connectTimeout + receiveTimeout` (45 s by default; Dio counted `receiveTimeout` from the connection) — `package:http` does not say when the connection is up. An injected client brings its own connect timeout;
+  - an answer of the wrong shape is a `PlexErrorType.parse` error with its status code (was `unknown`); a body cut short is a `connection` error.
+- **Ids are named parameters everywhere.** 42 methods took their id positionally while the other 111 named it, sometimes within one class. All are named now: `library.item(ratingKey: …)`, `library.children(ratingKey: …)`, `playlists.items(playlistId: …)`, `playlists.delete(playlistId: …)`, `playback.scrobble(ratingKey: …)`, `streaming.stopUniversal(session: …)`, `playQueues.clear(playQueueId: …)`, … (`preferences.set` and `library.matches` keep their positional map).
+- **Typed answers instead of maps**: `server.identity()` → `PlexServerIdentity`, `server.info()` → `PlexServerInfo`, `sessions.history()` → `PlexMediaContainer<PlexHistoryEntry>` (with `totalSize`), `activities.list()` → `List<PlexActivity>`, `butler.tasks()` → `List<PlexButlerTask>`, `preferences.all()` → `List<PlexSetting>`, `preferences.byId()` → `PlexSetting?` (`null` when there is no such setting). Each keeps the body in `raw`, so `identity()['machineIdentifier']` becomes `identity().machineIdentifier` (or `.raw['machineIdentifier']`).
 - **`Object?` instead of `dynamic`** in every map and list the API exposes (`raw`, `queryParameters`, the admin answers that are still maps). Reading and assigning work as before; a chained dynamic access such as `raw['a']['b']` now needs a type check.
-- **Models are `final`**: they can no longer be extended or implemented outside the package. `PlexClient` and the sub-API classes stay open, so test fakes still work.
-- `playback.timeline()` throws an `ArgumentError` for `durationMs <= 0` or a negative `timeMs`: PMS never counts a play reported with duration 0 (verified).
+- **Classes are `final`**: the models, and also `PlexException`, `PlexCredentials`, `PlexFilter`, `PlexNotification` and `PlexTranscodeDecision`, can no longer be extended or implemented outside the package. `PlexClient` and the sub-API classes stay open, but they gained members (`close()`, `withCancelToken()`, `requestStream()`, new methods): a fake that `implements` one must add them — extend it, or use `noSuchMethod`.
+- `PlexMediaContainer.raw` holds the envelope's own fields, without the entry array (that is `items`): keeping the JSON of a large page next to its models doubled what it held.
+- `playback.timeline()`:
+  - throws an `ArgumentError` for `durationMs <= 0` or a negative `timeMs` — PMS never counts a play reported with duration 0 (verified);
+  - sends a `timeMs` past `durationMs` as `durationMs` (PMS answers 400 to `time > duration`);
+  - takes exactly one of `playState:` and the deprecated `state:` (neither is required at compile time any more), and refuses `PlexPlayState.unknown`.
 - `playlists.items()` and `children()` / `allLeaves()` refuse a `start` without a `size`, and always send `X-Plex-Container-Start` with `-Size`: PMS ignores `Size` on its own and answers the whole list (verified).
+- `library.autocomplete()` takes a required `PlexMetadataType type`: PMS answers 400 without one (verified).
 - `streaming.stopUniversal()` returns normally on 404 (the session is already gone).
 
 ### Added
-- `PlexClient.withCancelToken(token)`: a view of the client whose every sub-API call is cancelled by `token.cancel()` — for leaving a page, changing a filter, typing in a search.
+- `PlexClient.withCancelToken(token)`: a view of the client whose every sub-API call is cancelled by `token.cancel()` — for leaving a page, changing a filter, typing in a search. `PlexClient.close()` closes the client the library created.
 - `PlexRetryPolicy` (`retryPolicy:`): opt-in resend of `GET` / `HEAD` after a network failure, `502`, `503`, `504` or `429`, with backoff, jitter and `Retry-After`.
 - `PlexException.isNetworkFailure`, `isTransient`, `isNotFound`, `isCancelled`, `retryAfter`, with the same meaning as in `dart_jellyfin`.
-- `requestStream()`, and `downloadToFile()` in the new `package:dart_plex/io.dart` (streams to disk, whole file or none, with progress).
-- `library.children(key, start:, size:, sort:)`, `countChildren()`, `allLeaves(key, start:, size:)`, `grandchildren()`, `recentlyAdded(sectionId:)`; `search.section()`.
+- `requestStream()`, and `downloadToFile()` in the new `package:dart_plex/io.dart`: streams to disk at the pace the disk takes, through a temporary file renamed into place, so the path holds the whole file or what was there before; with progress.
+- `library.children(ratingKey:, start:, size:, sort:)`, `countChildren()`, `allLeaves(ratingKey:, start:, size:)`, `grandchildren()`, `recentlyAdded(sectionId:)`; `search.section()`.
 - `playlists.list()` / `count()` take `filters:` — `/playlists` honours the general filter syntax, e.g. `PlexFilter.titleContains()` and `PlexFilter.rated()` (verified) — and `sort:`.
-- `PlexMetadata.playlistItemId`, for removing or moving one entry of a track listed twice.
+- `PlexMetadata.playlistItemId`: a playlist entry's own id, for removing or moving that entry.
+- `PlexMetadata.roles`: the `Role` tag names, a track's performers.
 - `PlexMetadata.thumbVersion`, `artVersion`, `parentThumbVersion`, `grandparentThumbVersion` and `PlexArtwork.versionOf()`: the timestamp PMS appends to artwork paths, which changes with the image (verified) — for artwork cache keys.
 - `PlexStream.gain`, `albumGain`, `peak`, `albumPeak`, `loudness`, `lra`; `PlexMetadata.audioStream`.
 - `PlexMetadata.originallyAvailableAt`, `parentYear`, `leafCount`, `viewedLeafCount`, `childCount`, `skipCount`, `lastRatedAt`, `librarySectionId`, `librarySectionTitle`, `parentGuid`, `grandparentGuid`, `distance`, `score`, `ultraBlurColors`.
@@ -28,31 +41,37 @@ Targets Plex Media Server `1.43.x`; every behaviour noted as verified below was 
 - `PlexPaging.pages()` / `items()`.
 
 ### Changed
-- JSON decoding, model parsing and gzip inflation run on a background isolate above `jsonIsolateThreshold` (50 KB by default, now a constructor argument). Measured on six parallel 1.5 MB pages, the stall of the calling isolate went from 38–64 ms to 14–23 ms.
-- `scrobble()`, `unscrobble()` and `rate()` are sent as `PUT`, as the API document asks (`GET` still works on 1.43.2).
+- JSON decoding, model parsing and gzip inflation run on a background isolate above `jsonIsolateThreshold` (50 KB by default, now a constructor argument); gzip is checked against its trailer, so a body cut short fails instead of coming back short. On a 5 MB page the calling isolate still pauses for about a third of an inline parse (garbage collection), so page large lists.
+- `scrobble()`, `unscrobble()` and `rate()` (and so `setFavorite()`) are sent as `PUT`, as the API document asks (`GET` still works on 1.43.2).
+- `connectEventSource()` no longer drops a quiet stream after the receive timeout, and closing it before the server answers cancels the request.
+- `PlexDVRsApi` is `PlexDvrsApi`, matching `PlexEpgApi`.
 - The pinned community API document moves to LukeHagar/plex-api-spec@3f0fb272b29c.
 - Stricter lints; every documentation reference resolves.
 
 ### Fixed
 - `library.firstCharacters()` called `/firstCharacters`, which answers 404; the route is `/firstCharacter`.
-- A transcode PMS accepts: `universalAudioUrl()` built a URL PMS 1.43.2 refuses (no prior decision, no client profile — there is none for platform `Linux` or `macOS` — no transcode target) and its `maxAudioBitrate` had no effect. `startAudioTranscode()` makes the decision, sends `X-Plex-Client-Profile-Name` and the target, and caps the bitrate with a profile limitation (96 → a 96 kbps stream, verified).
+- A transcode PMS accepts: `universalAudioUrl()` built a URL PMS 1.43.2 refuses (no prior decision from the client, no client profile — there is none for platform `Linux` or `macOS` — no transcode target) and its `maxAudioBitrate` had no effect. `startAudioTranscode()` makes the decision, sends `X-Plex-Client-Profile-Name` and the target, and caps the bitrate with a profile limitation (96 → a 96 kbps stream, verified).
+- `library.setItemArtwork(data:)` uploaded the text of the byte list instead of the bytes.
 - Two `create` calls threw a bare `Exception` when the server answered no item; they throw a `PlexException` of type `parse`.
 
 ### Deprecated
 - `streaming.universalAudioUrl()` → `startAudioTranscode()`.
 - `timeline(state: String)` and `PlexPlaybackApi.state*` → `timeline(playState: PlexPlayState)`; `timeline(playQueueItemId: String)` → `playQueueItemID: int`.
 - `nearestToTrack(excludeParentID: int, excludeGrandparentID: int)` → `excludeParentRatingKey` / `excludeGrandparentRatingKey` (`String`).
+- `PlexException.isRetriable` and `PlexErrorType.isRetriable` → `isNetworkFailure` (or `isTransient` to include 5xx and 429).
+- `PlexDVRsApi` → `PlexDvrsApi`.
 
 ### Notes (verified on PMS 1.43.2)
-- **What counts a play**: timeline reports in real time covering about half the track (50 % of 60 s counted, 40 % did not); fast-forwarded reports and `duration=0` never count; a 3 s track never counted. A counted play adds a history entry; `scrobble()` does not.
-- `/library/metadata/{id}/allLeaves` ignores `sort`.
+- **What counts a play**: timeline reports that follow real time over about half the track (50 % of a 60 s track counted, 40 % did not — measured on full-length tracks); fast-forwarded reports and `duration=0` never count. PMS judges the *reported* duration: a 3 s file reported with its length never counted, the same file reported as 20 s and played for 16 s did. A counted play adds a history entry; `scrobble()` does not.
+- `/library/metadata/{id}/allLeaves` ignores `sort` (`/grandchildren` honours it).
+- `recentlyAdded` in a music section answers albums whatever `type` says.
 - PMS serves an MP3 part without its ID3v2 tag: a downloaded file has no embedded tags or cover.
-- PMS ignores adding an item that is already in a regular playlist.
+- PMS ignores adding an item that is already in a regular playlist, on every path tried — a track cannot be listed twice through the API.
 - Several routes in the community document answer 404 (`/library/metadata/{id}/parent`, `/grandparent`, `/library/sections/{id}/hubs`, `/artists`, `/byDecade`, `/playlists`); they are not wrapped.
 
 ### Tests
-- A spec contract test calls every public method and checks each request's route, method and query parameters against the pinned document; parameters the document misses are listed with how they were verified.
-- Wire tests for the new surface, real anonymised fixtures, integration tests against PMS 1.43.2, and read-only live tests against any server (`PLEX_URL` / `PLEX_TOKEN`, tag `live`).
+- A spec contract test calls every public method, deprecated ones included, and checks each request's route, method and query parameters — with their case — against the pinned document, which is now tracked in `docs/`; parameters the document misses are listed with how they were verified, or marked as not verified.
+- Wire tests for the new surface, real anonymised fixtures, integration tests against PMS 1.43.2 (which now refuses requests without a token, so a transport that stopped sending it would fail), and read-only live tests against any server (`PLEX_URL` / `PLEX_TOKEN`, tag `live`). A plain `dart test` skips the integration suites; `dart test -P integration` runs everything.
 
 ## [0.1.3] - 22-09-2026
 
