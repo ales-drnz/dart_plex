@@ -23,7 +23,9 @@ abstract final class PlexPaging {
   /// Cancelling the subscription stops it before the next request; pair
   /// it with a cancel token to drop the request in flight too.
   ///
-  /// Each call costs one request; nothing is fetched ahead.
+  /// Each call costs one request; nothing is fetched ahead. When the
+  /// total is an exact multiple of [pageSize] the last request comes back
+  /// empty: a page cannot tell that it was the last one.
   static Stream<List<T>> pages<T>(
     Future<List<T>> Function(int start, int size) fetch, {
     int pageSize = 100,
