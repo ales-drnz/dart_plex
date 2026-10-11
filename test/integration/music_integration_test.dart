@@ -7,8 +7,10 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dart_plex/dart_plex.dart';
+import 'package:dart_plex/io.dart';
 import 'package:test/test.dart';
 
 import '_fixture.dart';
@@ -326,6 +328,25 @@ void main() {
         expect(await sessions(), isNot(contains(hlsId)));
         // Stopping a session that is already gone is not an error.
         await plex.streaming.stopUniversal(hlsId);
+      });
+
+      test('downloadToFile writes the original file', () async {
+        final track = (await plex.library.item(tracks.first.ratingKey))!;
+        final part = track.media.single.parts.single;
+        final (url, ext) = plex.streaming.directFileUrl(partKey: part.key!);
+        final dir = await Directory.systemTemp.createTemp('plex_dl');
+        try {
+          final path = '${dir.path}/track.$ext';
+          final n = await plex.downloadToFile(url, path);
+          expect(await File(path).length(), n);
+          // PMS serves the audio without its ID3v2 tag (verified on 1.43.2:
+          // the body is the file minus its first 137 bytes, the tag), so
+          // the download is at most Part.size.
+          expect(n, lessThanOrEqualTo(part.size!));
+          expect(n, greaterThan(part.size! - 4096));
+        } finally {
+          await dir.delete(recursive: true);
+        }
       });
 
       test('a timeline report with no duration is refused locally', () {

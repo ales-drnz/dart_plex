@@ -69,7 +69,9 @@ void main() {
           greaterThan(0),
         );
         expect(
-            tracks.first.parentThumbVersion ?? album.thumbVersion, isNotNull);
+          tracks.first.parentThumbVersion ?? album.thumbVersion,
+          isNotNull,
+        );
       });
 
       test('playlists narrow on the server', () async {

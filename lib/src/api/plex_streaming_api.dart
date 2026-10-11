@@ -9,6 +9,7 @@ import '../plex_connection.dart';
 import '../plex_credentials.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../plex_models.dart';
 import '../transport/plex_response.dart';
 
 /// Audio (and video) streaming URL builders.
@@ -184,6 +185,12 @@ class PlexStreamingApi {
   }
 
   /// Build the direct-file download URL — best quality, no transcode.
+  ///
+  /// PMS 1.43.2 serves an MP3 part *without its ID3v2 tag* (verified: the
+  /// body was the file minus its first 137 bytes, exactly the tag), so a
+  /// downloaded file carries no embedded tags or cover, and is a little
+  /// shorter than [PlexPart.size]. Take metadata and artwork from the
+  /// server, not from the downloaded file.
   ///
   /// [partKey] is the metadata-supplied `Part.key`, which already carries
   /// the partId, the required `{changestamp}` cache-busting segment, and
