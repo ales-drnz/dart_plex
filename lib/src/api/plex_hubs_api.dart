@@ -15,6 +15,8 @@ import 'plex_search_api.dart';
 /// row of [PlexMetadata]; render them as horizontal carousels.
 ///
 /// Search hubs live on [PlexSearchApi.hubs] (separate endpoint).
+///
+/// {@category Images and hubs}
 class PlexHubsApi {
   final PlexConnection _http;
 

@@ -12,6 +12,8 @@ import 'plex_live_tv_api.dart';
 /// [PlexLiveTvApi]). Admin only. Each DVR groups one or more
 /// devices and a listings lineup; subscriptions schedule
 /// recordings against a DVR.
+///
+/// {@category Live TV}
 class PlexDvrsApi {
   final PlexConnection _http;
 

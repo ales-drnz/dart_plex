@@ -18,6 +18,8 @@ import '../transport/plex_response.dart';
 /// you can hand to an audio engine (mpv, AVPlayer, ExoPlayer, …). The
 /// X-Plex-Token is appended as a query parameter so transcode children
 /// (segment requests) don't need custom headers.
+///
+/// {@category Streaming}
 class PlexStreamingApi {
   final PlexConnection _http;
 

@@ -14,6 +14,8 @@ import 'plex_streaming_api.dart';
 /// offline copy of media on the device. New clients should prefer
 /// the [PlexStreamingApi] / [PlexPlayQueuesApi] flow; this sub-API
 /// exists so older mobile workflows can still be driven from Dart.
+///
+/// {@category Events and downloads}
 class PlexDownloadQueueApi {
   final PlexConnection _http;
 

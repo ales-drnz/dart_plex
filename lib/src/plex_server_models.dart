@@ -50,6 +50,8 @@ final class PlexServerIdentity {
 }
 
 /// `GET /` — the server's capabilities and account state.
+///
+/// {@category Server}
 final class PlexServerInfo {
   /// Display name.
   final String? friendlyName;

@@ -10,6 +10,8 @@ part of '../plex_models.dart';
 
 /// One `<Hub>` entry from `/hubs` or `/hubs/search` — a titled, optionally
 /// paginated bucket of [PlexMetadata] items grouped by Plex.
+///
+/// {@category Images and hubs}
 final class PlexHub {
   /// Relative URL to fetch the full contents of this hub (e.g.
   /// `/hubs/sections/home/onDeck`). This is the field to use for

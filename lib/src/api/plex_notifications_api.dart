@@ -28,6 +28,8 @@ import '../transport/plex_cancel_token.dart';
 /// `type` discriminator; [PlexNotification.events] and the
 /// [PlexNotificationEvents.events] stream extension decode them into
 /// typed [PlexEvent]s.
+///
+/// {@category Events and downloads}
 class PlexNotificationsApi {
   final PlexConnection _http;
 
@@ -319,6 +321,8 @@ class PlexNotificationsApi {
 }
 
 /// One frame received from the Plex notifications stream.
+///
+/// {@category Events and downloads}
 final class PlexNotification {
   /// Upstream `type` discriminator (e.g. `'playing'`, `'progress'`,
   /// `'activity'`, `'transcodeSession.update'`,

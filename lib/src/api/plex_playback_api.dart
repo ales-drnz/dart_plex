@@ -15,6 +15,8 @@ import 'plex_play_queues_api.dart';
 /// Plex doesn't have an "is favorite" flag — favorites are encoded as
 /// `userRating == 10` (i.e. five stars). Use [setFavorite] for the
 /// convention and [rate] for arbitrary ratings.
+///
+/// {@category Playback and play queues}
 class PlexPlaybackApi {
   static const String _libraryIdentifier = 'com.plexapp.plugins.library';
 

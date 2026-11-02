@@ -19,6 +19,8 @@ import 'plex_server_api.dart';
 /// `library` + `streaming`), but if you want cast-friendly state,
 /// "Up Next" persistence, or party-mode add-to-queue from another
 /// device, this is the API.
+///
+/// {@category Playback and play queues}
 class PlexPlayQueuesApi {
   final PlexConnection _http;
 

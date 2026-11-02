@@ -13,6 +13,8 @@
 ///   ),
 /// );
 /// ```
+///
+/// {@category Requests and errors}
 abstract final class PlexPaging {
   /// Pages of a list endpoint, fetched one after the other as the stream
   /// is listened to.

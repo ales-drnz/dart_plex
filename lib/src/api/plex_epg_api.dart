@@ -11,6 +11,8 @@ import '../plex_connection.dart';
 /// powers the "what's on" grid: which channels exist, what shows
 /// are airing on them, when. Used during DVR setup to pick a
 /// listings lineup.
+///
+/// {@category Live TV}
 class PlexEpgApi {
   final PlexConnection _http;
 

@@ -18,6 +18,8 @@ import '../plex_models.dart';
 /// gradient (`image` endpoint) or use them directly in the client
 /// (CSS gradient, native shader). Saves the consumer the cost of
 /// running k-means locally.
+///
+/// {@category Images and hubs}
 class PlexUltraBlurApi {
   final PlexConnection _http;
 

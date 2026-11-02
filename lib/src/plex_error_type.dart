@@ -10,6 +10,8 @@ import 'transport/plex_cancel_token.dart';
 ///
 /// Used by [PlexException.type] so callers can decide whether to retry,
 /// re-authenticate, or surface the error to the user.
+///
+/// {@category Requests and errors}
 enum PlexErrorType {
   /// Transport-level failure (DNS resolution, TCP reset, broken pipe, no
   /// route to host). Usually retriable after a backoff.

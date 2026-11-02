@@ -7,6 +7,8 @@ import '../plex_connection.dart';
 import '../plex_server_models.dart';
 
 /// Top-level server endpoints — `/`, `/identity`, `/capabilities`.
+///
+/// {@category Server}
 class PlexServerApi {
   final PlexConnection _http;
 

@@ -1,0 +1,36 @@
+dartdoc:
+  categories:
+    "Client and sign-in":
+      markdown: doc/client.md
+    "Server":
+      markdown: doc/server.md
+    "Library":
+      markdown: doc/library.md
+    "Playlists":
+      markdown: doc/playlists.md
+    "Search":
+      markdown: doc/search.md
+    "Playback and play queues":
+      markdown: doc/playback.md
+    "Streaming":
+      markdown: doc/streaming.md
+    "Images and hubs":
+      markdown: doc/images_hubs.md
+    "Live TV":
+      markdown: doc/live_tv.md
+    "Requests and errors":
+      markdown: doc/requests.md
+    "Events and downloads":
+      markdown: doc/events.md
+  categoryOrder:
+    - "Client and sign-in"
+    - "Server"
+    - "Library"
+    - "Playlists"
+    - "Search"
+    - "Playback and play queues"
+    - "Streaming"
+    - "Images and hubs"
+    - "Live TV"
+    - "Requests and errors"
+    - "Events and downloads"

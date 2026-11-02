@@ -31,6 +31,8 @@ import 'plex_models.dart';
 ///   }
 /// });
 /// ```
+///
+/// {@category Events and downloads}
 sealed class PlexEvent {
   /// The entry as the server sent it.
   final Map<String, Object?> raw;

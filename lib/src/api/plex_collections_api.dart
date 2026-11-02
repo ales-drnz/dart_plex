@@ -18,6 +18,8 @@ import 'plex_library_api.dart';
 /// own ratingKey, so the existing [PlexLibraryApi.item] and
 /// [PlexLibraryApi.children] also work on them — this sub-API is
 /// for create / add / remove / reorder.
+///
+/// {@category Library}
 class PlexCollectionsApi {
   final PlexConnection _http;
 

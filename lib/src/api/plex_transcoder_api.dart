@@ -17,6 +17,8 @@ import 'plex_streaming_api.dart';
 /// video universal start URLs already live on [PlexStreamingApi];
 /// this sub-API adds the subtitle transcode, the manual fallback
 /// trigger, and the image transcoder URL builder.
+///
+/// {@category Streaming}
 class PlexTranscoderApi {
   final PlexConnection _http;
 

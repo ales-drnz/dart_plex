@@ -67,6 +67,8 @@ import 'transport/plex_retry_policy.dart';
 /// app's tests can stand in for them (`class FakeClient implements
 /// PlexClient`, or a mocking library). The models are `final`: they are
 /// data, built by the library.
+///
+/// {@category Client and sign-in}
 class PlexClient {
   final PlexConnection _http;
 

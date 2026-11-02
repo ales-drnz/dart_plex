@@ -14,6 +14,8 @@ import '../plex_exception.dart';
 ///
 /// Plex requires you to ask the server to resize the image — it WILL
 /// serve the raw URL too, but the resulting bytes can be 4MB PNGs.
+///
+/// {@category Images and hubs}
 class PlexImagesApi {
   final PlexConnection _http;
 

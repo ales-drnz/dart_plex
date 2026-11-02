@@ -11,6 +11,8 @@ import '../plex_models.dart';
 /// Talks to <https://plex.tv/api/v2> for everything that lives outside a
 /// specific Plex Media Server: authentication, server discovery, user
 /// profile.
+///
+/// {@category Client and sign-in}
 class PlexAccountApi {
   static const String _plexTv = 'https://plex.tv/api/v2';
   static const String _plexTvLegacy = 'https://plex.tv';

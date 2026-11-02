@@ -14,6 +14,8 @@ import 'plex_library_api.dart';
 import 'plex_server_api.dart';
 
 /// Playlist endpoints — `/playlists` and `/playlists/{id}/items`.
+///
+/// {@category Playlists}
 class PlexPlaylistsApi {
   final PlexConnection _http;
 

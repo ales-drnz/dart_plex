@@ -76,6 +76,8 @@ enum PlexFilterOperator {
 /// Which fields a section accepts is a property of the section, not of
 /// this package — ask the server with [PlexLibraryApi.filters] and read
 /// [PlexLibraryFilter.field].
+///
+/// {@category Library}
 final class PlexFilter {
   /// Field being filtered, exactly as Plex names it on the wire:
   /// `genre`, `year`, `unwatched`, `userRating`.

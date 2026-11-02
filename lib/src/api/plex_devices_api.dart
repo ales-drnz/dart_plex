@@ -11,6 +11,8 @@ import '../plex_connection.dart';
 /// "Grabbers" are the things that capture live TV: HDHomeRun tuners,
 /// IPTV M3U sources, etc. Each grabber owns one or more devices,
 /// each device has channels and a channel map.
+///
+/// {@category Live TV}
 class PlexDevicesApi {
   final PlexConnection _http;
 

@@ -16,6 +16,8 @@ part 'plex_library_item_editing.dart';
 part 'plex_library_sections_admin.dart';
 
 /// Browse `/library/sections` and `/library/metadata/{id}`.
+///
+/// {@category Library}
 class PlexLibraryApi
     with _PlexSectionAdmin, _PlexItemEditing, _PlexItemDetails {
   @override

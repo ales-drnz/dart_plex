@@ -13,6 +13,8 @@ import '../plex_parsing.dart';
 /// Tuner / EPG / device-grabber configuration lives behind the
 /// escape hatch — those endpoints are admin-only and unlikely to
 /// belong in a music+video app.
+///
+/// {@category Live TV}
 class PlexLiveTvApi {
   final PlexConnection _http;
 

@@ -12,6 +12,8 @@
 /// `clientIdentifier` MUST be a stable per-installation UUID. Generate it
 /// once, persist it (SharedPreferences / Keychain / etc.), and reuse it
 /// forever. Changing it invalidates every previously-issued token.
+///
+/// {@category Client and sign-in}
 final class PlexCredentials {
   /// Stable per-install UUID. Sent as `X-Plex-Client-Identifier`.
   final String clientIdentifier;

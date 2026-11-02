@@ -15,6 +15,8 @@ import '../plex_server_models.dart';
 /// concurrent client. Useful for showing a "now playing on server"
 /// dashboard, or to detect when the user is already streaming
 /// elsewhere before starting a new transcode.
+///
+/// {@category Playback and play queues}
 class PlexSessionsApi {
   static const String _libraryIdentifier = 'com.plexapp.plugins.library';
 

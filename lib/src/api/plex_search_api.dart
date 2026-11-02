@@ -8,6 +8,8 @@ import '../plex_models.dart';
 import '../plex_parsing.dart';
 
 /// Search endpoints.
+///
+/// {@category Search}
 class PlexSearchApi {
   final PlexConnection _http;
 

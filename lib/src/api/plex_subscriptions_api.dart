@@ -10,6 +10,8 @@ import '../plex_connection.dart';
 /// Wraps the `Subscriptions` OpenAPI tag (10 operations). A
 /// subscription is a recording rule: "record this show whenever it
 /// airs", "record this single program", etc.
+///
+/// {@category Live TV}
 class PlexSubscriptionsApi {
   final PlexConnection _http;
 

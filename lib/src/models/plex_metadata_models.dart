@@ -11,6 +11,8 @@ part of '../plex_models.dart';
 /// A single item under `/library/metadata/{ratingKey}` (or as an entry in
 /// any list response). Generic across types — the [type] tag tells you
 /// which fields are meaningful.
+///
+/// {@category Library}
 final class PlexMetadata {
   /// `ratingKey` — the numeric id used in every `/library/metadata/...`
   /// path. Always present.
@@ -634,6 +636,8 @@ final class PlexStream {
 // ---------------------------------------------------------------------------
 
 /// Helpers for PMS artwork paths.
+///
+/// {@category Images and hubs}
 abstract final class PlexArtwork {
   /// The version PMS appends to an artwork path —
   /// `/library/metadata/123/thumb/1791659974` → `'1791659974'` — or

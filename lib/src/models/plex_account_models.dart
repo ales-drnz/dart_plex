@@ -68,6 +68,8 @@ final class PlexUser {
 ///
 /// `connections` is the list of candidate URIs to reach the server —
 /// pick the best one with [bestConnection].
+///
+/// {@category Client and sign-in}
 final class PlexResource {
   /// Friendly display name of the resource (server or player).
   final String name;
