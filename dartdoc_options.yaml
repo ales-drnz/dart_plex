@@ -18,10 +18,12 @@ dartdoc:
       markdown: doc/images_hubs.md
     "Live TV":
       markdown: doc/live_tv.md
-    "Requests and errors":
-      markdown: doc/requests.md
+    "Errors and paging":
+      markdown: doc/errors.md
     "Events and downloads":
       markdown: doc/events.md
+    "Raw requests":
+      markdown: doc/raw.md
   categoryOrder:
     - "Client and sign-in"
     - "Server"
@@ -32,5 +34,6 @@ dartdoc:
     - "Streaming"
     - "Images and hubs"
     - "Live TV"
-    - "Requests and errors"
+    - "Errors and paging"
     - "Events and downloads"
+    - "Raw requests"

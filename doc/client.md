@@ -27,7 +27,7 @@ The other constructor arguments are optional:
 | `connectTimeout` | 15 s | The handshake (default client) and, with `receiveTimeout`, the wait for response headers |
 | `receiveTimeout` | 30 s | Also bounds every pause inside a response body |
 | `jsonIsolateThreshold` | 50 KB | Responses this large or larger are decoded and parsed on a background isolate |
-| `retryPolicy` | `PlexRetryPolicy.none` | See [Requests and errors](https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html) |
+| `retryPolicy` | `PlexRetryPolicy.none` | See [Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html) |
 
 Above `jsonIsolateThreshold` the JSON decode and the walk that builds the
 typed models both run on a background isolate, and so does the gzip

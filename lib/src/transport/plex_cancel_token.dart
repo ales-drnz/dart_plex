@@ -31,6 +31,8 @@ import '../plex_exception.dart';
 /// // The user left the page:
 /// token.cancel();
 /// ```
+///
+/// {@category Errors and paging}
 final class PlexCancelToken {
   final Completer<void> _cancelled = Completer<void>();
   final Set<_Listener> _listeners = {};

@@ -59,15 +59,15 @@ dependencies:
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/zap.png" width="32"></td>
-<td valign="middle"><b>Cancellation and retries</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html"><code>withCancelToken()</code></a> makes every call of a page cancellable; an opt-in <a href="https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html"><code>PlexRetryPolicy</code></a> resends idempotent requests after transient failures.</td>
+<td valign="middle"><b>Cancellation and retries</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>withCancelToken()</code></a> makes every call of a page cancellable; an opt-in <a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>PlexRetryPolicy</code></a> resends idempotent requests after transient failures.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/activity.png" width="32"></td>
 <td valign="middle"><b>Live events</b><br>the server's notifications decoded into a sealed <a href="https://pub.dev/documentation/dart_plex/latest/topics/Events%20and%20downloads-topic.html"><code>PlexEvent</code></a> type: play states, library changes, scans.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/triangle-alert.png" width="32"></td>
-<td valign="middle"><b>Typed errors</b><br>every failure is a <a href="https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html"><code>PlexException</code></a> you can branch on: auth, not found, network, transient, cancelled.</td>
+<td valign="middle"><b>Typed errors</b><br>every failure is a <a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>PlexException</code></a> you can branch on: auth, not found, network, transient, cancelled.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/terminal.png" width="32"></td>
-<td valign="middle"><b>Escape hatch</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html"><code>request()</code></a>, <code>requestBytes()</code> and <code>requestStream()</code> reach endpoints the typed sub-APIs do not cover.</td>
+<td valign="middle"><b>Escape hatch</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Raw%20requests-topic.html"><code>request()</code></a>, <code>requestBytes()</code> and <code>requestStream()</code> reach endpoints the typed sub-APIs do not cover.</td>
 </tr>
 </table>
 
@@ -243,7 +243,7 @@ try {
 }
 ```
 
-See [Requests and errors](https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html) for the error types, cancel tokens, the retry policy, paging and raw requests.
+See [Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html) for the error types, cancel tokens, the retry policy and paging. [Raw requests](https://pub.dev/documentation/dart_plex/latest/topics/Raw%20requests-topic.html) reach the endpoints the sub-APIs do not cover.
 
 ### Search as you type
 
@@ -291,8 +291,9 @@ See [Images and hubs](https://pub.dev/documentation/dart_plex/latest/topics/Imag
   - [Streaming](https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html): audio and video transcodes, direct files, lyrics and loudness
   - [Images and hubs](https://pub.dev/documentation/dart_plex/latest/topics/Images%20and%20hubs-topic.html): resized artwork, cache keys, UltraBlur and hubs
   - [Live TV](https://pub.dev/documentation/dart_plex/latest/topics/Live%20TV-topic.html): live sessions, DVRs, recording rules, tuners and the guide
-  - [Requests and errors](https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html): typed errors, cancellation, retries, paging and raw requests
+  - [Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html): typed errors, cancellation, retries and paging
   - [Events and downloads](https://pub.dev/documentation/dart_plex/latest/topics/Events%20and%20downloads-topic.html): notifications, typed events, downloads and download queues
+  - [Raw requests](https://pub.dev/documentation/dart_plex/latest/topics/Raw%20requests-topic.html): `request()`, `requestBytes()` and `requestStream()`
 - [Example](example/dart_plex_example.dart)
 - [CHANGELOG](CHANGELOG.md) and [MIGRATION](MIGRATION.md)
 

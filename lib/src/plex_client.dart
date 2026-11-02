@@ -69,6 +69,7 @@ import 'transport/plex_retry_policy.dart';
 /// data, built by the library.
 ///
 /// {@category Client and sign-in}
+/// {@category Raw requests}
 class PlexClient {
   final PlexConnection _http;
 

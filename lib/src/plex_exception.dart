@@ -20,7 +20,7 @@ import 'plex_error_type.dart';
 /// }
 /// ```
 ///
-/// {@category Requests and errors}
+/// {@category Errors and paging}
 final class PlexException implements Exception {
   /// Human-readable description.
   final String message;

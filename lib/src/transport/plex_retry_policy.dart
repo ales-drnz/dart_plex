@@ -25,6 +25,8 @@ import '../plex_exception.dart';
 /// header is honoured up to [maxDelay]. The wait between attempts grows
 /// exponentially from [initialDelay] with full jitter, and a cancel token
 /// cancels the wait too.
+///
+/// {@category Errors and paging}
 final class PlexRetryPolicy {
   /// How many times a request is sent at most, the first time included.
   /// `1` never retries.

@@ -19,7 +19,7 @@ for (final hub in hubs) {
 `hubs()` returns one `PlexHub` per kind of result (artists, albums,
 tracks), at most `limit` (10) in each. It suits search as you type. To
 drop the request of the previous keystroke, see the cancel tokens in
-[Requests and errors](https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html).
+[Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html).
 
 ## Section search
 

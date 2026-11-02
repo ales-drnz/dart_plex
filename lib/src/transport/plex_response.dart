@@ -18,6 +18,8 @@ enum PlexResponseType {
 }
 
 /// A completed response with a decoded body.
+///
+/// {@category Raw requests}
 final class PlexResponse<T> {
   /// The decoded body, or `null` when the server sent none.
   final T? data;
@@ -48,6 +50,8 @@ final class PlexResponse<T> {
 ///
 /// Listen to [stream] once. Cancelling the subscription closes the
 /// connection.
+///
+/// {@category Raw requests}
 final class PlexStreamedResponse {
   /// The body, chunk by chunk.
   final Stream<List<int>> stream;

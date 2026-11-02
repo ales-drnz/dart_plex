@@ -202,7 +202,7 @@ final leaves = await plex.library.allLeaves(ratingKey: artist.ratingKey);
 
 Without `size` these calls return every row; with `size` they return one
 page (see the page parameters in
-[Requests and errors](https://pub.dev/documentation/dart_plex/latest/topics/Requests%20and%20errors-topic.html)).
+[Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html)).
 `children()` takes the section sort syntax. `allLeaves()` has no sort:
 the server ignores it and answers in library order.
 `sectionAllLeaves(sectionId:)` returns every leaf of a section.

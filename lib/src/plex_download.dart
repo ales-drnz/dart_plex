@@ -11,6 +11,8 @@ import 'plex_exception.dart';
 import 'transport/plex_cancel_token.dart';
 
 /// Downloads straight to disk.
+///
+/// {@category Events and downloads}
 extension PlexDownload on PlexClient {
   /// Streams [url] into the file at [path] and returns the bytes written.
   ///
