@@ -391,20 +391,15 @@ class PlexClient {
   /// With [verifyToken] (the default) the token is then tried on the
   /// server (`GET /`, which needs one). When the server refuses it with
   /// `401`, the token [PlexAccountApi.devices] lists for the server, if
-  /// any, is tried instead. What is known and what is not:
+  /// any, is tried instead.
   ///
-  /// * plex.tv answers `/api/v2/resources` for a JWT account token as for
-  ///   a legacy one, with an `accessToken` per server; for an owned server
-  ///   it can be the JWT itself, which a server only accepts if it
-  ///   supports JWTs — and [useJwt] then renews it on the server too.
-  /// * Some servers were reported to refuse the token plex.tv handed out
-  ///   when the account signed in with a JWT. The `devices` fallback
-  ///   follows that report; whether plex.tv still lists device tokens
-  ///   there, and for which accounts, is not documented and could not be
-  ///   verified here.
+  /// For an owned server the resource's token can be the account's JWT;
+  /// [useJwt] then renews it on the server too.
   ///
   /// Throws a [PlexException] of type [PlexErrorType.connection] when no
-  /// connection answers, and the server's auth error when no token works.
+  /// connection answers, and the server's error when no token works. On
+  /// a failure the client keeps its previous server, connection and
+  /// tokens.
   Future<PlexServerConnection> connectToResource(
     PlexResource resource, {
     Duration timeout = const Duration(seconds: 10),
@@ -417,21 +412,33 @@ class PlexClient {
         type: PlexErrorType.connection,
       );
     }
+    final baseUrl = _http.baseUrl;
+    final token = _http.token;
+    final accountToken = _state.accountToken;
+    final connection = _state.connection;
     connectTo(
       picked,
       accessToken: resource.accessToken.isEmpty ? null : resource.accessToken,
     );
     if (!verifyToken) return picked;
     try {
-      await _http.request<Object>('/');
-    } on PlexException catch (e) {
-      if (e.statusCode != 401) rethrow;
-      final fallback = await account.serverTokenFromDevices(
-        resource.clientIdentifier,
-      );
-      if (fallback == null || fallback == _http.token) rethrow;
-      _http.token = fallback;
-      await _http.request<Object>('/');
+      try {
+        await _http.request<Object>('/');
+      } on PlexException catch (e) {
+        if (e.statusCode != 401) rethrow;
+        final fallback = await account.serverTokenFromDevices(
+          resource.clientIdentifier,
+        );
+        if (fallback == null || fallback == _http.token) rethrow;
+        _http.token = fallback;
+        await _http.request<Object>('/');
+      }
+    } catch (_) {
+      _http.baseUrl = baseUrl;
+      _http.token = token;
+      _state.accountToken = accountToken;
+      _state.connection = connection;
+      rethrow;
     }
     return picked;
   }

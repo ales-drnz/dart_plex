@@ -404,8 +404,9 @@ class PlexAccountApi {
   /// The connection of [resource] to use: every one in
   /// [PlexResource.rankedConnections] is tried at once (`GET /identity`,
   /// which needs no token), and the best-ranked one that answers wins —
-  /// without waiting for worse ones once it has. A connection whose
-  /// server reports another machine identifier does not count.
+  /// without waiting for worse ones once it has. A connection counts only
+  /// when its server reports the resource's machine identifier, so the
+  /// token is never sent to another host that happens to answer.
   ///
   /// Returns `null` when none answers within [timeout]; when some
   /// answered but a better one was still pending, the best of those.
@@ -470,7 +471,7 @@ class PlexAccountApi {
         cancelToken: cancel,
         extraHeaders: const {'X-Plex-Token': ''},
       );
-      return machineIdentifier.isEmpty || id == null || id == machineIdentifier;
+      return machineIdentifier.isEmpty || id == machineIdentifier;
     } on PlexException {
       return false;
     }

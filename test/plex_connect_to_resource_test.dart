@@ -2,6 +2,11 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+/// Reaching a server from its plex.tv resource: the connections' kinds
+/// and ranking, the parallel `/identity` probes, and `connectToResource`
+/// with its token checks.
+library;
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -200,6 +205,56 @@ void main() {
         timeout: const Duration(milliseconds: 100),
       );
       expect(picked!.uri, 'https://remote.example:32400');
+    });
+
+    test('a host that answers without a machine identifier does not '
+        'count', () async {
+      final adapter = CapturingAdapter({'MediaContainer': <String, Object?>{}});
+      final picked = await client(adapter).account.findConnection(resource);
+      expect(picked, isNull);
+    });
+
+    test('a 401 from a probe never asks the account renewer', () async {
+      final adapter = CapturingAdapter()
+        ..respond = (_) => CannedResponse(401, const []);
+      var renewed = 0;
+      final plex = client(adapter)
+        ..setToken('account-token')
+        ..tokenRenewer = (_) async {
+          renewed++;
+          return 'other';
+        };
+      expect(await plex.account.findConnection(resource), isNull);
+      expect(renewed, 0);
+    });
+
+    test('a failed check leaves the client as it was', () async {
+      final adapter = CapturingAdapter();
+      adapter.respond = (r) {
+        if (r.uri.path == '/identity') {
+          return CannedResponse.json({
+            'MediaContainer': {'machineIdentifier': 'machine-1'},
+          });
+        }
+        if (r.uri.path == '/api/v2/devices') {
+          return CannedResponse.json([
+            {'clientIdentifier': 'machine-1', 'token': 'device-token'},
+          ]);
+        }
+        return CannedResponse(401, const []);
+      };
+      final plex = client(adapter)
+        ..connect('http://10.0.0.9:32400', accessToken: 'old-token');
+      await expectLater(
+        plex.connectToResource(resource),
+        throwsA(isA<PlexException>().having((e) => e.statusCode, 'st', 401)),
+      );
+      expect(plex.baseUrl, 'http://10.0.0.9:32400');
+      expect(plex.token, 'old-token');
+      expect(plex.accountToken, 'old-token');
+      expect(plex.connection, isNull);
+      // The fallback token was tried.
+      expect(adapter.requests.last.headers['X-Plex-Token'], 'device-token');
     });
 
     test('null when nothing answers', () async {
