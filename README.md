@@ -21,7 +21,7 @@
 
 ## Installation
 
-It needs Dart 3.10 or later.
+It needs Dart 3.10 or later, and is tested against Plex Media Server 1.43.2.
 
 Add `dart_plex` to your `pubspec.yaml`:
 
@@ -55,21 +55,21 @@ dependencies:
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/sliders-horizontal.png" width="32"></td>
-<td valign="middle"><b>Your HTTP stack</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html">any <code>http.Client</code></a>: the default <code>dart:io</code> one, <code>cupertino_http</code> or <code>cronet_http</code> for HTTP/2 and the system proxy, a <code>MockClient</code> in tests.</td>
+<td valign="middle"><b>Any HTTP stack</b><br>built on <code>package:http</code>: pass a <code>CupertinoClient</code> or <code>CronetClient</code> for HTTP/2 and the system proxy, or a <code>MockClient</code> in tests (see <a href="https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html">Client and sign-in</a>).</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/cpu.png" width="32"></td>
-<td valign="middle"><b>Off the calling isolate</b><br>large responses are inflated, decoded and parsed into models on a background isolate.</td>
+<td valign="middle"><b>Off the caller's isolate</b><br>large answers are inflated, decoded and parsed into models on a background isolate, so the UI keeps its frames.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/zap.png" width="32"></td>
-<td valign="middle"><b>Cancellation and retries</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>withCancelToken()</code></a> makes every call of a page cancellable; an opt-in <a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>PlexRetryPolicy</code></a> resends idempotent requests after transient failures.</td>
+<td valign="middle"><b>Cancellation and retries</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>withCancelToken()</code></a> makes every call of a view cancellable, and an opt-in <a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>PlexRetryPolicy</code></a> resends idempotent requests after transient failures.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/activity.png" width="32"></td>
 <td valign="middle"><b>Live events</b><br>the server's notifications decoded into a sealed <a href="https://pub.dev/documentation/dart_plex/latest/topics/Events%20and%20downloads-topic.html"><code>PlexEvent</code></a> type: play states, library changes, scans.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/triangle-alert.png" width="32"></td>
-<td valign="middle"><b>Typed errors</b><br>every failure is a <a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>PlexException</code></a> you can branch on: auth, not found, network, transient, cancelled.</td>
+<td valign="middle"><b>Typed errors</b><br>every failure is a <a href="https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html"><code>PlexException</code></a> with a type to branch on: auth, pass required, not found, network, transient, cancelled.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/terminal.png" width="32"></td>
-<td valign="middle"><b>Escape hatch</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Raw%20requests-topic.html"><code>request()</code></a>, <code>requestBytes()</code> and <code>requestStream()</code> reach endpoints the typed sub-APIs do not cover.</td>
+<td valign="middle"><b>Escape hatch</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Raw%20requests-topic.html"><code>request()</code>, <code>requestBytes()</code> and <code>requestStream()</code></a> for endpoints the sub-APIs do not cover.</td>
 </tr>
 </table>
 
@@ -135,7 +135,7 @@ Future<void> main() async {
 }
 ```
 
-### How it works
+## How it works
 
 `PlexClient` holds the identity of your app, the server and the token. Each part of the Plex API is a sub-API on it (`plex.library`, `plex.playlists`, `plex.streaming` and so on), and every call goes through one connection, the same transport `dart_jellyfin` uses.
 
