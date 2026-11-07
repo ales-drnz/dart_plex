@@ -15,7 +15,7 @@ final transcode = await plex.streaming.startAudioTranscode(
   ratingKey: track.ratingKey,
   session: 'my-uuid',   // one per playback session
   protocol: PlexStreamingProtocol.dash, // hls (default) or dash
-  maxBitrateKbps: 128,
+  maxAudioBitrateKbps: 128,
 );
 if (transcode.decision.isPlayable) {
   print(transcode.url); // hand to the player

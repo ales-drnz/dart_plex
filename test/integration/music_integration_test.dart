@@ -295,7 +295,7 @@ void main() {
       final hls = await player.streaming.startAudioTranscode(
         ratingKey: tracks.first.ratingKey,
         session: hlsId,
-        maxBitrateKbps: 96,
+        maxAudioBitrateKbps: 96,
       );
       final dash = await player.streaming.startAudioTranscode(
         ratingKey: tracks.first.ratingKey,

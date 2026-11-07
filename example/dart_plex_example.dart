@@ -81,7 +81,7 @@ Future<void> main() async {
     final transcode = await plex.streaming.startAudioTranscode(
       ratingKey: tracks.first.ratingKey,
       session: 'example-session',
-      maxBitrateKbps: 128,
+      maxAudioBitrateKbps: 128,
     );
     print('Playable: ${transcode.decision.isPlayable}\n${transcode.url}');
     await plex.streaming.stopUniversal(session: transcode.session);

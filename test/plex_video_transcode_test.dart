@@ -77,10 +77,14 @@ void main() {
         plex.streaming.universalVideoUrl(
           ratingKey: '1',
           protocol: PlexStreamingProtocol.dash,
+          maxVideoBitrateKbps: 4000,
+          maxAudioBitrateKbps: 192,
         ),
       );
       expect(url.path, endsWith('start.mpd'));
       expect(url.queryParameters['container'], 'mp4');
+      expect(url.queryParameters['maxVideoBitrate'], '4000');
+      expect(url.queryParameters['maxAudioBitrate'], '192');
     });
 
     test('startAudioTranscode refuses HTTP', () {

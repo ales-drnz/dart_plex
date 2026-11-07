@@ -72,7 +72,7 @@ class PlexStreamingApi {
   ///   by default) names one explicitly, so any platform works;
   /// * **a transcode target** in `X-Plex-Client-Profile-Extra`
   ///   (`add-transcode-target(type=musicProfile&…&audioCodec=…)`);
-  /// * **the bitrate cap as a profile limitation** — [maxBitrateKbps]
+  /// * **the bitrate cap as a profile limitation** — [maxAudioBitrateKbps]
   ///   becomes `add-limitation(…name=audio.bitrate…)`: 96 gave a 96 kbps
   ///   stream. A plain `maxAudioBitrate` query parameter has no effect.
   ///   The cap cannot go above the profile's own ceiling (256 kbps AAC for
@@ -81,8 +81,9 @@ class PlexStreamingApi {
   /// The URL carries the token and the client identity in its query, since
   /// the player opens it without this client's headers. [protocol] is
   /// [PlexStreamingProtocol.hls] (an `.m3u8`, default) or
-  /// [PlexStreamingProtocol.dash] (an `.mpd`); HTTP is not offered for
-  /// music. Keep [session] for [pingUniversal] and [stopUniversal].
+  /// [PlexStreamingProtocol.dash] (an `.mpd`). HTTP is not offered for
+  /// music: [PlexStreamingProtocol.http] throws an [ArgumentError]. Keep
+  /// [session] for [pingUniversal] and [stopUniversal].
   ///
   /// Check [PlexAudioTranscode.decision]: when it is not playable the URL
   /// will not work either.
@@ -96,7 +97,7 @@ class PlexStreamingApi {
     required String session,
     PlexStreamingProtocol protocol = PlexStreamingProtocol.hls,
     String audioCodec = 'aac',
-    int? maxBitrateKbps,
+    int? maxAudioBitrateKbps,
     int offsetSeconds = 0,
     int mediaIndex = 0,
     int partIndex = 0,
@@ -134,7 +135,7 @@ class PlexStreamingApi {
         protocol: protocol.wire,
         container: container,
         audioCodec: audioCodec,
-        maxBitrateKbps: maxBitrateKbps,
+        maxAudioBitrateKbps: maxAudioBitrateKbps,
       ),
     };
     final decision = await decisionUniversal(
@@ -242,19 +243,19 @@ class PlexStreamingApi {
 
   /// The `X-Plex-Client-Profile-Extra` value that asks for a music
   /// transcode to [audioCodec] in [container] over [protocol], capped at
-  /// [maxBitrateKbps] when given (see [startAudioTranscode]).
+  /// [maxAudioBitrateKbps] when given (see [startAudioTranscode]).
   static String musicProfileExtra({
     required String protocol,
     required String container,
     required String audioCodec,
-    int? maxBitrateKbps,
+    int? maxAudioBitrateKbps,
   }) {
     final target =
         'add-transcode-target(type=musicProfile&context=streaming'
         '&protocol=$protocol&container=$container&audioCodec=$audioCodec)';
-    if (maxBitrateKbps == null) return target;
+    if (maxAudioBitrateKbps == null) return target;
     return '$target+add-limitation(scope=musicCodec&scopeName=$audioCodec'
-        '&type=upperBound&name=audio.bitrate&value=$maxBitrateKbps'
+        '&type=upperBound&name=audio.bitrate&value=$maxAudioBitrateKbps'
         '&isRequired=false)';
   }
 
@@ -307,16 +308,16 @@ class PlexStreamingApi {
   ///
   /// Prefer [startVideoTranscode]: PMS 1.43.2 refuses a start without a
   /// decision and a client profile.
-  /// - [videoBitrate] / [audioBitrate] in kbps. Pass `null` to let
-  ///   the server pick.
+  /// - [maxVideoBitrateKbps] / [maxAudioBitrateKbps] cap the output, in
+  ///   kbps. Pass `null` to let the server pick.
   /// - [videoResolution]: e.g. `'1920x1080'`, `'1280x720'`.
   String universalVideoUrl({
     required String ratingKey,
     PlexStreamingProtocol protocol = PlexStreamingProtocol.hls,
     String? container,
     String? videoResolution,
-    int? videoBitrate,
-    int? audioBitrate,
+    int? maxVideoBitrateKbps,
+    int? maxAudioBitrateKbps,
     String? videoCodec,
     String? audioCodec,
     int? subtitleSize,
@@ -344,8 +345,12 @@ class PlexStreamingApi {
       'container': container ?? protocol.videoContainer,
     };
     if (videoResolution != null) qp['videoResolution'] = videoResolution;
-    if (videoBitrate != null) qp['maxVideoBitrate'] = '$videoBitrate';
-    if (audioBitrate != null) qp['maxAudioBitrate'] = '$audioBitrate';
+    if (maxVideoBitrateKbps != null) {
+      qp['maxVideoBitrate'] = '$maxVideoBitrateKbps';
+    }
+    if (maxAudioBitrateKbps != null) {
+      qp['maxAudioBitrate'] = '$maxAudioBitrateKbps';
+    }
     if (videoCodec != null) qp['videoCodec'] = videoCodec;
     if (audioCodec != null) qp['audioCodec'] = audioCodec;
     if (subtitleSize != null) qp['subtitleSize'] = '$subtitleSize';

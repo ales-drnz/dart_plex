@@ -124,7 +124,7 @@ Future<void> main() async {
   final transcode = await plex.streaming.startAudioTranscode(
     ratingKey: tracks.first.ratingKey,
     session: 'a-uuid-per-playback',
-    maxBitrateKbps: 192,
+    maxAudioBitrateKbps: 192,
   );
   print(transcode.url); // hand this to your audio engine
 
@@ -217,7 +217,7 @@ See [Playlists](https://pub.dev/documentation/dart_plex/latest/topics/Playlists-
 final transcode = await plex.streaming.startAudioTranscode(
   ratingKey: track.ratingKey,
   session: sessionId,
-  maxBitrateKbps: 128,
+  maxAudioBitrateKbps: 128,
 );
 await plex.streaming.pingUniversal(session: sessionId); // every 30 s while paused
 await plex.streaming.stopUniversal(session: sessionId); // when the user leaves
