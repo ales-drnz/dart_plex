@@ -444,7 +444,10 @@ final class PlexMarker {
   /// Parses one `Marker`.
   factory PlexMarker.fromJson(Map<String, Object?> json) => PlexMarker(
     id: asInt(json['id']),
-    type: PlexMarkerType(asString(json['type']) ?? ''),
+    type: switch (asString(json['type'])) {
+      'credit' => PlexMarkerType.credits,
+      final t => PlexMarkerType(t ?? ''),
+    },
     start: Duration(milliseconds: asInt(json['startTimeOffset']) ?? 0),
     end: Duration(milliseconds: asInt(json['endTimeOffset']) ?? 0),
     isFinal: asBool(json['final']) || json['final'] == 'true',

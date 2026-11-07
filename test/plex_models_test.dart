@@ -278,6 +278,11 @@ void main() {
       expect(m.markers.first.type, PlexMarkerType.intro);
       expect(m.markers.first.end, const Duration(seconds: 31));
       expect(m.markersOf(PlexMarkerType.credits).single.isFinal, isTrue);
+      expect(
+        PlexMarker.fromJson(const {'type': 'credit'}).type,
+        PlexMarkerType.credits,
+        reason: "the API document's spelling",
+      );
       expect(m.chapters.single.title, 'Opening');
       expect(m.squareArt, '/sq');
       expect(m.logo, '/logo');

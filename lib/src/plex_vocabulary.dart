@@ -138,7 +138,8 @@ extension type const PlexMarkerType(String wire) implements String {
   /// `intro` — a show's opening, to skip.
   static const intro = PlexMarkerType('intro');
 
-  /// `credits` — the end credits.
+  /// `credits` — the end credits. PMS sends `credits` (as python-plexapi
+  /// reads it); the API document's `credit` is read as this too.
   static const credits = PlexMarkerType('credits');
 
   /// `commercial` — an ad break (Live TV recordings, with commercial
