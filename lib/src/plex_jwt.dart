@@ -29,17 +29,21 @@ import 'plex_exception.dart';
 ///
 /// {@category Client and sign-in}
 final class PlexDeviceKey {
-  /// The 32-byte private seed (RFC 8032's "secret key"). Keep it secret.
-  final Uint8List privateKey;
+  final Uint8List _privateKey;
+  final Uint8List _publicKey;
 
-  /// The 32-byte public key, derived from [privateKey].
-  final Uint8List publicKey;
+  /// The 32-byte private seed (RFC 8032's "secret key"), as a copy. Keep
+  /// it secret.
+  Uint8List get privateKey => Uint8List.fromList(_privateKey);
+
+  /// The 32-byte public key, derived from [privateKey], as a copy.
+  Uint8List get publicKey => Uint8List.fromList(_publicKey);
 
   /// The key id sent as `kid`: the RFC 7638 JWK thumbprint of the public
   /// key (base64url SHA-256 of `{"crv":"Ed25519","kty":"OKP","x":…}`).
   final String keyId;
 
-  PlexDeviceKey._(this.privateKey, this.publicKey, this.keyId);
+  PlexDeviceKey._(this._privateKey, this._publicKey, this.keyId);
 
   static final DartEd25519 _ed25519 = DartEd25519(sha512: const DartSha512());
 
@@ -74,9 +78,9 @@ final class PlexDeviceKey {
     }
     final d = json['d'];
     if (d is! String) throw const FormatException('The JWK has no "d"');
-    final key = await fromSeed(base64UrlDecodeUnpadded(d));
+    final key = await fromSeed(_base64UrlDecode(d));
     final x = json['x'];
-    if (x is String && x != base64UrlEncodeUnpadded(key.publicKey)) {
+    if (x is String && x != _base64UrlEncode(key._publicKey)) {
       throw const FormatException('The JWK "x" does not match its "d"');
     }
     return key;
@@ -88,8 +92,8 @@ final class PlexDeviceKey {
   Map<String, Object?> toJson() => {
     'kty': 'OKP',
     'crv': 'Ed25519',
-    'x': base64UrlEncodeUnpadded(publicKey),
-    'd': base64UrlEncodeUnpadded(privateKey),
+    'x': _base64UrlEncode(_publicKey),
+    'd': _base64UrlEncode(_privateKey),
     'kid': keyId,
   };
 
@@ -98,7 +102,7 @@ final class PlexDeviceKey {
   Map<String, Object?> get publicJwk => {
     'kty': 'OKP',
     'crv': 'Ed25519',
-    'x': base64UrlEncodeUnpadded(publicKey),
+    'x': _base64UrlEncode(_publicKey),
     'kid': keyId,
     'use': 'sig',
     'alg': 'EdDSA',
@@ -108,15 +112,15 @@ final class PlexDeviceKey {
   static String thumbprint(List<int> publicKey) {
     final canonical =
         '{"crv":"Ed25519","kty":"OKP","x":"'
-        '${base64UrlEncodeUnpadded(publicKey)}"}';
-    return base64UrlEncodeUnpadded(
+        '${_base64UrlEncode(publicKey)}"}';
+    return _base64UrlEncode(
       const DartSha256().hashSync(utf8.encode(canonical)).bytes,
     );
   }
 
   /// The raw Ed25519 signature of [message] (64 bytes).
   Future<Uint8List> sign(List<int> message) async {
-    final pair = await _ed25519.newKeyPairFromSeed(privateKey);
+    final pair = await _ed25519.newKeyPairFromSeed(_privateKey);
     final signature = await _ed25519.sign(message, keyPair: pair);
     return Uint8List.fromList(signature.bytes);
   }
@@ -127,7 +131,7 @@ final class PlexDeviceKey {
     final header = {'alg': 'EdDSA', 'typ': 'JWT', 'kid': keyId};
     final input = '${_segment(header)}.${_segment(claims)}';
     final signature = await sign(utf8.encode(input));
-    return '$input.${base64UrlEncodeUnpadded(signature)}';
+    return '$input.${_base64UrlEncode(signature)}';
   }
 
   /// The device JWT plex.tv exchanges for a token: `aud` `plex.tv`, `iss`
@@ -153,7 +157,7 @@ final class PlexDeviceKey {
   }
 
   static String _segment(Map<String, Object?> json) =>
-      base64UrlEncodeUnpadded(utf8.encode(jsonEncode(json)));
+      _base64UrlEncode(utf8.encode(jsonEncode(json)));
 }
 
 /// A token plex.tv issued, with what its claims say about its lifetime.
@@ -185,25 +189,42 @@ final class PlexJwt {
     'joinedAt',
   ];
 
-  const PlexJwt._(this.token, this.claims);
+  /// When this object was made: the local time the token was received,
+  /// for a token read from an answer.
+  final DateTime _receivedAt;
+
+  PlexJwt._(this.token, this.claims) : _receivedAt = DateTime.now().toUtc();
 
   /// Reads [token]'s payload. A token that is not a three-part JWT, or
   /// whose payload is not JSON, is kept with no claims.
+  ///
+  /// Throws a [PlexException] of type [PlexErrorType.parse] when `exp` or
+  /// `iat` is not a time in seconds, or `thumbprint` not a string.
   factory PlexJwt.parse(String token) {
     final parts = token.split('.');
     if (parts.length != 3) return PlexJwt._(token, const {});
+    final Object? payload;
     try {
-      final payload = jsonDecode(
-        utf8.decode(base64UrlDecodeUnpadded(parts[1])),
-      );
-      return PlexJwt._(
-        token,
-        payload is Map<String, Object?> ? payload : const {},
-      );
+      payload = jsonDecode(utf8.decode(_base64UrlDecode(parts[1])));
     } on FormatException {
       return PlexJwt._(token, const {});
     }
+    if (payload is! Map<String, Object?>) return PlexJwt._(token, const {});
+    for (final name in const ['exp', 'iat']) {
+      final v = payload[name];
+      if (v != null && _epoch(v) == null) throw _badClaim(name, v);
+    }
+    final thumbprint = payload['thumbprint'];
+    if (thumbprint != null && thumbprint is! String) {
+      throw _badClaim('thumbprint', thumbprint);
+    }
+    return PlexJwt._(token, payload);
   }
+
+  static PlexException _badClaim(String name, Object value) => PlexException(
+    'The JWT claim "$name" is not valid: $value',
+    type: PlexErrorType.parse,
+  );
 
   /// Whether [token] is a JWT with claims (a legacy token is not).
   bool get isJwt => claims.isNotEmpty;
@@ -218,6 +239,14 @@ final class PlexJwt {
   /// (`thumbprint`), when plex.tv put one in.
   String? get thumbprint => claims['thumbprint'] as String?;
 
+  /// `exp - iat`: how long the token was issued for, or `null` when a
+  /// claim is missing.
+  Duration? get _lifetime {
+    final exp = expiresAt;
+    final iat = issuedAt;
+    return exp == null || iat == null ? null : exp.difference(iat);
+  }
+
   /// Whether [expiresAt] has passed (compared with [now], or the clock).
   bool isExpired([DateTime? now]) => expiresWithin(Duration.zero, now);
 
@@ -229,9 +258,12 @@ final class PlexJwt {
     return !(now ?? DateTime.now()).toUtc().add(margin).isBefore(exp);
   }
 
-  static DateTime? _epoch(Object? v) => v is num
-      ? DateTime.fromMillisecondsSinceEpoch(v.toInt() * 1000, isUtc: true)
-      : null;
+  /// Seconds since the epoch, or `null` when [v] is not a number in
+  /// [DateTime]'s range.
+  static DateTime? _epoch(Object? v) {
+    if (v is! num || !v.isFinite || v.abs() > 8640000000000) return null;
+    return DateTime.fromMillisecondsSinceEpoch(v.toInt() * 1000, isUtc: true);
+  }
 
   @override
   String toString() => 'PlexJwt(expiresAt: $expiresAt)';
@@ -261,13 +293,18 @@ final class PlexJwtSession {
   final List<String> scopes;
 
   /// How long before [PlexJwt.expiresAt] the token is renewed ahead of
-  /// time (a day by default, as python-plexapi does).
+  /// time (a day by default, as python-plexapi does). For a token issued
+  /// for less than twice that, half its lifetime instead.
   final Duration refreshBefore;
 
   /// Called after each change of [token], to persist the session.
   final void Function(PlexJwtSession session)? onChanged;
 
   PlexJwt? _token;
+
+  /// Whether [_token] was received in this run (a refresh or
+  /// [updateToken]), so that its local receipt time is known.
+  bool _received = false;
   Future<PlexJwt>? _refreshing;
 
   /// A session for [key], with the [token] already obtained, if any.
@@ -315,23 +352,63 @@ final class PlexJwtSession {
 
   /// Whether the token is missing, expired, or expires within
   /// [refreshBefore].
-  bool get needsRefresh {
+  ///
+  /// A token received in this run is timed from when it arrived, by its
+  /// `exp - iat`, so a device clock that disagrees with plex.tv's does not
+  /// make every call refresh it.
+  bool get needsRefresh => _expiresWithin(_margin);
+
+  /// [refreshBefore], or half the token's lifetime when that is shorter.
+  Duration get _margin {
+    final lifetime = _token?._lifetime;
+    if (lifetime == null || lifetime > refreshBefore * 2) return refreshBefore;
+    return lifetime ~/ 2;
+  }
+
+  bool _expiresWithin(Duration margin) {
     final t = _token;
-    return t == null || t.expiresWithin(refreshBefore);
+    if (t == null) return true;
+    final lifetime = t._lifetime;
+    if (_received && lifetime != null) {
+      final now = DateTime.now().toUtc();
+      return !now.add(margin).isBefore(t._receivedAt.add(lifetime));
+    }
+    return t.expiresWithin(margin);
   }
 
   /// Replaces the token (after a PIN sign-in, say) and calls [onChanged].
   void updateToken(PlexJwt token) {
     _token = token;
+    _received = true;
     onChanged?.call(this);
   }
 
   /// Refreshes the token through [account], once even when several
   /// callers ask at the same time.
+  ///
+  /// Throws a [PlexException] of type [PlexErrorType.auth] when plex.tv
+  /// answers a token bound to another key (its `thumbprint` is not
+  /// [PlexDeviceKey.keyId]), and one of type [PlexErrorType.unknown] when
+  /// [onChanged] throws; the new token is kept then.
   Future<PlexJwt> refresh(PlexAccountApi account) => _refreshing ??= () async {
     try {
       final fresh = await account.refreshJwt(key: key, scopes: scopes);
-      updateToken(fresh);
+      final thumbprint = fresh.thumbprint;
+      if (thumbprint != null && thumbprint != key.keyId) {
+        throw const PlexException(
+          'plex.tv answered a token bound to another device key',
+          type: PlexErrorType.auth,
+        );
+      }
+      try {
+        updateToken(fresh);
+      } on Object catch (e, st) {
+        throw PlexException(
+          'PlexJwtSession.onChanged threw: $e',
+          cause: e,
+          stackTrace: st,
+        );
+      }
       return fresh;
     } finally {
       _refreshing = null;
@@ -341,26 +418,29 @@ final class PlexJwtSession {
   /// The token, refreshed first when [needsRefresh].
   Future<PlexJwt> freshToken(PlexAccountApi account) async {
     final t = _token;
-    if (t != null && !t.expiresWithin(refreshBefore)) return t;
+    if (t != null && !needsRefresh) return t;
     try {
       return await refresh(account);
     } on PlexException catch (e) {
       // Still valid for a while: a failed early refresh is not fatal.
-      if (t != null && !t.isExpired() && !e.isAuthError) return t;
+      if (t != null &&
+          identical(t, _token) &&
+          !_expiresWithin(Duration.zero) &&
+          !e.isAuthError) {
+        return t;
+      }
       rethrow;
     }
   }
 }
 
 /// base64url without the `=` padding, as JOSE writes it.
-String base64UrlEncodeUnpadded(List<int> bytes) =>
+String _base64UrlEncode(List<int> bytes) =>
     base64Url.encode(bytes).replaceAll('=', '');
 
 /// Decodes base64url with or without padding.
-Uint8List base64UrlDecodeUnpadded(String text) {
-  final pad = (4 - text.length % 4) % 4;
-  return base64Url.decode(text + '=' * pad);
-}
+Uint8List _base64UrlDecode(String text) =>
+    base64Url.decode(base64Url.normalize(text));
 
 /// A [PlexException] for a plex.tv answer that lacks what it should carry.
 PlexException missingField(String what, String route) => PlexException(

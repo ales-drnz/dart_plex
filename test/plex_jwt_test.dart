@@ -137,6 +137,14 @@ void main() {
       expect(a.keyId, isNot(b.keyId));
     });
 
+    test('privateKey and publicKey are copies', () async {
+      final key = await PlexDeviceKey.fromSeed(_hex(_seed1));
+      key.privateKey[0] ^= 0xff;
+      key.publicKey[0] ^= 0xff;
+      expect(_toHex(key.privateKey), _seed1);
+      expect(_toHex(key.publicKey), _public1);
+    });
+
     test('a seed of the wrong length is refused', () {
       expect(() => PlexDeviceKey.fromSeed([1, 2, 3]), throwsArgumentError);
     });
@@ -167,6 +175,26 @@ void main() {
         isTrue,
       );
       expect(jwt.isExpired(now.add(const Duration(days: 8))), isTrue);
+    });
+
+    test('a claim of the wrong type is a parse error', () {
+      for (final payload in [
+        {'exp': 'tomorrow'},
+        {'iat': 1e300},
+        {'thumbprint': 42},
+      ]) {
+        expect(
+          () => PlexJwt.parse(_jwt(payload)),
+          throwsA(
+            isA<PlexException>().having(
+              (e) => e.type,
+              't',
+              PlexErrorType.parse,
+            ),
+          ),
+          reason: '$payload',
+        );
+      }
     });
 
     test('a legacy token has no claims and never expires', () {
@@ -513,6 +541,69 @@ void main() {
       adapter.respond = (_) => CannedResponse.json({'id': 1});
       await plex.account.currentUser();
       expect(count('/api/v2/auth/nonce'), 1, reason: 'no refresh on the call');
+    });
+
+    test('a token from a skewed clock is timed from its receipt', () {
+      // plex.tv's clock is 10 days behind: by the claims the token
+      // expired 3 days ago, but it was issued for 7 days just now.
+      final issued = DateTime.now().toUtc().subtract(const Duration(days: 10));
+      final skewed = PlexJwt.parse(
+        _jwt({
+          'iat': _epoch(issued),
+          'exp': _epoch(issued.add(const Duration(days: 7))),
+        }),
+      );
+      final session = PlexJwtSession(key: key);
+      expect(session.needsRefresh, isTrue);
+      session.updateToken(skewed);
+      expect(session.needsRefresh, isFalse);
+      // Restored from storage, the receipt is unknown: the claims count.
+      expect(PlexJwtSession(key: key, token: skewed).needsRefresh, isTrue);
+    });
+
+    test('a short-lived token is refreshed at half its lifetime', () {
+      final now = DateTime.now().toUtc();
+      final short = PlexJwt.parse(
+        _jwt({
+          'iat': _epoch(now),
+          'exp': _epoch(now.add(const Duration(hours: 1))),
+        }),
+      );
+      final session = PlexJwtSession(key: key)..updateToken(short);
+      expect(session.needsRefresh, isFalse);
+    });
+
+    test('a refreshed token bound to another key is refused', () async {
+      adapter.respond = (r) => r.uri.path.endsWith('nonce')
+          ? CannedResponse.json({'nonce': 'n'})
+          : CannedResponse.json({
+              'auth_token': _jwt({'thumbprint': 'someone-else'}),
+            });
+      await expectLater(
+        PlexJwtSession(key: key).refresh(plex.account),
+        throwsA(
+          isA<PlexException>().having((e) => e.type, 't', PlexErrorType.auth),
+        ),
+      );
+    });
+
+    test('onChanged throwing surfaces as a PlexException', () async {
+      adapter.respond = (r) => r.uri.path.endsWith('nonce')
+          ? CannedResponse.json({'nonce': 'n'})
+          : CannedResponse.json({
+              'auth_token': _jwt({'thumbprint': key.keyId}),
+            });
+      final session = PlexJwtSession(
+        key: key,
+        onChanged: (_) => throw StateError('disk full'),
+      );
+      await expectLater(
+        session.refresh(plex.account),
+        throwsA(
+          isA<PlexException>().having((e) => e.cause, 'cause', isStateError),
+        ),
+      );
+      expect(session.token, isNotNull, reason: 'the new token is kept');
     });
   });
 
