@@ -216,4 +216,17 @@ void main() {
       );
     });
   });
+
+  test('PlexTranscodeDecision.fromJson reads codes as numbers or text', () {
+    final d = PlexTranscodeDecision.fromJson(const {
+      'generalDecisionCode': '1000',
+      'directPlayDecisionCode': 3000,
+      'transcodeDecisionCode': '1001',
+      'transcodeDecisionText': 'Transcode OK.',
+    });
+    expect(d.code, 1000);
+    expect((d.isPlayable, d.isDirect, d.isTranscode), (true, false, true));
+    expect(d.text, 'Transcode OK.');
+    expect(d.isPassRequired, isFalse);
+  });
 }

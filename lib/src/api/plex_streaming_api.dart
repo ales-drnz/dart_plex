@@ -11,6 +11,7 @@ import '../plex_connection.dart';
 import '../plex_credentials.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_vocabulary.dart';
 import '../transport/plex_response.dart';
@@ -392,14 +393,9 @@ class PlexStreamingApi {
       throw classifyPassRequired(e);
     }
     final container = res.data?['MediaContainer'];
-    if (container is! Map<String, Object?>) {
-      return const PlexTranscodeDecision(code: null, raw: {});
-    }
-    final codeRaw = container['generalDecisionCode'];
-    final codeInt = codeRaw is int
-        ? codeRaw
-        : (codeRaw is String ? int.tryParse(codeRaw) : null);
-    return PlexTranscodeDecision(code: codeInt, raw: container);
+    return PlexTranscodeDecision.fromJson(
+      container is Map<String, Object?> ? container : const {},
+    );
   }
 
   /// Tell the server a transcode session can be stopped
@@ -645,6 +641,13 @@ final class PlexTranscodeDecision {
   /// Wraps a transcode decision response with its numeric [code] and [raw] container.
   const PlexTranscodeDecision({required this.code, required this.raw});
 
+  /// Reads a decision: a `MediaContainer`, or a `DecisionResult`.
+  factory PlexTranscodeDecision.fromJson(Map<String, Object?> json) =>
+      PlexTranscodeDecision(
+        code: asInt(json['generalDecisionCode']),
+        raw: json,
+      );
+
   /// `true` when the decision call returned a success code (1xxx).
   /// `false` (and so unplayable) for 2xxx/3xxx/4xxx error bands.
   bool get isPlayable => code != null && code! >= 1000 && code! < 2000;
@@ -666,31 +669,24 @@ final class PlexTranscodeDecision {
     return tc != null && tc >= 1000 && tc < 2000;
   }
 
-  int? _subCode(String key) {
-    final raw = this.raw[key];
-    return raw is int ? raw : (raw is String ? int.tryParse(raw) : null);
-  }
+  int? _subCode(String key) => asInt(raw[key]);
 
-  /// The decision's own words: `generalDecisionText`, else the transcode
-  /// or direct-play text.
-  String? get text => [
+  /// The general, transcode and direct-play texts, those present.
+  Iterable<String> get _texts => [
     raw['generalDecisionText'],
     raw['transcodeDecisionText'],
     raw['directPlayDecisionText'],
-  ].whereType<String>().where((t) => t.isNotEmpty).firstOrNull;
+  ].whereType<String>().where((t) => t.isNotEmpty);
+
+  /// The decision's own words: `generalDecisionText`, else the transcode
+  /// or direct-play text.
+  String? get text => _texts.firstOrNull;
 
   /// Whether the decision refuses playback and its texts say a Plex Pass
   /// or Remote Watch Pass is required (a heuristic: see
   /// [PlexStreamingApi]).
   bool get isPassRequired =>
-      !isPlayable &&
-      PlexStreamingApi.mentionsPass(
-        [
-          raw['generalDecisionText'],
-          raw['transcodeDecisionText'],
-          raw['directPlayDecisionText'],
-        ].whereType<String>().join(' '),
-      );
+      !isPlayable && PlexStreamingApi.mentionsPass(_texts.join(' '));
 }
 
 /// A started video transcode: the server's [decision] and the [url] to

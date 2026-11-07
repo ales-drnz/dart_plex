@@ -109,11 +109,8 @@ class PlexDownloadQueueApi {
 
   static PlexTranscodeDecision _decision(Object? json) {
     final c = json is Map<String, Object?> ? json['MediaContainer'] : null;
-    final container = c is Map<String, Object?> ? c : const <String, Object?>{};
-    final code = container['generalDecisionCode'];
-    return PlexTranscodeDecision(
-      code: code is int ? code : int.tryParse('$code'),
-      raw: container,
+    return PlexTranscodeDecision.fromJson(
+      c is Map<String, Object?> ? c : const {},
     );
   }
 

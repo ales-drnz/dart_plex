@@ -800,7 +800,7 @@ final class PlexDownloadQueueItem {
       status: asString(json['status']),
       error: asString(json['error']),
       decision: d is Map<String, Object?>
-          ? PlexTranscodeDecision(code: asInt(d['generalDecisionCode']), raw: d)
+          ? PlexTranscodeDecision.fromJson(d)
           : null,
       transcodeSession: t is Map<String, Object?> ? t : null,
       raw: json,
