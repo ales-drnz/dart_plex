@@ -379,8 +379,9 @@ final class PlexServerConnection {
   }
 
   /// [url] with an unbracketed IPv6 host put in brackets:
-  /// `http://2001:db8::1:32400` becomes `http://[2001:db8::1]:32400`. A
-  /// URL that parses as it is comes back unchanged.
+  /// `http://2001:db8::1:32400` becomes `http://[2001:db8::1]:32400`. The
+  /// URL is not parsed: one whose host is already in brackets, or whose
+  /// host and port hold fewer than two colons, comes back unchanged.
   ///
   /// The last group of an unbracketed address cannot be told from a port,
   /// so the last `:n` is read as the port when there are more than seven
