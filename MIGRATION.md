@@ -6,7 +6,12 @@ plex.tv JWT is new and optional: a legacy token keeps working.
 
 ## Dart 3.10
 
-The SDK floor is `^3.10.0`. Flutter 3.38 ships Dart 3.10.
+The package needs Dart `3.10` or later. Flutter 3.38 ships Dart 3.10.
+
+## Fakes of the client
+
+`PlexClient` and the sub-APIs gained members. A fake that implements one
+must add them, or extend a mocking library's mock instead.
 
 ## Removed
 
@@ -60,7 +65,28 @@ the wire string.
 | `providers.list()`, `add()` → map | `PlexMediaProvider` |
 | `streaming.lyrics()` → `String?` | `PlexLyrics?`: `.text` for the old string, `.lines` for the LRC lines |
 
-Each model keeps its entry in `raw`. The maps the package still returns
+Each model keeps its entry in `raw`.
+
+A lookup returns `null` when the answer holds nothing, and a create
+throws a `parse` error (`subscriptions.create()` returns `null` too):
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| `subscriptions.get()`, `create()` → map | `PlexMediaSubscription?` |
+| `devices.details()` → map | `PlexTunerDevice?` |
+| `dvrs.get()` → map | `PlexDvr?` |
+| `downloadQueue.get()`, `item()` → map | `PlexDownloadQueue?`, `PlexDownloadQueueItem?` |
+| `liveTv.liveSession()` → map | `PlexMetadata?` |
+| `library.person()` → map | `PlexPerson?` |
+
+## Ids and bitrates
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| `downloadQueue.items(queueId: '1')`, `remove(queueId: '1', itemId: '2')` | `queueId: 1`, `itemId: 2`: the ids are `int`, as `PlexDownloadQueue.id` is |
+| `playlists.generatorItems(generatorId: '4')`, `moveGeneratorItem(generatorId: '4', …)` | `generatorId: generator.id` (an `int`) |
+| `startAudioTranscode(maxBitrateKbps: 128)`, `musicProfileExtra(maxBitrateKbps: 128, …)` | `maxAudioBitrateKbps: 128` |
+| `universalVideoUrl(videoBitrate: 8000, audioBitrate: 256)` | `maxVideoBitrateKbps: 8000, maxAudioBitrateKbps: 256` | The maps the package still returns
 (`autocomplete()`, `sectionCommon()`, `sectionPreferences()`,
 `streamLoudness()` and a few other admin reads) are unchanged.
 
@@ -86,6 +112,10 @@ also drops the account token and any JWT session.
 for want of a Plex Pass or Remote Watch Pass. It is not an auth error. A
 `switch` over `PlexErrorType` must handle it. `498` (plex.tv's "token
 expired") is an `auth` error.
+
+`PlexException.path` and `message` show `REDACTED` for the value of an
+`X-Plex-Token`, `deviceJWT` or `pin` query parameter. Code that read the
+token back from an exception's path reads it from the client instead.
 
 ## Moving to JWT sign-in (optional)
 

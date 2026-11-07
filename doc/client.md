@@ -156,9 +156,16 @@ once the user has signed in.
 `useJwt` makes the session's token the account token (and the server
 token, while there is none) and keeps it fresh: before a plex.tv call when
 it expires within a day (`PlexJwtSession.refreshBefore`), and after
-plex.tv or a server refuses it with `401` or `498` ("token expired"). Each
-new token goes to `onChanged`: persist the session there. On the next
-start, read it back and hand it to the client:
+plex.tv or a server refuses it with `401` or `498` ("token expired"). A
+token received in this run is timed from its arrival, by its
+`exp - iat`, so a device clock that disagrees with plex.tv's does not
+refresh it on every call; a token issued for less than two days is
+refreshed at half its lifetime. Each new token goes to `onChanged`:
+persist the session there. If `onChanged` throws, the refresh fails with
+a `PlexException` and the new token is kept. A refreshed token bound to
+another key (its `thumbprint` is not the key's `keyId`) is refused.
+When the first refresh in `useJwt` fails, the client is left as it was.
+On the next start, read the session back and hand it to the client:
 
 ```dart
 final session = await PlexJwtSession.fromJson(
@@ -198,6 +205,12 @@ await plex.useJwt(session); // no token yet: refreshJwt runs now
 fails with it when it returns `null`. Concurrent refusals share one call.
 `useJwt` installs one that refreshes the JWT; set your own to renew
 tokens another way, for example by asking the user to sign in again.
+
+Only the client's own token is renewed. A request that sets
+`X-Plex-Token` in `extraHeaders` (another token, or `''` for none, as the
+sign-in calls and the connection probes do) is not, and neither is a
+request the renewer makes. A plex.tv call that sends the account token
+apart from the server's retries once itself after a fresh JWT.
 
 ### Legacy PIN flow
 
@@ -318,18 +331,17 @@ waiting for worse ones once it has, connects with the resource's
 `accessToken`, and checks the token on the server. `findConnection` does
 the first part alone.
 
-When the server refuses the resource's token with `401`, the token
-`account.devices()` lists for that server is tried instead. What is known
-about server tokens after a JWT sign-in, and what is not:
+A connection counts only when its server reports the resource's machine
+identifier, so the token never goes to another host that answers. When
+the server refuses the resource's token with `401`, the token
+`account.devices()` lists for that server is tried instead. When no
+token works, the call throws and the client keeps its previous server,
+connection and tokens.
 
-- plex.tv answers `/api/v2/resources` for a JWT as for a legacy token,
-  with an `accessToken` per server. For an owned server it can be the
-  account token itself — then the server must accept JWTs, and
-  `useJwt` renews it on the server too.
-- Servers were reported to refuse the token handed out after a JWT
-  sign-in. The `devices` fallback follows that report; whether plex.tv
-  still lists device tokens at `/api/v2/devices`, and for which accounts,
-  is not documented and could not be verified for this release.
+For an owned server the resource's token can be the account's JWT;
+`useJwt` then renews it on the server too. Whether plex.tv lists a device
+token for every account is not documented: the fallback is a best
+effort.
 
 `connect()` and `connectTo()` remain for a URL or a connection you chose:
 

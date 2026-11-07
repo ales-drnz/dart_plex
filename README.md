@@ -21,6 +21,8 @@
 
 ## Installation
 
+It needs Dart 3.10 or later.
+
 Add `dart_plex` to your `pubspec.yaml`:
 
 ```yaml

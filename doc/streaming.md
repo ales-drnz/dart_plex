@@ -205,9 +205,11 @@ The lyrics are a stream of the full item (`isLyrics`, stream type 4).
 `lyrics()` returns `PlexLyrics`, or `null` when there is none: `text` is
 the file as decoded, `lines` its lines read as LRC. A line has `start`
 (`null` when unsynced), `text` and, for enhanced LRC, word `cues`
-(`position`, `endPosition`, `start`), the shape of dart_jellyfin's
-`JellyfinLyricLine`. Several `[mm:ss.xx]` on one line repeat it, ID tags
-(`[ar:…]`) go to `metadata`, and `[offset:±ms]` is applied to every time.
+(`position`, `endPosition`, `start`, `end`), the shape of dart_jellyfin's
+`JellyfinLyricLine`. Several `[mm:ss.xx]` on one line repeat it, the LRC
+ID tags (`ar`, `ti`, `al`, `au`, `by`, `length`, `offset`, `re`, `ve`,
+`#`) go to `metadata`, and `[offset:±ms]` is applied to every time. Any
+other bracketed line, such as `[Chorus: Jay-Z]`, is text.
 `toLrc()` (with `enhanced: true` for word times) and `toPlainText()` write
 it back.
 

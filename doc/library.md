@@ -56,7 +56,8 @@ count always matches what `allByType()` would list; it takes the same
 `sort` takes a `PlexSort`: `PlexSort.titleSort`, `PlexSort.addedAt.desc`,
 `PlexSort.lastViewedAt.desc`, `PlexSort.originallyAvailableAt.desc`,
 `PlexSort.random`, and `then()` for ties
-(`PlexSort.year.desc.then(PlexSort.titleSort)`). The constants are the
+(`PlexSort.year.desc.then(PlexSort.titleSort)`). `asc` and `desc` on a
+combined sort change its last field only. The constants are the
 sorts PMS 1.43.2 offers on music and movie sections; any other is
 `PlexSort('field')`, since `PlexSort` is an extension type over the wire
 string. The same type goes to `children()`, `firstCharacters()`,
@@ -213,7 +214,8 @@ for (final c in episode.chapters) {
 The server sends markers and chapters only when asked. A `PlexMarker`
 has a `type` (`PlexMarkerType.intro`, `credits`, `commercial`,
 `bookmark`, `resume`, or any other the server sends), `start`, `end` and,
-for credits, `isFinal`. `createMarker()` and `editMarker()` take the same
+for credits, `isFinal`. PMS sends `credits`; the API document's `credit`
+reads as the same type. `createMarker()` and `editMarker()` take the same
 type.
 
 ## Children and leaves
