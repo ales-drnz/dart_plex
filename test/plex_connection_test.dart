@@ -197,6 +197,34 @@ void main() {
       expect(res.data, isNull);
       expect(res.statusCode, 204);
     });
+
+    test(
+      'an empty extra header removes the header, whatever its case',
+      () async {
+        conn.token = 'tok';
+        await conn.request<void>(
+          '/x',
+          extraHeaders: const {'x-plex-token': ''},
+        );
+        expect(
+          adapter.last!.headers.keys.map((k) => k.toLowerCase()),
+          isNot(contains('x-plex-token')),
+        );
+      },
+    );
+
+    test('an extra header replaces the base one, whatever its case', () async {
+      conn.token = 'tok';
+      await conn.request<void>(
+        '/x',
+        extraHeaders: const {'x-plex-token': 'other'},
+      );
+      final values = [
+        for (final MapEntry(:key, :value) in adapter.last!.headers.entries)
+          if (key.toLowerCase() == 'x-plex-token') value,
+      ];
+      expect(values, ['other']);
+    });
   });
 
   group('errors', () {
@@ -216,6 +244,20 @@ void main() {
       }
       fail('expected a PlexException');
     }
+
+    test('keeps the whole error body; the message only its start', () async {
+      final text = 'x' * 600;
+      adapter.respond = (_) => CannedResponse(500, utf8.encode(text));
+      final e = await failure(conn.request<void>('/x'));
+      expect(e.body, text);
+      expect(e.message.length, lessThan(text.length));
+    });
+
+    test('an empty error body is null', () async {
+      adapter.respond = (_) => CannedResponse(500, const []);
+      final e = await failure(conn.request<void>('/x'));
+      expect(e.body, isNull);
+    });
 
     for (final (status, type) in [
       (400, PlexErrorType.badRequest),

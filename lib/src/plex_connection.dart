@@ -523,14 +523,18 @@ final class PlexConnection {
       uri,
       abortTrigger: abort.future,
     );
-    // An empty extra header removes the header: `X-Plex-Token: ''`.
-    request.headers.addAll(
-      {
-        ..._baseHeaders,
-        if (_shared.inflates) 'Accept-Encoding': 'gzip',
-        ...?extraHeaders,
-      }..removeWhere((_, value) => value.isEmpty),
-    );
+    // An empty extra header removes the header (`X-Plex-Token: ''`), whatever
+    // the case of its name: HTTP header names are case-insensitive.
+    final merged = <String, String>{
+      ..._baseHeaders,
+      if (_shared.inflates) 'Accept-Encoding': 'gzip',
+    };
+    extraHeaders?.forEach((name, value) {
+      final lower = name.toLowerCase();
+      merged.removeWhere((key, _) => key.toLowerCase() == lower);
+      if (value.isNotEmpty) merged[name] = value;
+    });
+    request.headers.addAll(merged);
     _encodeBody(request, data);
 
     final opened = _Opened(uri, abort, token, _shared.receiveTimeout);
