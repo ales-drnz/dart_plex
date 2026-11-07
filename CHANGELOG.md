@@ -6,11 +6,11 @@ Sign-in with plex.tv JWTs, video transcodes, typed answers in place of maps, and
 - The package needs Dart `3.10` or later.
 - `PlexClient` and the sub-APIs gained members, so a fake that implements one must add them.
 - A lookup returns `null` when the answer holds nothing: `subscriptions.get()`, `devices.details()`, `dvrs.get()`, `downloadQueue.get()` and `item()`, `liveTv.liveSession()` and `library.person()`. `subscriptions.create()` does too. The other creates, `downloadQueue.create()` among them, throw a `parse` error. The Errors and paging topic states the rule.
-- The download queue takes `int` ids (`queueId:`, `itemId:`), as its models give them, and `playlists.generatorItems()` and `moveGeneratorItem()` an `int` `generatorId:`, as `PlexPlayQueueGenerator.id` is.
+- The download queue takes `int` ids (`queueId:`, `itemId:`), as its models give them, and `playlists.generatorItems()` and `reprocessGenerator()` an `int` `generatorId:`, as `PlexPlayQueueGenerator.id` is.
 - The bitrate caps are named `max…BitrateKbps`: `startAudioTranscode()` and `musicProfileExtra()` take `maxAudioBitrateKbps` (was `maxBitrateKbps`), `universalVideoUrl()` `maxVideoBitrateKbps` and `maxAudioBitrateKbps` (were `videoBitrate` and `audioBitrate`).
 - `downloadQueue`, `liveTv`, `dvrs`, `devices`, `subscriptions` and `epg` return typed models instead of maps: `PlexDownloadQueue`, `PlexDownloadQueueItem`, `PlexDvr`, `PlexTunerDevice`, `PlexMediaGrabber`, `PlexDeviceChannel`, `PlexMediaSubscription`, `PlexMediaGrabOperation`, `PlexEpgCountry`, `PlexEpgLanguage`, `PlexLineup`, `PlexEpgChannel` and `PlexChannelMapping`. `liveTv.sessions()` and `liveSession()` return `PlexMetadata`.
-- `downloadQueue.itemMedia()` is `itemMediaUrl()`: the route answers the file, not JSON.
-- `library.tags()`, `matches()`, `person()` and `sectionDetails()`, `playlists.generators()`, `updater.status()`, `server.securityResources()` and `backgroundTasks()`, and `providers.list()` and `add()` return typed models.
+- `downloadQueue.itemMedia()` is `itemMediaUrl()`: the route answers the file, not JSON. It throws a `state` error before `connect()`, and leaves out an absent token.
+- `library.tags()`, `matches()`, `person()` and `sectionDetails()`, `playlists.generators()`, `updater.status()`, `server.securityResources()` and `backgroundTasks()`, and `providers.list()` and `add()` return typed models: `PlexTag`, `PlexMetadata`, `PlexPerson`, `PlexSectionDetails`, `PlexPlayQueueGenerator`, `PlexUpdaterStatus`, `PlexSecurityResource`, `PlexTranscodeJob` and `PlexMediaProvider`.
 - `library.tags()` and `sectionCommon()` require a `type`: the server answers 400 without one.
 - `account.tokenDetails()` returns the `PlexUser` the server token belongs to, from plex.tv. `connectedUsers()` returns `PlexAccountUser`s from `plex.tv/api/users/`. Both asked the server before, which answered an empty container.
 - `streaming.lyrics()` returns `PlexLyrics`, with the lines read as LRC and the text in `text`.
@@ -19,7 +19,7 @@ Sign-in with plex.tv JWTs, video transcodes, typed answers in place of maps, and
 - `startAudioTranscode()` and `universalVideoUrl()` take a `PlexStreamingProtocol` instead of a string. `universalVideoUrl()` takes the protocol's container when `container` is `null`.
 - `connect(accessToken:)` keeps the token it replaces as the account token, for plex.tv calls. `clearSession()` also drops the account token and the JWT session.
 - `PlexErrorType` has a new value, `passRequired`, and `498` is an `auth` error. A `switch` over the type must handle it.
-- Removed what 0.2 deprecated: `PlexDVRsApi`, `isRetriable`, `timeline(state:)` and `playQueueItemId:`, the `PlexPlaybackApi.state*` constants, `universalAudioUrl()` and `nearestToTrack(excludeParentID:, excludeGrandparentID:)`.
+- Removed what 0.2 deprecated: `PlexDVRsApi`, `isRetriable`, `timeline(state:)` and `playQueueItemId:` (`playState` is required), the `PlexPlaybackApi.state*` constants, `universalAudioUrl()` and `nearestToTrack(excludeParentID:, excludeGrandparentID:)`.
 
 ### Added
 - plex.tv JWT sign-in: `PlexDeviceKey` (an Ed25519 key pair, pure Dart, on every platform), `account.createJwtPin()`, `pollJwtPin()`, `authAppUrl()`, `registerJwtKey()`, `authNonce()`, `exchangeDeviceJwt()` and `refreshJwt()`, and `PlexJwt` to read a token's expiry. `PlexDeviceKey.privateKey` and `publicKey` are copies. `PlexJwt.parse()` throws a `parse` error for an `exp`, `iat` or `thumbprint` claim of the wrong type.
@@ -29,7 +29,7 @@ Sign-in with plex.tv JWTs, video transcodes, typed answers in place of maps, and
 - `PlexClient.connectToResource()` and `account.findConnection()`: every connection is tried at once, and the best that answers with the resource's machine identifier wins. A `401` on the resource token falls back to the token `account.devices()` lists for the server (`account.serverTokenFromDevices()`). When no token works, the client keeps its previous server and tokens.
 - `PlexResource.rankedConnections()`, `PlexServerConnection.kind`, `httpUri`, `raw` and `bracketIpv6()`, `PlexClient.connectTo()`, `connection` and `connectionKind`. An unbracketed IPv6 host in `PlexServerConnection.uri`, or in the URL given to `connect()`, is put in brackets.
 - `streaming.startVideoTranscode()`, `PlexVideoTranscode` and `PlexStreamingApi.videoProfileExtra()`.
-- `PlexErrorType.passRequired` and `PlexException.isPassRequired`, for playback refused for want of a Plex Pass or Remote Watch Pass: a decision, or a 4xx other than `401`, `404` and `498`, whose text says so. A bare `403` stays an `auth` error. `PlexException.body` holds the whole error answer, and `withType()` copies an exception with another type.
+- `PlexErrorType.passRequired` and `PlexException.isPassRequired`, for playback refused for want of a Plex Pass or Remote Watch Pass: a decision, or a 4xx other than `401`, `404` and `498`, whose text says so; an HTML page does not count. `decisionUniversal()` returns such a decision as it is. A bare `403` stays an `auth` error. `PlexException.body` holds the whole error answer, and `withType()` copies an exception with another type.
 - `PlexTranscodeDecision.fromJson()`, `text` and `isPassRequired`.
 - `account.homeUsers()`, `managedUsers()`, `switchHomeUser()`, `friends()`, `devices()`, `geoip()`, `watchlist()` with `PlexWatchlistFilter`, `addToWatchlist()`, `removeFromWatchlist()` and `PlexAccountApi.discoverKeyOf()`.
 - `library.folder()`, for `/library/sections/{id}/folder`.
@@ -41,7 +41,7 @@ Sign-in with plex.tv JWTs, video transcodes, typed answers in place of maps, and
 - `PlexFilter.atmos()`, `dolbyVision()`, `hdr()`, `videoCodec()`, `audioCodec()`, `subtitleCodec()`, `audioLayout()`, `audioLanguage()`, `subtitleLanguage()`, `inProgress()` and `duplicate()`.
 - `PlexUser.restricted`, `home`, `homeAdmin`, `protected`, `subscriptionFeatures`, `title` and `raw`, and `PlexResource.raw`.
 - A dependency on `cryptography` `^2.9.0`, for the Ed25519 signatures of the JWT sign-in.
-- A CI workflow: analysis at the SDK floor and on stable, formatting, tests, a publish dry run, the transport drift check and, on demand, the integration suite.
+- A CI workflow: analysis and tests at the SDK floor and on stable, formatting, a publish dry run, the transport drift check and, on demand, the integration suite.
 
 ### Changed
 - `PlexResource.bestConnection()` follows `rankedConnections()`: local, remote, relay; HTTPS before HTTP; IPv4 before IPv6. It leaves out the local addresses of a server neither owned nor shared through Plex Home.
@@ -50,11 +50,10 @@ Sign-in with plex.tv JWTs, video transcodes, typed answers in place of maps, and
 - The package description lists the web.
 - The value of an `X-Plex-Token`, `deviceJWT` or `pin` query parameter reads `REDACTED` in `PlexException.path`, `message` and `toString()`.
 - A flag reads `true`, `1`, `"1"` and `"true"` in every model.
-- `PlexFilter.videoCodec()` and the other media-field filters keep a copy of their values.
+- The tests read PMS 1.43.2's own answers from `test/fixtures/real/`.
 
 ### Fixed
 - `liveTv.dvrs()` reads the `DVR` spelling of the API document as well as the server's `Dvr`.
-- `downloadQueue.itemMediaUrl()` throws a `state` error before `connect()`, and leaves out an absent token.
 - A `PlexTag` from `/library/tags` has its name and filter.
 
 ## [0.2.2] - 2-11-2026
