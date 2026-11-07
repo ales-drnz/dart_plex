@@ -1,7 +1,5 @@
 ## [0.3.0] - 7-11-2026
 
-Sign-in with plex.tv JWTs, video transcodes, typed answers in place of maps, and Dart 3.10. See [MIGRATION.md](MIGRATION.md) for the changes to make in an app.
-
 ### All platforms
 **Breaking**
 - The package needs Dart `3.10` or later.
