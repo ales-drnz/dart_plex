@@ -2,12 +2,12 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../models/plex_server_models.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
-import '../plex_server_models.dart';
 import '../plex_vocabulary.dart';
 
 /// `/status/sessions` and `/status/sessions/history/*` — "what's

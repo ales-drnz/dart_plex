@@ -246,7 +246,7 @@ final class PlexResource {
   ///
   /// The local addresses of a server neither owned nor shared through
   /// Plex Home are left out: they are on its owner's network, not yours.
-  /// [PlexClient.connectToResource] tries them all in parallel.
+  /// `PlexClient.connectToResource` tries them all in parallel.
   List<PlexServerConnection> rankedConnections() {
     final usable = [
       for (final c in connections)
@@ -265,7 +265,7 @@ final class PlexResource {
 
   /// The first of [rankedConnections], without checking that it answers;
   /// `null` when there is none. To pick one that answers, use
-  /// [PlexClient.connectToResource].
+  /// `PlexClient.connectToResource`.
   PlexServerConnection? bestConnection() =>
       rankedConnections().firstOrNull ?? connections.firstOrNull;
 }
@@ -403,7 +403,7 @@ final class PlexServerConnection {
 /// PIN flow state returned by `POST /api/v2/pins` and `GET /api/v2/pins/{id}`.
 ///
 /// The 4-character [code] is what the user types at <https://plex.tv/link>.
-/// Poll [PlexAccountApi.pollPin] until [authToken] is non-null, or until
+/// Poll `PlexAccountApi.pollPin` until [authToken] is non-null, or until
 /// [expiresAt] passes.
 final class PlexPin {
   /// Server-assigned pin id used to poll for completion.
@@ -460,11 +460,11 @@ final class PlexPin {
 /// A member of the account's Plex Home (`plex.tv/api/home/users`): the
 /// admin, other full accounts, and managed users.
 ///
-/// Switch to one with [PlexAccountApi.switchHomeUser].
+/// Switch to one with `PlexAccountApi.switchHomeUser`.
 ///
 /// {@category Client and sign-in}
 final class PlexHomeUser {
-  /// Numeric plex.tv id — what [PlexAccountApi.switchHomeUser] takes.
+  /// Numeric plex.tv id — what `PlexAccountApi.switchHomeUser` takes.
   final int id;
 
   /// Account UUID.
@@ -759,7 +759,7 @@ final class PlexDevice {
 
   /// The device's own token, when plex.tv lists it (`token` or
   /// `accessToken`). For a server, a legacy token that server accepts:
-  /// see [PlexClient.connectToResource].
+  /// see `PlexClient.connectToResource`.
   final String? token;
 
   /// When it was last seen.

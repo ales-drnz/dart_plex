@@ -12,14 +12,7 @@ library;
 
 import 'dart:convert';
 
-import 'api/plex_account_api.dart';
-import 'api/plex_library_api.dart';
-import 'api/plex_live_tv_api.dart';
-import 'api/plex_play_queues_api.dart';
-import 'api/plex_playlists_api.dart';
-import 'api/plex_streaming_api.dart';
-import 'api/plex_subscriptions_api.dart';
-import 'plex_client.dart';
+import 'api/plex_streaming_api.dart' show PlexTranscodeDecision;
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
 import 'plex_filter.dart';
@@ -27,11 +20,13 @@ import 'plex_json.dart';
 import 'plex_vocabulary.dart';
 
 part 'models/plex_account_models.dart';
+part 'models/plex_download_queue_models.dart';
 part 'models/plex_hub_models.dart';
 part 'models/plex_library_models.dart';
 part 'models/plex_live_tv_models.dart';
 part 'models/plex_lyrics_models.dart';
 part 'models/plex_metadata_models.dart';
+part 'models/plex_playlist_models.dart';
 part 'models/plex_server_admin_models.dart';
 part 'models/plex_session_models.dart';
 

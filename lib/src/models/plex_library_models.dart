@@ -128,7 +128,7 @@ enum PlexFilterValueType {
 /// [field] is the query-parameter name to filter with — feed it to
 /// [PlexFilter.new] or one of its named constructors. [valuesKey] is
 /// the endpoint listing the values the facet can take, which
-/// [PlexLibraryApi.filterValues] fetches for you.
+/// `PlexLibraryApi.filterValues` fetches for you.
 final class PlexLibraryFilter {
   /// Parameter name this facet filters on (`genre`, `year`,
   /// `unwatched`) — the `filter` attribute on the wire.
@@ -173,8 +173,8 @@ final class PlexLibraryFilter {
 /// One value of a filterable field — a genre, mood, style, decade,
 /// collection or label row.
 ///
-/// Returned by [PlexLibraryApi.genres] and
-/// [PlexLibraryApi.filterValues]. [id] is the number Plex expects when
+/// Returned by `PlexLibraryApi.genres` and
+/// `PlexLibraryApi.filterValues`. [id] is the number Plex expects when
 /// filtering by this tag and [field] is the parameter it belongs to;
 /// hand the whole tag to [PlexFilter.of] rather than reassembling
 /// either by hand.
@@ -276,4 +276,38 @@ final class PlexTag {
     }
   }
   return (id: null, field: null);
+}
+
+/// A person in the library (`/library/people/{id}`): an actor, a
+/// director, …
+///
+/// {@category Library}
+final class PlexPerson {
+  /// Person id.
+  final int? id;
+
+  /// Name (`tag`).
+  final String name;
+
+  /// Photo URL.
+  final String? thumb;
+
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
+  /// Builds a person.
+  const PlexPerson({
+    required this.name,
+    this.id,
+    this.thumb,
+    this.raw = const {},
+  });
+
+  /// Parses one person entry.
+  factory PlexPerson.fromJson(Map<String, Object?> json) => PlexPerson(
+    id: asInt(json['id']),
+    name: asString(json['tag']) ?? asString(json['title']) ?? '',
+    thumb: asString(json['thumb']),
+    raw: json,
+  );
 }

@@ -14,10 +14,10 @@ part of '../plex_models.dart';
 /// `playQueueID`, `playQueueSelectedItemID`, `playQueueShuffled`,
 /// `playQueueVersion` — and the items in the `Metadata` array. This
 /// DTO surfaces both so callers can pass [id] straight back to
-/// [PlexPlayQueuesApi.items], [PlexPlayQueuesApi.addItems], …
+/// `PlexPlayQueuesApi.items`, `PlexPlayQueuesApi.addItems`, …
 final class PlexPlayQueue {
   /// Server-assigned queue identifier. Use this with the rest of
-  /// [PlexPlayQueuesApi].
+  /// `PlexPlayQueuesApi`.
   final int id;
 
   /// `playQueueSelectedItemID` — the per-item id (NOT a ratingKey) of

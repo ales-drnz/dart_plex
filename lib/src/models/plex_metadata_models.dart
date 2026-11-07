@@ -134,7 +134,7 @@ final class PlexMetadata {
 
   /// Number of leaves under the item (`leafCount`): an album's tracks.
   /// On PMS 1.43.2 it comes with the item details and
-  /// [PlexLibraryApi.recentlyAdded], not with section listings or
+  /// `PlexLibraryApi.recentlyAdded`, not with section listings or
   /// `/children`.
   final int? leafCount;
 
@@ -144,7 +144,7 @@ final class PlexMetadata {
   /// Number of children (`childCount`): an artist's albums, when the
   /// response carries it. On PMS 1.43.2 search hubs do; section listings
   /// and the artist's own details do not — use
-  /// [PlexLibraryApi.countChildren] there.
+  /// `PlexLibraryApi.countChildren` there.
   final int? childCount;
 
   /// How many times the item was skipped (`skipCount`).
@@ -167,7 +167,7 @@ final class PlexMetadata {
   final String? grandparentGuid;
 
   /// Sonic distance from the seed, on items from
-  /// [PlexLibraryApi.nearestToTrack] (`distance`; smaller is closer).
+  /// `PlexLibraryApi.nearestToTrack` (`distance`; smaller is closer).
   final double? distance;
 
   /// Search relevance, on items from search (`score`).
@@ -181,7 +181,7 @@ final class PlexMetadata {
   /// only on items read from `/playlists/{id}/items`.
   ///
   /// It names one *entry*, not the track: pass it to
-  /// [PlexPlaylistsApi.removeItem] / [PlexPlaylistsApi.moveItem]. Kept as
+  /// `PlexPlaylistsApi.removeItem` / `PlexPlaylistsApi.moveItem`. Kept as
   /// a `String` like [ratingKey] and the ids those methods take.
   final String? playlistItemId;
 
@@ -190,11 +190,11 @@ final class PlexMetadata {
   final String? editionTitle;
 
   /// Intro, credits and commercial markers (`Marker`). Only in item
-  /// details asked with `includeMarkers` ([PlexLibraryApi.item]).
+  /// details asked with `includeMarkers` (`PlexLibraryApi.item`).
   final List<PlexMarker> markers;
 
   /// Chapters (`Chapter`). Only in item details asked with
-  /// `includeChapters` ([PlexLibraryApi.item]).
+  /// `includeChapters` (`PlexLibraryApi.item`).
   final List<PlexChapter> chapters;
 
   /// The artwork list (`Image`): poster, background, square background,
@@ -202,7 +202,7 @@ final class PlexMetadata {
   final List<PlexImage> images;
 
   /// The entry id inside a server play queue (`playQueueItemID`), present
-  /// only on items read from [PlexPlayQueuesApi]: what
+  /// only on items read from `PlexPlayQueuesApi`: what
   /// `PlexPlaybackApi.timeline(playQueueItemID:)` and the play queue's
   /// move and remove calls take.
   final int? playQueueItemId;
@@ -383,7 +383,7 @@ final class PlexMetadata {
   /// The first selected audio stream of the first media part, or the first
   /// audio stream when none is flagged. Streams (and so [PlexStream.gain]
   /// and the other loudness fields) are in the full item from
-  /// [PlexLibraryApi.item]; list responses usually leave them out.
+  /// `PlexLibraryApi.item`; list responses usually leave them out.
   PlexStream? get audioStream {
     for (final m in media) {
       for (final part in m.parts) {

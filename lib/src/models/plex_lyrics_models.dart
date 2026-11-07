@@ -8,7 +8,7 @@ part of '../plex_models.dart';
 // Lyrics
 // ---------------------------------------------------------------------------
 
-/// A track's lyrics as [PlexStreamingApi.lyrics] reads them: the text as
+/// A track's lyrics as `PlexStreamingApi.lyrics` reads them: the text as
 /// the server sent it, and its lines.
 ///
 /// Plex serves a lyrics stream as the file it found — an `.lrc` with
