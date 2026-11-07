@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
   pull_request:
   workflow_dispatch:
     inputs:
@@ -77,10 +77,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: dart_plex
-      - uses: actions/checkout@v4
-        with:
-          repository: ales-drnz/dart_jellyfin
-          path: dart_jellyfin
+      # The sibling's branch: main from main; otherwise the branch of the
+      # same name, else its newest release/* branch, else main. A transport
+      # change lands in both repositories on release branches first.
+      - name: Check out dart_jellyfin
+        run: |
+          url=https://github.com/ales-drnz/dart_jellyfin.git
+          ref=main
+          if [ "$BRANCH" != main ]; then
+            if git ls-remote --exit-code --heads "$url" "$BRANCH" >/dev/null; then
+              ref=$BRANCH
+            else
+              newest=$(git ls-remote --heads "$url" 'release/*' \
+                | sed 's|.*refs/heads/||' | sort -V | tail -n 1)
+              ref=${newest:-main}
+            fi
+          fi
+          echo "dart_jellyfin at $ref"
+          git clone --depth 1 --branch "$ref" "$url" dart_jellyfin
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
