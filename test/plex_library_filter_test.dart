@@ -618,6 +618,11 @@ void main() {
       expect(PlexFilter.audioLayout(['5.1']).toString(), 'audioLayout=5.1');
       expect(PlexFilter.audioLanguage(['ita']).toString(), 'audioLanguage=ita');
       expect(PlexFilter.inProgress().toString(), 'inProgress=1');
+      final codecs = ['hevc'];
+      final filter = PlexFilter.videoCodec(codecs);
+      codecs.add('av1');
+      expect(filter.toString(), 'videoCodec=hevc');
+      expect(() => filter.values.add('x'), throwsUnsupportedError);
     });
   });
 

@@ -292,14 +292,17 @@ final class PlexFilter {
     bool exclude = false,
   }) => PlexFilter._values('subtitleLanguage', languages, exclude);
 
-  factory PlexFilter._values(String field, List<String> values, bool exclude) =>
-      PlexFilter(
-        field: field,
-        operator: exclude
-            ? PlexFilterOperator.doesNotMatch
-            : PlexFilterOperator.matches,
-        values: values,
-      );
+  /// A copy of [values], so the caller's list can change afterwards.
+  factory PlexFilter._values(String field, List<String> values, bool exclude) {
+    assert(values.isNotEmpty, '$field needs at least one value');
+    return PlexFilter(
+      field: field,
+      operator: exclude
+          ? PlexFilterOperator.doesNotMatch
+          : PlexFilterOperator.matches,
+      values: List.unmodifiable(values),
+    );
+  }
 
   /// Query-parameter name this condition sends — [field] followed by
   /// [PlexFilterOperator.wire].
