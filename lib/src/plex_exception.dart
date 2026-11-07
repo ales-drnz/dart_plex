@@ -72,10 +72,8 @@ final class PlexException implements Exception {
 
   /// [text] with the value of every `X-Plex-Token`, `deviceJWT` and `pin`
   /// query parameter replaced by `REDACTED`.
-  static String _redact(String text) => text.replaceAllMapped(
-    _secret,
-    (m) => '${m[1]}REDACTED',
-  );
+  static String _redact(String text) =>
+      text.replaceAllMapped(_secret, (m) => '${m[1]}REDACTED');
 
   static final RegExp _secret = RegExp(
     r'([?&;](?:x-plex-token|devicejwt|pin)=)[^&#\s]*',

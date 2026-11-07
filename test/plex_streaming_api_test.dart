@@ -280,11 +280,34 @@ void _stopUniversalTests() {
         (0, 6, const Duration(seconds: 12)),
         (6, 11, const Duration(milliseconds: 12400)),
       ]);
+      expect(line.cues.map((c) => c.end), [
+        const Duration(milliseconds: 12400),
+        const Duration(milliseconds: 13100),
+      ]);
       expect(l.hasCues, isTrue);
       expect(
         line.toLrcLine(enhanced: true),
-        '[00:12.00]<00:12.00>Hello <00:12.40>world',
+        '[00:12.00]<00:12.00>Hello <00:12.40>world<00:13.10>',
       );
+    });
+
+    test('a space after the stamp is not part of an enhanced line', () {
+      final line = PlexLyrics.parse(
+        '[00:01.00] <00:01.00>Hey <00:01.50>you',
+      ).lines.single;
+      expect(line.text, 'Hey you');
+      expect(line.cues.map((c) => (c.position, c.endPosition)), [
+        (0, 4),
+        (4, 7),
+      ]);
+    });
+
+    test('only the LRC ID tags are tags: other brackets are text', () {
+      final l = PlexLyrics.parse(
+        '[ar:Artist]\n[re:Tool]\n[#:note]\n[Chorus: Jay-Z]\nHello',
+      );
+      expect(l.metadata, {'ar': 'Artist', 're': 'Tool', '#': 'note'});
+      expect(l.lines.map((x) => x.text), ['[Chorus: Jay-Z]', 'Hello']);
     });
 
     test('plain text gives unsynced lines', () {

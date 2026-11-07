@@ -14,9 +14,11 @@ part of '../plex_models.dart';
 /// Plex serves a lyrics stream as the file it found — an `.lrc` with
 /// timestamps, or plain text — so [lines] are read from the LRC syntax:
 /// `[mm:ss.xx]` line times (several on one line repeat it), `<mm:ss.xx>`
-/// word times of enhanced LRC ([PlexLyricLine.cues]), `[ar:…]`-style tags
-/// ([metadata]) and `[offset:±ms]`, which is applied to every time.
-/// Plain text gives lines without times.
+/// word times of enhanced LRC ([PlexLyricLine.cues]), the ID tags `ar`,
+/// `ti`, `al`, `au`, `by`, `length`, `offset`, `re`, `ve` and `#`
+/// ([metadata]), and `[offset:±ms]`, which is applied to every time. Any
+/// other bracketed line, such as `[Chorus: Jay-Z]`, is text. Plain text
+/// gives lines without times.
 ///
 /// {@category Playback and play queues}
 final class PlexLyrics {
@@ -26,7 +28,8 @@ final class PlexLyrics {
   /// The lines, in time order when [isSynced], in file order otherwise.
   final List<PlexLyricLine> lines;
 
-  /// The ID tags (`ar`, `ti`, `al`, `by`, `length`, …), lowercased keys.
+  /// The ID tags (`ar`, `ti`, `al`, `au`, `by`, `length`, `offset`,
+  /// `re`, `ve`, `#`), lowercased keys.
   final Map<String, String> metadata;
 
   /// Builds lyrics from already-parsed parts.
@@ -43,7 +46,10 @@ final class PlexLyrics {
     final untimed = <PlexLyricLine>[];
     var offset = Duration.zero;
     final stamp = RegExp(r'^\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]');
-    final tag = RegExp(r'^\[([A-Za-z#]+):(.*)\]\s*$');
+    final tag = RegExp(
+      r'^\[(ar|ti|al|au|by|length|offset|re|ve|#):(.*)\]\s*$',
+      caseSensitive: false,
+    );
     for (final raw in const LineSplitter().convert(text)) {
       var line = raw.trimRight();
       final starts = <Duration>[];
@@ -92,6 +98,7 @@ final class PlexLyrics {
                       position: c.position,
                       endPosition: c.endPosition,
                       start: shift(c.start),
+                      end: c.end == null ? null : shift(c.end!),
                     ),
                 ],
               ),
@@ -141,15 +148,23 @@ final class PlexLyrics {
       last = m.end;
     }
     out.write(line.substring(last));
-    final text = out.toString();
+    final raw = out.toString();
+    final text = raw.trim();
+    final lead = raw.length - raw.trimLeft().length;
+    int at(int i) => (i - lead).clamp(0, text.length);
     final cues = <PlexLyricCue>[];
     for (var i = 0; i < marks.length; i++) {
-      final (position, start) = marks[i];
-      final end = i + 1 < marks.length ? marks[i + 1].$1 : text.length;
+      final position = at(marks[i].$1);
       // A closing tag after the last word marks its end, not a word.
       if (position >= text.length) break;
+      final next = i + 1 < marks.length ? marks[i + 1] : null;
       cues.add(
-        PlexLyricCue(position: position, endPosition: end, start: start),
+        PlexLyricCue(
+          position: position,
+          endPosition: next == null ? text.length : at(next.$1),
+          start: marks[i].$2,
+          end: next?.$2,
+        ),
       );
     }
     return (text, cues);
@@ -189,6 +204,10 @@ final class PlexLyricLine {
       consumed = position;
     }
     out.write(text.substring(consumed));
+    final end = cues.last.end;
+    if (end != null && cues.last.endPosition >= text.length) {
+      out.write('<${_stamp(end)}>');
+    }
     return out.toString();
   }
 
@@ -219,10 +238,15 @@ final class PlexLyricCue {
   /// When the word starts.
   final Duration start;
 
+  /// When the word ends: the next word's start, or the closing time after
+  /// the last word. `null` for a last word without one.
+  final Duration? end;
+
   /// Builds a cue.
   const PlexLyricCue({
     required this.position,
     required this.endPosition,
     required this.start,
+    this.end,
   });
 }
