@@ -53,7 +53,7 @@ the wire string.
 | `downloadQueue.itemMedia()` | `itemMediaUrl()`: the route answers the file |
 | `liveTv.sessions()`, `liveSession()` → maps | `PlexMetadata` |
 | `liveTv.dvrs()`, `dvrs.get()` → maps | `PlexDvr` (`key`, `devices`) |
-| `devices.grabbers()`, `list()`, `details()`, `channels()` → maps | `PlexMediaGrabber`, `PlexTunerDevice`, `PlexDeviceChannel` |
+| `devices.grabbers()`, `list()`, `discover()`, `add()`, `details()`, `channels()` → maps | `PlexMediaGrabber`, `PlexTunerDevice`, `PlexDeviceChannel` |
 | `subscriptions.list()`, `get()`, `create()`, `template()` → maps | `PlexMediaSubscription` |
 | `subscriptions.scheduledRecordings()` → map | `PlexMediaGrabOperation` |
 | `epg.*` → maps | `PlexEpgCountry`, `PlexEpgLanguage`, `PlexLineup`, `PlexEpgChannel`, `PlexChannelMapping` |
@@ -79,16 +79,18 @@ throws a `parse` error (`subscriptions.create()` returns `null` too):
 | `liveTv.liveSession()` → map | `PlexMetadata?` |
 | `library.person()` → map | `PlexPerson?` |
 
+The maps the package still returns
+(`autocomplete()`, `sectionCommon()`, `sectionPreferences()`,
+`streamLoudness()` and a few other admin reads) are unchanged.
+
 ## Ids and bitrates
 
 | 0.2.x | 0.3.0 |
 | --- | --- |
 | `downloadQueue.items(queueId: '1')`, `remove(queueId: '1', itemId: '2')` | `queueId: 1`, `itemId: 2`: the ids are `int`, as `PlexDownloadQueue.id` is |
-| `playlists.generatorItems(generatorId: '4')`, `moveGeneratorItem(generatorId: '4', …)` | `generatorId: generator.id` (an `int`) |
+| `playlists.generatorItems(generatorId: '4')`, `reprocessGenerator(generatorId: '4', …)` | `generatorId: generator.id` (an `int`) |
 | `startAudioTranscode(maxBitrateKbps: 128)`, `musicProfileExtra(maxBitrateKbps: 128, …)` | `maxAudioBitrateKbps: 128` |
-| `universalVideoUrl(videoBitrate: 8000, audioBitrate: 256)` | `maxVideoBitrateKbps: 8000, maxAudioBitrateKbps: 256` | The maps the package still returns
-(`autocomplete()`, `sectionCommon()`, `sectionPreferences()`,
-`streamLoudness()` and a few other admin reads) are unchanged.
+| `universalVideoUrl(videoBitrate: 8000, audioBitrate: 256)` | `maxVideoBitrateKbps: 8000, maxAudioBitrateKbps: 256` |
 
 ## plex.tv calls and tokens
 
