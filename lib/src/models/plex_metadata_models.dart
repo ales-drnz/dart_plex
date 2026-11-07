@@ -517,14 +517,23 @@ final class PlexImage {
   /// Text for accessibility (`alt`).
   final String? alt;
 
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds an image entry.
-  const PlexImage({required this.type, required this.url, this.alt});
+  const PlexImage({
+    required this.type,
+    required this.url,
+    this.alt,
+    this.raw = const {},
+  });
 
   /// Parses one `Image`.
   factory PlexImage.fromJson(Map<String, Object?> json) => PlexImage(
     type: asString(json['type']) ?? '',
     url: asString(json['url']) ?? '',
     alt: asString(json['alt']),
+    raw: json,
   );
 }
 

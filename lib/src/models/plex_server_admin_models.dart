@@ -87,6 +87,9 @@ final class PlexRelease {
   /// State (`notify`, `downloaded`, …).
   final String? state;
 
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds a release.
   const PlexRelease({
     this.key,
@@ -95,6 +98,7 @@ final class PlexRelease {
     this.fixed,
     this.downloadUrl,
     this.state,
+    this.raw = const {},
   });
 
   /// Parses one `Release`.
@@ -105,6 +109,7 @@ final class PlexRelease {
     fixed: asString(json['fixed']),
     downloadUrl: asString(json['downloadURL']),
     state: asString(json['state']),
+    raw: json,
   );
 }
 
@@ -406,6 +411,9 @@ final class PlexSectionView {
   /// The search prompt.
   final String? prompt;
 
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds a view.
   const PlexSectionView({
     required this.key,
@@ -413,6 +421,7 @@ final class PlexSectionView {
     required this.secondary,
     required this.search,
     this.prompt,
+    this.raw = const {},
   });
 
   /// Parses one `Directory`.
@@ -423,6 +432,7 @@ final class PlexSectionView {
         secondary: asBool(json['secondary']),
         search: asBool(json['search']),
         prompt: asString(json['prompt']),
+        raw: json,
       );
 }
 

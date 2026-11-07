@@ -70,5 +70,32 @@ void main() {
       });
       expect((await plex.epg.languages()).single.code, 'aar');
     });
+
+    test('the spec fields: lineupType, signal, and raw everywhere', () {
+      final device = PlexTunerDevice.fromJson(const {
+        'lineupType': 'cable',
+        'ChannelMapping': [
+          {'channelKey': 'c', 'extra': 1},
+        ],
+      });
+      expect(device.lineupType, 'cable');
+      expect(device.channelMappings.single.raw['extra'], 1);
+      final channel = PlexEpgChannel.fromJson(const {
+        'signalQuality': 80,
+        'signalStrength': '90',
+      });
+      expect((channel.signalQuality, channel.signalStrength), (80, 90));
+      expect(channel.raw['signalQuality'], 80);
+      for (final raw in [
+        PlexMediaGrabber.fromJson(const {'x': 1}).raw,
+        PlexDeviceChannel.fromJson(const {'x': 1}).raw,
+        PlexEpgLanguage.fromJson(const {'x': 1}).raw,
+        PlexRelease.fromJson(const {'x': 1}).raw,
+        PlexSectionView.fromJson(const {'x': 1}).raw,
+        PlexImage.fromJson(const {'x': 1}).raw,
+      ]) {
+        expect(raw, {'x': 1});
+      }
+    });
   });
 }

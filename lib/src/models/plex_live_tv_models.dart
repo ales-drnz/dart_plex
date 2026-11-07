@@ -123,6 +123,9 @@ final class PlexTunerDevice {
   /// Lineup.
   final String? lineup;
 
+  /// Kind of lineup (`lineupType`).
+  final String? lineupType;
+
   /// Number of tuners.
   final int? tuners;
 
@@ -159,6 +162,7 @@ final class PlexTunerDevice {
     this.state,
     this.status,
     this.lineup,
+    this.lineupType,
     this.tuners,
     this.uri,
     this.thumb,
@@ -184,6 +188,7 @@ final class PlexTunerDevice {
         status: asString(json['status']),
         enabled: asBool(json['enabled']),
         lineup: asString(json['lineup']),
+        lineupType: asString(json['lineupType']),
         tuners: asInt(json['tuners']),
         uri: asString(json['uri']),
         thumb: asString(json['thumb']),
@@ -216,12 +221,16 @@ final class PlexChannelMapping {
   /// Whether the channel is enabled.
   final bool enabled;
 
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds a mapping.
   const PlexChannelMapping({
     required this.enabled,
     this.deviceIdentifier,
     this.channelKey,
     this.lineupIdentifier,
+    this.raw = const {},
   });
 
   /// Parses one `ChannelMapping`.
@@ -231,6 +240,7 @@ final class PlexChannelMapping {
         channelKey: asString(json['channelKey']),
         lineupIdentifier: asString(json['lineupIdentifier']),
         enabled: asBool(json['enabled']),
+        raw: json,
       );
 
   /// The `ChannelMapping` entries of an answer.
@@ -251,11 +261,15 @@ final class PlexMediaGrabber {
   /// Protocol (`livetv`, `stream`, `download`).
   final String protocol;
 
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds a grabber.
   const PlexMediaGrabber({
     required this.title,
     required this.identifier,
     required this.protocol,
+    this.raw = const {},
   });
 
   /// Parses one `MediaGrabber`.
@@ -264,6 +278,7 @@ final class PlexMediaGrabber {
         title: asString(json['title']) ?? '',
         identifier: asString(json['identifier']) ?? '',
         protocol: asString(json['protocol']) ?? '',
+        raw: json,
       );
 }
 
@@ -296,6 +311,9 @@ final class PlexDeviceChannel {
   /// Signal strength.
   final int? signalStrength;
 
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds a channel.
   const PlexDeviceChannel({
     required this.drm,
@@ -306,6 +324,7 @@ final class PlexDeviceChannel {
     this.name,
     this.signalQuality,
     this.signalStrength,
+    this.raw = const {},
   });
 
   /// Parses one `DeviceChannel`.
@@ -319,6 +338,7 @@ final class PlexDeviceChannel {
         hd: asBool(json['hd']),
         signalQuality: asInt(json['signalQuality']),
         signalStrength: asInt(json['signalStrength']),
+        raw: json,
       );
 }
 
@@ -386,14 +406,22 @@ final class PlexEpgLanguage {
   /// Name, in that language.
   final String title;
 
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds a language.
-  const PlexEpgLanguage({required this.code, required this.title});
+  const PlexEpgLanguage({
+    required this.code,
+    required this.title,
+    this.raw = const {},
+  });
 
   /// Parses one `Language`.
   factory PlexEpgLanguage.fromJson(Map<String, Object?> json) =>
       PlexEpgLanguage(
         code: asString(json['code']) ?? '',
         title: asString(json['title']) ?? '',
+        raw: json,
       );
 }
 
@@ -493,6 +521,15 @@ final class PlexEpgChannel {
   /// Whether it is HD.
   final bool hd;
 
+  /// Signal quality.
+  final int? signalQuality;
+
+  /// Signal strength.
+  final int? signalStrength;
+
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
   /// Builds a channel.
   const PlexEpgChannel({
     required this.drm,
@@ -505,6 +542,9 @@ final class PlexEpgChannel {
     this.channelVcn,
     this.language,
     this.thumb,
+    this.signalQuality,
+    this.signalStrength,
+    this.raw = const {},
   });
 
   /// Parses one `Channel`.
@@ -519,6 +559,9 @@ final class PlexEpgChannel {
     drm: asBool(json['drm']),
     favorite: asBool(json['favorite']),
     hd: asBool(json['hd']),
+    signalQuality: asInt(json['signalQuality']),
+    signalStrength: asInt(json['signalStrength']),
+    raw: json,
   );
 }
 
