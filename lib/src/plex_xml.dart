@@ -15,8 +15,8 @@
 /// content, comments, processing instructions and DTDs are skipped.
 library;
 
-/// The Plex-JSON shape of [xml]. Throws a [FormatException] when it is
-/// not well-formed enough to read.
+/// The Plex-JSON shape of [xml]. Throws a [FormatException], and nothing
+/// else, when it is not well-formed enough to read.
 Map<String, Object?> plexXmlToJson(String xml) {
   final reader = _Reader(xml);
   final root = reader.readDocument();
@@ -84,12 +84,16 @@ final class _Reader {
       }
       i++;
       _spaces();
+      if (i >= s.length) throw FormatException('Expected a value', s, i);
       final quote = s[i];
       if (quote != '"' && quote != "'") {
         throw FormatException('Expected a quoted value', s, i);
       }
       final end = s.indexOf(quote, i + 1);
       if (end < 0) throw FormatException('Unterminated value', s, i);
+      if (map.containsKey(attr)) {
+        throw FormatException('Duplicate attribute $attr', s, i);
+      }
       map[attr] = _unescape(s.substring(i + 1, end));
       i = end + 1;
     }
@@ -110,8 +114,13 @@ final class _Reader {
         i = _after(']]>');
         continue;
       }
+      final at = i;
       final (child, value) = _element();
-      ((map[child] ??= <Object?>[]) as List<Object?>).add(value);
+      final list = map[child] ??= <Object?>[];
+      if (list is! List<Object?>) {
+        throw FormatException('<$child> clashes with an attribute', s, at);
+      }
+      list.add(value);
     }
   }
 
@@ -143,11 +152,14 @@ final class _Reader {
     if (!v.contains('&')) return v;
     return v.replaceAllMapped(RegExp(r'&(#x[0-9a-fA-F]+|#[0-9]+|\w+);'), (m) {
       final e = m[1]!;
-      if (e.startsWith('#x')) {
-        return String.fromCharCode(int.parse(e.substring(2), radix: 16));
-      }
       if (e.startsWith('#')) {
-        return String.fromCharCode(int.parse(e.substring(1)));
+        final code = e.startsWith('#x')
+            ? int.tryParse(e.substring(2), radix: 16)
+            : int.tryParse(e.substring(1));
+        if (code == null || code < 0 || code > 0x10FFFF) {
+          throw FormatException('Bad character reference ${m[0]}', v);
+        }
+        return String.fromCharCode(code);
       }
       return switch (e) {
         'amp' => '&',

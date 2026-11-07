@@ -34,6 +34,17 @@ void main() {
 
     test('malformed XML is a FormatException', () {
       expect(() => plexXmlToJson('<a b="1">'), throwsFormatException);
+      for (final bad in [
+        '<a b=',
+        '<a b',
+        '<a',
+        '<a b="1"><b/></a>',
+        '<a b="1" b="2"/>',
+        '<a b="&#x110000;"/>',
+        '<a b="&#99999999999999999999;"/>',
+      ]) {
+        expect(() => plexXmlToJson(bad), throwsFormatException, reason: bad);
+      }
     });
   });
 }
