@@ -158,6 +158,9 @@ recognise it from:
   remote playback as requiring a subscription or not allowed. An HTML
   page does not count: a site's pages can name the Plex Pass anywhere.
 
+`startAudioTranscode()` and `startVideoTranscode()` throw for such a
+decision; `decisionUniversal()` returns it, with `isPassRequired` true.
+
 A bare `403` stays an auth error on any connection: it is also how a
 server refuses a token. The rule could not be checked against a real
 refusal for this release.

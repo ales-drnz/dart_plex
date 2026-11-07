@@ -21,7 +21,8 @@ the underlying `cause`, the original `stackTrace`, the whole error `body`
 the server sent (`message` holds at most its first 512 bytes) and, when
 the server sent `Retry-After` (on a `429` or `503`), `retryAfter`. The
 value of an `X-Plex-Token`, `deviceJWT` or `pin` in the `path` or the
-`message` reads `REDACTED`, so an exception can be logged as it is.
+`message` reads `REDACTED`, so `toString()` can be logged as it is.
+`body` and `cause` are kept as they came.
 
 ### An empty answer
 

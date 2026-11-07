@@ -100,5 +100,6 @@ mobile apps use for offline sync: `create()`, `get()`,
 (one per client and user: `create()` returns the existing one), an entry
 a `PlexDownloadQueueItem` with its `status`, `error` and `decision`; once
 an item is `available`, download `itemMediaUrl()` with
-`downloadToFile()`. For a download of your own, `downloadToFile()` above
+`downloadToFile()`. The ids are `int`s, as `PlexDownloadQueue.id` is, and
+`get()` and `item()` return `null` when the answer holds nothing. For a download of your own, `downloadToFile()` above
 is enough.

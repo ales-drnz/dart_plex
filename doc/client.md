@@ -334,7 +334,8 @@ the first part alone.
 A connection counts only when its server reports the resource's machine
 identifier, so the token never goes to another host that answers. When
 the server refuses the resource's token with `401`, the token
-`account.devices()` lists for that server is tried instead. When no
+`account.devices()` lists for that server is tried instead.
+`verifyToken: false` skips the check on the server. When no
 token works, the call throws and the client keeps its previous server,
 connection and tokens.
 
