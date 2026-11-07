@@ -4,27 +4,57 @@
 
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
+
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_credentials.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
 import '../plex_models.dart';
+import '../plex_session_state.dart';
+import '../plex_vocabulary.dart';
 import '../transport/plex_response.dart';
 
-/// Audio (and video) streaming URL builders.
+/// Transcode decisions and streaming URLs.
 ///
-/// These methods don't make HTTP calls — they assemble fully signed URLs
-/// you can hand to an audio engine (mpv, AVPlayer, ExoPlayer, …). The
-/// X-Plex-Token is appended as a query parameter so transcode children
-/// (segment requests) don't need custom headers.
+/// [startAudioTranscode] and [startVideoTranscode] ask the server for a
+/// decision and build the URL to play; [directFileUrl] is the file as it
+/// is. The URLs carry the X-Plex-Token as a query parameter so a player
+/// (mpv, AVPlayer, ExoPlayer, …) and its segment requests need no custom
+/// headers.
+///
+/// ## The remote-streaming pass
+///
+/// Since April 2025 Plex requires a Plex Pass (on the server owner's
+/// account) or a Remote Watch Pass (on the viewer's) to stream personal
+/// video to a device outside the server's network. A refusal for that
+/// reason is thrown as [PlexErrorType.passRequired], with the server's
+/// whole answer in [PlexException.body]. PMS documents no code for it, so
+/// the decision calls recognise it heuristically, from:
+///
+/// * the answer's text — an error body, or a decision's
+///   `generalDecisionText` / `transcodeDecisionText` /
+///   `directPlayDecisionText` — naming "Plex Pass", "Remote Watch", or
+///   remote playback as requiring a subscription or not allowed;
+/// * a `403` on a decision or start while the client reached the server
+///   through a remote or relay connection ([PlexClient.connectionKind]):
+///   local playback never needs the pass, and a `403` with a valid token
+///   is what remote clients reported.
+///
+/// A false negative stays the error it was (an auth or bad-request error,
+/// or an unplayable [PlexTranscodeDecision]); check
+/// [PlexClient.connectionKind] and [PlexException.body] when in doubt.
+/// Music is not covered by the requirement.
 ///
 /// {@category Streaming}
 class PlexStreamingApi {
   final PlexConnection _http;
+  final PlexSessionState? _state;
 
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.streaming].
-  PlexStreamingApi(this._http);
+  PlexStreamingApi(this._http, {@internal PlexSessionState? state})
+    : _state = state;
 
   /// Starts a server-side audio transcode the way PMS accepts it, and
   /// returns the URL to play.
@@ -52,8 +82,9 @@ class PlexStreamingApi {
   ///
   /// The URL carries the token and the client identity in its query, since
   /// the player opens it without this client's headers. [protocol] is
-  /// `hls` (an `.m3u8`, default) or `dash` (an `.mpd`). Keep [session]
-  /// for [pingUniversal] and [stopUniversal].
+  /// [PlexStreamingProtocol.hls] (an `.m3u8`, default) or
+  /// [PlexStreamingProtocol.dash] (an `.mpd`); HTTP is not offered for
+  /// music. Keep [session] for [pingUniversal] and [stopUniversal].
   ///
   /// Check [PlexAudioTranscode.decision]: when it is not playable the URL
   /// will not work either.
@@ -65,7 +96,7 @@ class PlexStreamingApi {
   Future<PlexAudioTranscode> startAudioTranscode({
     required String ratingKey,
     required String session,
-    String protocol = 'hls',
+    PlexStreamingProtocol protocol = PlexStreamingProtocol.hls,
     String audioCodec = 'aac',
     int? maxBitrateKbps,
     int offsetSeconds = 0,
@@ -74,17 +105,21 @@ class PlexStreamingApi {
     String? clientProfileName = 'Generic',
   }) async {
     _requireConnected();
-    final (container, ext) = switch (protocol) {
-      'hls' => ('mpegts', 'm3u8'),
-      'dash' => ('mp4', 'mpd'),
-      _ => throw ArgumentError.value(protocol, 'protocol', 'hls or dash'),
+    final container = switch (protocol) {
+      PlexStreamingProtocol.hls => 'mpegts',
+      PlexStreamingProtocol.dash => 'mp4',
+      PlexStreamingProtocol.http => throw ArgumentError.value(
+        protocol,
+        'protocol',
+        'hls or dash',
+      ),
     };
     final creds = _http.credentials;
     final qp = <String, String>{
       'path': '/library/metadata/$ratingKey',
       'mediaIndex': '$mediaIndex',
       'partIndex': '$partIndex',
-      'protocol': protocol,
+      'protocol': protocol.wire,
       'directPlay': '0',
       'directStream': '0',
       'fastSeek': '1',
@@ -96,10 +131,9 @@ class PlexStreamingApi {
       'X-Plex-Platform': creds.platform,
       'X-Plex-Device': creds.device,
       'X-Plex-Device-Name': creds.deviceName,
-      if (clientProfileName != null)
-        'X-Plex-Client-Profile-Name': clientProfileName,
+      'X-Plex-Client-Profile-Name': ?clientProfileName,
       'X-Plex-Client-Profile-Extra': musicProfileExtra(
-        protocol: protocol,
+        protocol: protocol.wire,
         container: container,
         audioCodec: audioCodec,
         maxBitrateKbps: maxBitrateKbps,
@@ -109,11 +143,104 @@ class PlexStreamingApi {
       params: qp,
       transcodeType: 'music',
     );
+    _throwIfPassRequired(decision);
     final token = _http.token;
-    final url = '${_http.baseUrl}/music/:/transcode/universal/start.$ext?'
-        '${_encode({...qp, if (token != null) 'X-Plex-Token': token})}';
+    final url =
+        '${_http.baseUrl}/music/:/transcode/universal/start.'
+        '${protocol.extension}?'
+        '${_encode({...qp, 'X-Plex-Token': ?token})}';
     return PlexAudioTranscode(decision: decision, url: url, session: session);
   }
+
+  /// Starts a server-side video transcode the way PMS accepts it, and
+  /// returns the URL to play — the video counterpart of
+  /// [startAudioTranscode].
+  ///
+  /// One request: `/video/:/transcode/universal/decision` for [session],
+  /// then the `start` URL with the same parameters. As for music, PMS
+  /// 1.43.2 answers "no conversion profile found" (decision code 4005)
+  /// unless the client profile names a target, so the request carries
+  /// `X-Plex-Client-Profile-Name` ([clientProfileName], `Generic` by
+  /// default) and a `videoProfile` transcode target for [protocol] in
+  /// `X-Plex-Client-Profile-Extra` ([videoProfileExtra]). Verified on PMS
+  /// 1.43.2 for all three protocols: HLS (`start.m3u8`), DASH (`start.mpd`)
+  /// and HTTP (`start.mkv`, one Matroska stream).
+  ///
+  /// [maxVideoBitrateKbps] and [videoResolution] (`'1280x720'`) cap the
+  /// output; [directStream] lets the server copy streams it need not
+  /// re-encode. Check [PlexVideoTranscode.decision]: when it is not
+  /// playable the URL will not work either.
+  ///
+  /// Throws a [PlexException] of type [PlexErrorType.passRequired] when
+  /// the server refuses remote playback for want of a Plex Pass or Remote
+  /// Watch Pass (see the class documentation for how that is recognised).
+  Future<PlexVideoTranscode> startVideoTranscode({
+    required String ratingKey,
+    required String session,
+    PlexStreamingProtocol protocol = PlexStreamingProtocol.hls,
+    String videoCodec = 'h264',
+    String audioCodec = 'aac',
+    int? maxVideoBitrateKbps,
+    String? videoResolution,
+    bool directStream = true,
+    int offsetSeconds = 0,
+    int mediaIndex = 0,
+    int partIndex = 0,
+    String? clientProfileName = 'Generic',
+  }) async {
+    _requireConnected();
+    final creds = _http.credentials;
+    final qp = <String, String>{
+      'path': '/library/metadata/$ratingKey',
+      'mediaIndex': '$mediaIndex',
+      'partIndex': '$partIndex',
+      'protocol': protocol.wire,
+      'directPlay': '0',
+      'directStream': directStream ? '1' : '0',
+      'fastSeek': '1',
+      'offset': '$offsetSeconds',
+      'session': session,
+      'maxVideoBitrate': ?maxVideoBitrateKbps?.toString(),
+      'videoResolution': ?videoResolution,
+      'X-Plex-Client-Identifier': creds.clientIdentifier,
+      'X-Plex-Product': creds.product,
+      'X-Plex-Version': creds.version,
+      'X-Plex-Platform': creds.platform,
+      'X-Plex-Device': creds.device,
+      'X-Plex-Device-Name': creds.deviceName,
+      'X-Plex-Client-Profile-Name': ?clientProfileName,
+      'X-Plex-Client-Profile-Extra': videoProfileExtra(
+        protocol: protocol,
+        videoCodec: videoCodec,
+        audioCodec: audioCodec,
+      ),
+    };
+    final decision = await decisionUniversal(params: qp);
+    _throwIfPassRequired(decision);
+    final token = _http.token;
+    final url =
+        '${_http.baseUrl}/video/:/transcode/universal/start.'
+        '${protocol.extension}?'
+        '${_encode({...qp, 'X-Plex-Token': ?token})}';
+    return PlexVideoTranscode(
+      decision: decision,
+      url: url,
+      session: session,
+      protocol: protocol,
+    );
+  }
+
+  /// The `X-Plex-Client-Profile-Extra` value that asks for a video
+  /// transcode to [videoCodec] / [audioCodec] over [protocol], in the
+  /// protocol's container (see [startVideoTranscode]).
+  static String videoProfileExtra({
+    required PlexStreamingProtocol protocol,
+    String videoCodec = 'h264',
+    String audioCodec = 'aac',
+  }) =>
+      'add-transcode-target(type=videoProfile&context=streaming'
+      '&protocol=${protocol.wire}&container=${protocol.videoContainer}'
+      '&videoCodec=$videoCodec&audioCodec=$audioCodec&subtitleCodec=)';
 
   /// The `X-Plex-Client-Profile-Extra` value that asks for a music
   /// transcode to [audioCodec] in [container] over [protocol], capped at
@@ -124,69 +251,13 @@ class PlexStreamingApi {
     required String audioCodec,
     int? maxBitrateKbps,
   }) {
-    final target = 'add-transcode-target(type=musicProfile&context=streaming'
+    final target =
+        'add-transcode-target(type=musicProfile&context=streaming'
         '&protocol=$protocol&container=$container&audioCodec=$audioCodec)';
     if (maxBitrateKbps == null) return target;
     return '$target+add-limitation(scope=musicCodec&scopeName=$audioCodec'
         '&type=upperBound&name=audio.bitrate&value=$maxBitrateKbps'
         '&isRequired=false)';
-  }
-
-  /// Build a `/music/:/transcode/universal/start.{ext}` URL.
-  ///
-  /// - [protocol] is `'hls'` (default — segments wrapped in MPEG-TS) or
-  ///   `'dash'` or `'http'` (single-stream).
-  /// - [container] is the *target* container; for `hls` use `mpegts`,
-  ///   for direct mp3 use `mp3`.
-  /// - [maxAudioBitrate] in kbps. Pass `null` to let the server pick.
-  /// - [audioCodec] — usually `'aac'` (HLS) or `'mp3'`. Multiple values
-  ///   can be passed as `'aac,mp3'`.
-  /// - [session] is a stable UUID the caller picks — Plex uses it to
-  ///   correlate ping / stop calls.
-  ///
-  /// Deprecated: on PMS 1.43.2 this URL alone is refused (400) — a start
-  /// needs a prior decision for its session and a client profile — and
-  /// [maxAudioBitrate] has no effect. Use [startAudioTranscode].
-  @Deprecated('Use startAudioTranscode, which makes the decision PMS requires')
-  String universalAudioUrl({
-    required String ratingKey,
-    String protocol = 'hls',
-    String container = 'mpegts',
-    String audioCodec = 'aac',
-    int? maxAudioBitrate,
-    int audioChannels = 2,
-    int offsetSeconds = 0,
-    String? session,
-    bool directPlay = false,
-    bool directStream = true,
-  }) {
-    _requireConnected();
-    final base = _http.baseUrl!;
-    final token = _http.token ?? '';
-    final qp = <String, String>{
-      'path': '/library/metadata/$ratingKey',
-      'mediaIndex': '0',
-      'partIndex': '0',
-      'protocol': protocol,
-      'audioCodec': audioCodec,
-      'audioChannels': '$audioChannels',
-      'directPlay': directPlay ? '1' : '0',
-      'directStream': directStream ? '1' : '0',
-      'fastSeek': '1',
-      'offset': '$offsetSeconds',
-      'X-Plex-Token': token,
-    };
-    if (container.isNotEmpty) qp['container'] = container;
-    if (maxAudioBitrate != null) {
-      qp['maxAudioBitrate'] = '$maxAudioBitrate';
-    }
-    if (session != null) qp['session'] = session;
-    final ext = switch (protocol) {
-      'hls' => 'm3u8',
-      'dash' => 'mpd',
-      _ => container.isNotEmpty ? container : 'mp3',
-    };
-    return '$base/music/:/transcode/universal/start.$ext?${_encode(qp)}';
   }
 
   /// Build the direct-file download URL — best quality, no transcode.
@@ -231,17 +302,20 @@ class PlexStreamingApi {
   /// drive that decision, it follows whatever the server already
   /// decided (or its defaults).
   ///
-  /// - [protocol]: `'hls'` (MPEG-TS segments), `'dash'` (fMP4
-  ///   segments), or `'http'` (single MP4 / MKV).
-  /// - [container]: the *target* container the server should produce
-  ///   (`'mpegts'` for HLS, `'mp4'` for DASH/HTTP).
+  /// - [protocol]: HLS (MPEG-TS segments), DASH (fMP4 segments), or HTTP
+  ///   (one stream).
+  /// - [container]: the *target* container the server should produce;
+  ///   `null` takes the protocol's ([PlexStreamingProtocol.videoContainer]).
+  ///
+  /// Prefer [startVideoTranscode]: PMS 1.43.2 refuses a start without a
+  /// decision and a client profile.
   /// - [videoBitrate] / [audioBitrate] in kbps. Pass `null` to let
   ///   the server pick.
   /// - [videoResolution]: e.g. `'1920x1080'`, `'1280x720'`.
   String universalVideoUrl({
     required String ratingKey,
-    String protocol = 'hls',
-    String container = 'mpegts',
+    PlexStreamingProtocol protocol = PlexStreamingProtocol.hls,
+    String? container,
     String? videoResolution,
     int? videoBitrate,
     int? audioBitrate,
@@ -262,15 +336,15 @@ class PlexStreamingApi {
       'path': '/library/metadata/$ratingKey',
       'mediaIndex': '0',
       'partIndex': '0',
-      'protocol': protocol,
+      'protocol': protocol.wire,
       'directPlay': directPlay ? '1' : '0',
       'directStream': directStream ? '1' : '0',
       'fastSeek': fastSeek ? '1' : '0',
       'offset': '$offsetSeconds',
       'audioBoost': '$audioBoost',
       'X-Plex-Token': token,
+      'container': container ?? protocol.videoContainer,
     };
-    if (container.isNotEmpty) qp['container'] = container;
     if (videoResolution != null) qp['videoResolution'] = videoResolution;
     if (videoBitrate != null) qp['maxVideoBitrate'] = '$videoBitrate';
     if (audioBitrate != null) qp['maxAudioBitrate'] = '$audioBitrate';
@@ -278,11 +352,9 @@ class PlexStreamingApi {
     if (audioCodec != null) qp['audioCodec'] = audioCodec;
     if (subtitleSize != null) qp['subtitleSize'] = '$subtitleSize';
     if (session != null) qp['session'] = session;
-    final ext = switch (protocol) {
-      'hls' => 'm3u8',
-      'dash' => 'mpd',
-      _ => container.isNotEmpty ? container : 'mp4',
-    };
+    final ext = protocol == PlexStreamingProtocol.http && container != null
+        ? container
+        : protocol.extension;
     return '$base/video/:/transcode/universal/start.$ext?${_encode(qp)}';
   }
 
@@ -312,11 +384,16 @@ class PlexStreamingApi {
     String transcodeType = 'video',
     Map<String, String>? extraHeaders,
   }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/$transcodeType/:/transcode/universal/decision',
-      queryParameters: params,
-      extraHeaders: extraHeaders,
-    );
+    final PlexResponse<Map<String, Object?>> res;
+    try {
+      res = await _http.request<Map<String, Object?>>(
+        '/$transcodeType/:/transcode/universal/decision',
+        queryParameters: params,
+        extraHeaders: extraHeaders,
+      );
+    } on PlexException catch (e) {
+      throw classifyPassRequired(e, _state?.connection?.kind);
+    }
     final container = res.data?['MediaContainer'];
     if (container is! Map<String, Object?>) {
       return const PlexTranscodeDecision(code: null, raw: {});
@@ -391,8 +468,10 @@ class PlexStreamingApi {
   /// whichever way round it is mislabelled.
   ///
   /// Returns null if the stream key is empty or the server has no
-  /// lyrics for the item. Throws [PlexException] for transport errors.
-  Future<String?> lyrics({required String streamKey}) async {
+  /// lyrics for the item; otherwise the text read as LRC
+  /// ([PlexLyrics.lines]) and kept whole ([PlexLyrics.text]). Throws
+  /// [PlexException] for transport errors.
+  Future<PlexLyrics?> lyrics({required String streamKey}) async {
     if (streamKey.isEmpty) return null;
     final res = await _http.request<List<int>>(
       streamKey,
@@ -401,11 +480,51 @@ class PlexStreamingApi {
     );
     final data = res.data;
     if (data == null || data.isEmpty) return null;
-    return _decodeTextBody(
-      data,
-      contentType: res.contentType,
+    return PlexLyrics.parse(
+      _decodeTextBody(data, contentType: res.contentType),
     );
   }
+
+  /// Throws [PlexErrorType.passRequired] for a decision that says the
+  /// pass is missing.
+  void _throwIfPassRequired(PlexTranscodeDecision decision) {
+    if (!decision.isPassRequired) return;
+    throw PlexException(
+      'Playback refused: ${decision.text ?? 'a Plex Pass or Remote Watch '
+              'Pass is required'}',
+      type: PlexErrorType.passRequired,
+      statusCode: 200,
+      body: jsonEncode(decision.raw),
+    );
+  }
+
+  /// [e] retyped as [PlexErrorType.passRequired] when it looks like the
+  /// remote-streaming pass refusal: a text that says so, or a `403` on a
+  /// remote or relay connection ([kind]). Otherwise [e] unchanged. See
+  /// the class documentation for the heuristics.
+  static PlexException classifyPassRequired(
+    PlexException e,
+    PlexConnectionKind? kind,
+  ) {
+    if (e.type == PlexErrorType.cancelled || e.isNetworkFailure) return e;
+    final text = '${e.body ?? ''} ${e.message}';
+    final remote =
+        kind == PlexConnectionKind.remote || kind == PlexConnectionKind.relay;
+    if (mentionsPass(text) || (e.statusCode == 403 && remote)) {
+      return e.withType(PlexErrorType.passRequired);
+    }
+    return e;
+  }
+
+  /// Whether [text] says playback needs a Plex Pass or Remote Watch Pass.
+  static bool mentionsPass(String text) => _passPattern.hasMatch(text);
+
+  static final RegExp _passPattern = RegExp(
+    r'plex\s*pass|remote\s*watch|remote\s+(?:play(?:back)?|stream(?:ing)?|'
+    r'access)[^.]{0,60}(?:requir|subscri|not\s+(?:allowed|available|'
+    r'permitted))|subscription\s+(?:is\s+)?required',
+    caseSensitive: false,
+  );
 
   void _requireConnected() {
     if (_http.baseUrl == null) {
@@ -546,6 +665,51 @@ final class PlexTranscodeDecision {
     final raw = this.raw[key];
     return raw is int ? raw : (raw is String ? int.tryParse(raw) : null);
   }
+
+  /// The decision's own words: `generalDecisionText`, else the transcode
+  /// or direct-play text.
+  String? get text => [
+    raw['generalDecisionText'],
+    raw['transcodeDecisionText'],
+    raw['directPlayDecisionText'],
+  ].whereType<String>().where((t) => t.isNotEmpty).firstOrNull;
+
+  /// Whether the decision refuses playback and its texts say a Plex Pass
+  /// or Remote Watch Pass is required (a heuristic: see
+  /// [PlexStreamingApi]).
+  bool get isPassRequired =>
+      !isPlayable &&
+      PlexStreamingApi.mentionsPass(
+        [
+          raw['generalDecisionText'],
+          raw['transcodeDecisionText'],
+          raw['directPlayDecisionText'],
+        ].whereType<String>().join(' '),
+      );
+}
+
+/// A started video transcode: the server's [decision] and the [url] to
+/// play (see [PlexStreamingApi.startVideoTranscode]).
+final class PlexVideoTranscode {
+  /// What the server decided for the session.
+  final PlexTranscodeDecision decision;
+
+  /// The `start` URL to hand to the player. Valid while [session] lives.
+  final String url;
+
+  /// The session id, for `pingUniversal` / `stopUniversal`.
+  final String session;
+
+  /// The protocol the URL speaks.
+  final PlexStreamingProtocol protocol;
+
+  /// Wraps a started transcode.
+  const PlexVideoTranscode({
+    required this.decision,
+    required this.url,
+    required this.session,
+    required this.protocol,
+  });
 }
 
 /// A started audio transcode: the server's [decision] and the [url] to

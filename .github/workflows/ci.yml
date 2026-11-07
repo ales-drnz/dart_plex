@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      integration:
+        description: Run the integration suite against a Docker PMS
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (Dart ${{ matrix.sdk }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The pubspec floor and the current stable.
+        sdk: ['3.10.0', stable]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.sdk }}
+      - run: dart pub get
+      - run: dart analyze --fatal-infos
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart format --output=none --set-exit-if-changed .
+
+  test:
+    name: Test (Dart ${{ matrix.sdk }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: ['3.10.0', stable]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.sdk }}
+      - run: dart pub get
+      # The integration suites are tagged and skipped here
+      # (dart_test.yaml); the spec drift test skips when offline.
+      - run: dart test
+
+  publish-dry-run:
+    name: Publish dry run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart pub publish --dry-run
+
+  transport-drift:
+    name: Transport drift against dart_jellyfin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: dart_plex
+      - uses: actions/checkout@v4
+        with:
+          repository: ales-drnz/dart_jellyfin
+          path: dart_jellyfin
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Compare the shared transport
+        working-directory: dart_plex
+        run: |
+          dart pub get
+          dart run tool/transport_drift.dart . ../dart_jellyfin
+
+  integration:
+    name: Integration (Docker PMS)
+    if: github.event_name == 'workflow_dispatch' && inputs.integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - name: Write test/integration/.env.test
+        env:
+          PLEX_TEST_USERNAME: ${{ secrets.PLEX_TEST_USERNAME }}
+          PLEX_TEST_PASSWORD: ${{ secrets.PLEX_TEST_PASSWORD }}
+          PLEX_TEST_TOKEN: ${{ secrets.PLEX_TEST_TOKEN }}
+        run: |
+          {
+            echo "PLEX_TEST_USERNAME=${PLEX_TEST_USERNAME}"
+            echo "PLEX_TEST_PASSWORD=${PLEX_TEST_PASSWORD}"
+            echo "PLEX_TEST_TOKEN=${PLEX_TEST_TOKEN}"
+            echo "PLEX_IMAGE_TAG=1.43.2.10687-563d026ea"
+            echo "PLEX_HOST_PORT=42400"
+          } > test/integration/.env.test
+      # Signs in to plex.tv, claims the server and brings up the stack with
+      # docker compose (test/integration/docker-compose.yml).
+      - run: dart run test/integration/bootstrap.dart
+      - run: dart test -P integration
+      - name: Tear down
+        if: always()
+        working-directory: test/integration
+        run: docker compose --env-file .env.test down -v

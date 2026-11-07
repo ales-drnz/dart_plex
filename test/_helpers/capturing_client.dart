@@ -56,8 +56,8 @@ final class CannedResponse {
   });
 
   CannedResponse.json(Object? value, {this.status = 200})
-      : body = utf8.encode(jsonEncode(value)),
-        contentType = 'application/json';
+    : body = utf8.encode(jsonEncode(value)),
+      contentType = 'application/json';
 }
 
 /// Shared recording logic.
@@ -73,8 +73,12 @@ abstract class _Recording extends http.BaseClient {
 
   Future<CapturedRequest> record(http.BaseRequest request) async {
     final body = await request.finalize().toBytes();
-    final captured =
-        CapturedRequest(request.method, request.url, request.headers, body);
+    final captured = CapturedRequest(
+      request.method,
+      request.url,
+      request.headers,
+      body,
+    );
     requests.add(captured);
     return captured;
   }
@@ -120,7 +124,7 @@ class BytesAdapter extends _Recording {
       200,
       contentLength: responseBytes.length,
       request: request,
-      headers: {if (contentType != null) 'content-type': contentType!},
+      headers: {'content-type': ?contentType},
     );
   }
 }
@@ -167,12 +171,11 @@ PlexConnection testConnection(
   http.Client client, {
   PlexCredentials credentials = testCredentials,
   int jsonIsolateThreshold = 0,
-}) =>
-    PlexConnection(
-      credentials: credentials,
-      httpClient: client,
-      jsonIsolateThreshold: jsonIsolateThreshold,
-    )..baseUrl = 'http://192.168.1.10:32400';
+}) => PlexConnection(
+  credentials: credentials,
+  httpClient: client,
+  jsonIsolateThreshold: jsonIsolateThreshold,
+)..baseUrl = 'http://192.168.1.10:32400';
 
 /// A client connected to the same fake PMS, with token `tok`.
 PlexClient testClient(http.Client client, {int jsonIsolateThreshold = 0}) =>

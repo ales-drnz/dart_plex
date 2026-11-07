@@ -40,19 +40,15 @@ Future<void> main() async {
   final headers = {'Accept': 'application/json', 'X-Plex-Token': token};
   Future<http.Response> fetch(String path, Map<String, dynamic>? qp) =>
       http.get(
-        Uri.parse('$baseUrl$path').replace(
-          queryParameters: qp?.map((k, v) => MapEntry(k, '$v')),
-        ),
+        Uri.parse(
+          '$baseUrl$path',
+        ).replace(queryParameters: qp?.map((k, v) => MapEntry(k, '$v'))),
         headers: headers,
       );
 
   Directory(_outDir).createSync(recursive: true);
 
-  Future<void> get(
-    String name,
-    String path, [
-    Map<String, dynamic>? qp,
-  ]) async {
+  Future<void> get(String name, String path, [Map<String, dynamic>? qp]) async {
     final res = await fetch(path, qp);
     if (res.statusCode != 200) {
       stderr.writeln('  ✗ $name ($path) — ${res.statusCode}');
@@ -62,20 +58,20 @@ Future<void> main() async {
   }
 
   await get('sections.json', '/library/sections');
-  await get(
-    'section_music_all.json',
-    '/library/sections/1/all',
-    {'type': 10, 'X-Plex-Container-Size': 3},
-  );
+  await get('section_music_all.json', '/library/sections/1/all', {
+    'type': 10,
+    'X-Plex-Container-Size': 3,
+  });
   // Section 1 is Music (we just created it in bootstrap). type=10 = track.
 
-  final tracksRes = jsonDecode(
-    (await fetch(
-      '/library/sections/1/all',
-      {'type': 10, 'X-Plex-Container-Size': 1},
-    ))
-        .body,
-  ) as Map<String, dynamic>;
+  final tracksRes =
+      jsonDecode(
+            (await fetch('/library/sections/1/all', {
+              'type': 10,
+              'X-Plex-Container-Size': 1,
+            })).body,
+          )
+          as Map<String, dynamic>;
   final firstTrack =
       ((tracksRes['MediaContainer'] as Map?)?['Metadata'] as List?)?.first
           as Map<String, dynamic>?;
@@ -87,11 +83,7 @@ Future<void> main() async {
 
   await get('sessions.json', '/status/sessions');
   await get('hubs_global.json', '/hubs', {'count': 3});
-  await get(
-    'hubs_search.json',
-    '/hubs/search',
-    {'query': 'Track', 'limit': 3},
-  );
+  await get('hubs_search.json', '/hubs/search', {'query': 'Track', 'limit': 3});
   await get('preferences.json', '/:/prefs');
   await get('account.json', '/myplex/account');
   await get('butler_tasks.json', '/butler');
@@ -117,7 +109,7 @@ Future<void> main() async {
     plex.connect(baseUrl, accessToken: token);
     try {
       final queue = await plex.playQueues.create(
-        type: 'audio',
+        type: PlexMediaType.audio,
         uri: PlexPlayQueuesApi.seedFromItems(
           machineIdentifier: machineId,
           ratingKeys: [firstTrack['ratingKey'] as String],
@@ -129,13 +121,15 @@ Future<void> main() async {
     }
   }
 
-  stdout.writeln('Captured ${Directory(_outDir).listSync().length} fixtures '
-      'to $_outDir/');
+  stdout.writeln(
+    'Captured ${Directory(_outDir).listSync().length} fixtures '
+    'to $_outDir/',
+  );
 }
 
 void _save(String name, dynamic data) {
-  File('$_outDir/$name').writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert(data),
-  );
+  File(
+    '$_outDir/$name',
+  ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(data));
   stdout.writeln('  ✓ $name');
 }

@@ -58,7 +58,10 @@ abstract final class PlexPaging {
     int pageSize = 100,
     int start = 0,
     int? limit,
-  }) =>
-      pages(fetch, pageSize: pageSize, start: start, limit: limit)
-          .expand((page) => page);
+  }) => pages(
+    fetch,
+    pageSize: pageSize,
+    start: start,
+    limit: limit,
+  ).expand((page) => page);
 }

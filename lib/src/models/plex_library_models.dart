@@ -227,7 +227,7 @@ final class PlexTag {
     final resolved = _resolveTagFilter(json, key, fastKey);
     return PlexTag(
       id: resolved.id ?? asInt(json['id']),
-      title: asString(json['title']) ?? '',
+      title: asString(json['title']) ?? asString(json['tag']) ?? '',
       field: resolved.field ?? field ?? asString(json['type']) ?? '',
       key: key,
       fastKey: fastKey,
@@ -245,6 +245,13 @@ final class PlexTag {
   String? key,
   String? fastKey,
 ) {
+  // `/library/tags` entries carry `filter: genre=5`.
+  final filter = json['filter'];
+  if (filter is String) {
+    final eq = filter.indexOf('=');
+    final value = eq > 0 ? int.tryParse(filter.substring(eq + 1)) : null;
+    if (value != null) return (id: value, field: filter.substring(0, eq));
+  }
   for (final candidate in [fastKey, key]) {
     if (candidate == null || !candidate.contains('?')) continue;
     final params = Uri.parse(candidate).queryParameters;

@@ -14,14 +14,16 @@ import 'package:yaml/yaml.dart';
 /// Used by `test/spec_drift_watchdog_test.dart`. Always informational
 /// — never fails, only prints a human-readable summary. Uses a 24h
 /// on-disk cache (`test/.spec_cache/`) so repeated runs don't hammer
-/// the network.
+/// the network. With no network and no cache the upstream copy is
+/// unknown: [PlexSpecDriftReport.offline] is set and the drift test skips.
+/// `PLEX_SPEC_OFFLINE=1` skips the fetch.
 
 const String _upstreamUrl =
     'https://raw.githubusercontent.com/LukeHagar/plex-api-spec/main/plex-api-spec.yaml';
 
 /// Upstream commit the pinned copy in `docs/plex-api-spec.yaml` was taken
-/// from: 344 paths / 405 operations, sha256
-/// `ff8801eb6c7904e6298215dd789521750e4af0f18b5fde0999bb544d15335070`.
+/// (2026-11-07): 345 paths / 406 operations, sha256
+/// `2426cccbca43003ff23c40781e3b2e6d57d6d1b523fcf442099db1f65ea282bb`.
 /// The file is tracked (the contract test reads it) and left out of the
 /// published package by `.pubignore`. To re-pin, fetch it with:
 ///
@@ -31,7 +33,7 @@ const String _upstreamUrl =
 /// ```
 ///
 /// and recheck `plexLocalCoverageFloor` and the contract test.
-const String pinnedSpecCommit = '3f0fb272b29c';
+const String pinnedSpecCommit = '23137a920c17';
 const String _pinnedPath = 'docs/plex-api-spec.yaml';
 const String _cacheDir = 'test/.spec_cache';
 const Duration _cacheTtl = Duration(hours: 24);
@@ -55,12 +57,16 @@ class PlexSpecDriftReport {
   final List<String> removed;
   final bool fromCache;
 
+  /// No upstream copy could be read: no network and no cache.
+  final bool offline;
+
   const PlexSpecDriftReport({
     required this.pinnedCount,
     required this.latestCount,
     required this.added,
     required this.removed,
     required this.fromCache,
+    this.offline = false,
   });
 
   bool get hasChanges => added.isNotEmpty || removed.isNotEmpty;
@@ -113,6 +119,10 @@ class PlexSpecDriftReport {
   }
 }
 
+/// The operations in the pinned spec, read from disk only.
+int pinnedSpecOperationCount() =>
+    _parseEndpoints(File(_pinnedPath).readAsStringSync()).length;
+
 Future<PlexSpecDriftReport> runPlexSpecWatchdog({bool force = false}) async {
   final cacheFile = File('$_cacheDir/plex.cache');
   final stampFile = File('$_cacheDir/plex.stamp');
@@ -120,22 +130,23 @@ Future<PlexSpecDriftReport> runPlexSpecWatchdog({bool force = false}) async {
   String? latestRaw;
   var fromCache = false;
 
+  final skipFetch = Platform.environment['PLEX_SPEC_OFFLINE'] == '1';
   final cacheFresh = !force && _isCacheFresh(stampFile);
-  if (cacheFresh && cacheFile.existsSync()) {
+  if ((cacheFresh || skipFetch) && cacheFile.existsSync()) {
     latestRaw = await cacheFile.readAsString();
     fromCache = true;
+  } else if (skipFetch) {
+    // Offline by request, and nothing cached.
   } else {
     try {
       final res = await http
           .get(Uri.parse(_upstreamUrl))
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         latestRaw = res.body;
         await Directory(_cacheDir).create(recursive: true);
         await cacheFile.writeAsString(latestRaw);
-        await stampFile.writeAsString(
-          DateTime.now().toUtc().toIso8601String(),
-        );
+        await stampFile.writeAsString(DateTime.now().toUtc().toIso8601String());
       } else if (cacheFile.existsSync()) {
         latestRaw = await cacheFile.readAsString();
         fromCache = true;
@@ -167,10 +178,12 @@ Future<PlexSpecDriftReport> runPlexSpecWatchdog({bool force = false}) async {
         .map(_formatEndpoint)
         .toList(),
     fromCache: fromCache,
+    offline: latestRaw == null,
   );
 }
 
-String _formatEndpoint(_Endpoint e) => '${e.method.padRight(6)} ${e.path}'
+String _formatEndpoint(_Endpoint e) =>
+    '${e.method.padRight(6)} ${e.path}'
     '${e.operationId == null ? '' : '  (${e.operationId})'}';
 
 bool _isCacheFresh(File stampFile) {

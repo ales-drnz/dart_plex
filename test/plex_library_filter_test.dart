@@ -10,12 +10,12 @@ import '_helpers/capturing_client.dart';
 /// An empty `Metadata` container — enough for [PlexLibraryApi.allByType]
 /// to decode, with a `totalSize` for the count path.
 Map<String, dynamic> _metadataBody({int totalSize = 42}) => {
-      'MediaContainer': {
-        'size': 0,
-        'totalSize': totalSize,
-        'Metadata': <Map<String, dynamic>>[],
-      },
-    };
+  'MediaContainer': {
+    'size': 0,
+    'totalSize': totalSize,
+    'Metadata': <Map<String, dynamic>>[],
+  },
+};
 
 ({PlexLibraryApi api, CapturingAdapter adapter}) _makeApi([
   Map<String, dynamic>? body,
@@ -207,7 +207,7 @@ void main() {
         type: PlexMetadataType.album,
         start: 100,
         size: 25,
-        sort: 'titleSort:asc',
+        sort: PlexSort.titleSort.asc,
         filters: [PlexFilter.genre(6)],
       );
 
@@ -218,22 +218,27 @@ void main() {
       expect(qp['genre'], '6');
     });
 
-    test('refuses two conditions that would collide on one parameter',
-        () async {
-      final ctx = _makeApi();
+    test(
+      'refuses two conditions that would collide on one parameter',
+      () async {
+        final ctx = _makeApi();
 
-      await expectLater(
-        ctx.api.allByType(
-          sectionId: '3',
-          type: PlexMetadataType.album,
-          filters: [PlexFilter.genre(6), PlexFilter.genre(7)],
-        ),
-        throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.state),
-        ),
-      );
-    });
+        await expectLater(
+          ctx.api.allByType(
+            sectionId: '3',
+            type: PlexMetadataType.album,
+            filters: [PlexFilter.genre(6), PlexFilter.genre(7)],
+          ),
+          throwsA(
+            isA<PlexException>().having(
+              (e) => e.type,
+              'type',
+              PlexErrorType.state,
+            ),
+          ),
+        );
+      },
+    );
 
     test('allows the same field twice under different operators', () async {
       final ctx = _makeApi();
@@ -303,8 +308,8 @@ void main() {
 
   group('PlexLibraryApi.genres', () {
     Map<String, dynamic> genreBody(List<Map<String, dynamic>> entries) => {
-          'MediaContainer': {'size': entries.length, 'Directory': entries},
-        };
+      'MediaContainer': {'size': entries.length, 'Directory': entries},
+    };
 
     test('reads the tag id out of fastKey', () async {
       final ctx = _makeApi(
@@ -349,10 +354,7 @@ void main() {
     test('reads a path-shaped key, as older servers send it', () async {
       final ctx = _makeApi(
         genreBody([
-          {
-            'key': '/library/sections/3/all?genre=11',
-            'title': 'Folk',
-          },
+          {'key': '/library/sections/3/all?genre=11', 'title': 'Folk'},
         ]),
       );
 
@@ -424,8 +426,11 @@ void main() {
       expect(
         () => PlexFilter.of(tag),
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.parse),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.parse,
+          ),
         ),
       );
     });
@@ -433,43 +438,45 @@ void main() {
 
   group('PlexLibraryApi.filters', () {
     Map<String, dynamic> filtersBody() => {
-          'MediaContainer': {
-            'size': 2,
-            'Directory': [
-              {
-                'filter': 'genre',
-                'filterType': 'string',
-                'key': '/library/sections/3/genre',
-                'title': 'Genre',
-                'type': 'filter',
-              },
-              {
-                'filter': 'unwatched',
-                'filterType': 'boolean',
-                'title': 'Unplayed',
-                'type': 'filter',
-              },
-            ],
+      'MediaContainer': {
+        'size': 2,
+        'Directory': [
+          {
+            'filter': 'genre',
+            'filterType': 'string',
+            'key': '/library/sections/3/genre',
+            'title': 'Genre',
+            'type': 'filter',
           },
-        };
+          {
+            'filter': 'unwatched',
+            'filterType': 'boolean',
+            'title': 'Unplayed',
+            'type': 'filter',
+          },
+        ],
+      },
+    };
 
-    test('decodes each facet into its field, value type and values key',
-        () async {
-      final ctx = _makeApi(filtersBody());
-      final facets = await ctx.api.filters(sectionId: '3');
+    test(
+      'decodes each facet into its field, value type and values key',
+      () async {
+        final ctx = _makeApi(filtersBody());
+        final facets = await ctx.api.filters(sectionId: '3');
 
-      expect(facets, hasLength(2));
-      final genre = facets.first;
-      expect(genre.field, 'genre');
-      expect(genre.title, 'Genre');
-      expect(genre.valueType, PlexFilterValueType.string);
-      expect(genre.valuesKey, '/library/sections/3/genre');
+        expect(facets, hasLength(2));
+        final genre = facets.first;
+        expect(genre.field, 'genre');
+        expect(genre.title, 'Genre');
+        expect(genre.valueType, PlexFilterValueType.string);
+        expect(genre.valuesKey, '/library/sections/3/genre');
 
-      final unwatched = facets.last;
-      expect(unwatched.field, 'unwatched');
-      expect(unwatched.valueType, PlexFilterValueType.boolean);
-      expect(unwatched.valuesKey, isNull);
-    });
+        final unwatched = facets.last;
+        expect(unwatched.field, 'unwatched');
+        expect(unwatched.valueType, PlexFilterValueType.boolean);
+        expect(unwatched.valuesKey, isNull);
+      },
+    );
 
     test('an unknown filterType degrades rather than throwing', () async {
       final ctx = _makeApi({
@@ -552,8 +559,11 @@ void main() {
       await expectLater(
         ctx.api.filterValues(filter: facet),
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.state),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.state,
+          ),
         ),
       );
     });

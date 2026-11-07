@@ -12,19 +12,21 @@ mixin _PlexSectionAdmin {
   // Section management
   // -------------------------------------------------------------------------
 
-  /// `GET /library/sections/{sectionId}?includeDetails={bool}` —
-  /// full section details.
-  Future<Map<String, Object?>> sectionDetails({
+  /// `GET /library/sections/{sectionId}?includeDetails={bool}` — the
+  /// section's details and views (all items, by genre, search, …).
+  Future<PlexSectionDetails> sectionDetails({
     required String sectionId,
     bool? includeDetails,
-  }) async {
+  }) {
     final qp = <String, Object?>{};
     if (includeDetails != null) qp['includeDetails'] = includeDetails ? 1 : 0;
-    final res = await _http.request<Map<String, Object?>>(
+    return _http.requestJson(
       '/library/sections/$sectionId',
       queryParameters: qp.isEmpty ? null : qp,
+      (json) => PlexSectionDetails.fromJson(
+        json is Map<String, Object?> ? json : const {},
+      ),
     );
-    return res.data ?? const {};
   }
 
   /// `PUT /library/sections/{sectionId}` — edit a section.
@@ -183,11 +185,11 @@ mixin _PlexSectionAdmin {
   /// — A-Z scrubber index.
   Future<List<PlexMetadata>> firstCharacters({
     required String sectionId,
-    String? type,
-    String? sort,
+    PlexMetadataType? type,
+    PlexSort? sort,
   }) async {
     final qp = <String, Object?>{};
-    if (type != null) qp['type'] = type;
+    if (type != null) qp['type'] = type.value;
     if (sort != null) qp['sort'] = sort;
     return _http.requestJson(
       '/library/sections/$sectionId/firstCharacter',
@@ -220,10 +222,9 @@ mixin _PlexSectionAdmin {
   /// fields across items (shared genres, ratings, etc.).
   Future<Map<String, Object?>> sectionCommon({
     required String sectionId,
-    String? type,
+    required PlexMetadataType type,
   }) async {
-    final qp = <String, Object?>{};
-    if (type != null) qp['type'] = type;
+    final qp = <String, Object?>{'type': type.value};
     final res = await _http.request<Map<String, Object?>>(
       '/library/sections/$sectionId/common',
       queryParameters: qp.isEmpty ? null : qp,

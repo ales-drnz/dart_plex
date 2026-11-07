@@ -120,22 +120,22 @@ final class PlexServerInfo {
 
   /// Decodes the `/` `MediaContainer`.
   factory PlexServerInfo.fromJson(Map<String, Object?> json) => PlexServerInfo(
-        friendlyName: asString(json['friendlyName']),
-        machineIdentifier: asString(json['machineIdentifier']) ?? '',
-        version: asString(json['version']),
-        platform: asString(json['platform']),
-        platformVersion: asString(json['platformVersion']),
-        myPlex: asBool(json['myPlex']),
-        myPlexUsername: asString(json['myPlexUsername']),
-        myPlexSubscription: asBool(json['myPlexSubscription']),
-        musicAnalysis: asBool(json['musicAnalysis']),
-        transcoderAudio: asBool(json['transcoderAudio']),
-        transcoderLyrics: asBool(json['transcoderLyrics']),
-        allowSync: asBool(json['allowSync']),
-        countryCode: asString(json['countryCode']),
-        updatedAt: asEpochSeconds(json['updatedAt']),
-        raw: json,
-      );
+    friendlyName: asString(json['friendlyName']),
+    machineIdentifier: asString(json['machineIdentifier']) ?? '',
+    version: asString(json['version']),
+    platform: asString(json['platform']),
+    platformVersion: asString(json['platformVersion']),
+    myPlex: asBool(json['myPlex']),
+    myPlexUsername: asString(json['myPlexUsername']),
+    myPlexSubscription: asBool(json['myPlexSubscription']),
+    musicAnalysis: asBool(json['musicAnalysis']),
+    transcoderAudio: asBool(json['transcoderAudio']),
+    transcoderLyrics: asBool(json['transcoderLyrics']),
+    allowSync: asBool(json['allowSync']),
+    countryCode: asString(json['countryCode']),
+    updatedAt: asEpochSeconds(json['updatedAt']),
+    raw: json,
+  );
 }
 
 /// One play in `/status/sessions/history/all`.
@@ -298,14 +298,14 @@ final class PlexButlerTask {
 
   /// Decodes a `ButlerTask` entry.
   factory PlexButlerTask.fromJson(Map<String, Object?> json) => PlexButlerTask(
-        name: asString(json['name']) ?? '',
-        title: asString(json['title']),
-        description: asString(json['description']),
-        intervalDays: asInt(json['interval']),
-        enabled: json['enabled'] == true,
-        scheduleRandomized: json['scheduleRandomized'] == true,
-        raw: json,
-      );
+    name: asString(json['name']) ?? '',
+    title: asString(json['title']),
+    description: asString(json['description']),
+    intervalDays: asInt(json['interval']),
+    enabled: json['enabled'] == true,
+    scheduleRandomized: json['scheduleRandomized'] == true,
+    raw: json,
+  );
 }
 
 /// One server preference (`/:/prefs` → `Setting`).

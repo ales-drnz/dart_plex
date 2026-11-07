@@ -16,7 +16,7 @@ mixin _PlexItemDetails {
   /// — create a marker.
   Future<void> createMarker({
     required String ids,
-    required String type,
+    required PlexMarkerType type,
     required int startTimeOffset,
     required int endTimeOffset,
     Map<String, Object?>? attributes,
@@ -38,7 +38,7 @@ mixin _PlexItemDetails {
   Future<void> editMarker({
     required String ids,
     required String marker,
-    String? type,
+    PlexMarkerType? type,
     int? startTimeOffset,
     int? endTimeOffset,
     Map<String, Object?>? attributes,
@@ -246,13 +246,16 @@ mixin _PlexItemDetails {
   // People
   // -------------------------------------------------------------------------
 
-  /// `GET /library/people/{personId}` — person details.
-  Future<Map<String, Object?>> person({required String personId}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/people/$personId',
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /library/people/{personId}` — a person, or `null` when the
+  /// answer holds none.
+  Future<PlexPerson?> person({required String personId}) => _http.requestJson(
+    '/library/people/$personId',
+    (json) => PlexMediaContainer.fromJson(
+      json is Map<String, Object?> ? json : const {},
+      'Directory',
+      PlexPerson.fromJson,
+    ).items.firstOrNull,
+  );
 
   /// `GET /library/people/{personId}/media` — items credited to
   /// a person.
@@ -272,10 +275,7 @@ mixin _PlexItemDetails {
     required String endId,
     double? maxDistance,
   }) async {
-    final qp = <String, Object?>{
-      'startID': startId,
-      'endID': endId,
-    };
+    final qp = <String, Object?>{'startID': startId, 'endID': endId};
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
     return _http.requestJson(
       '/library/sections/$sectionId/computePath',
@@ -299,10 +299,7 @@ mixin _PlexItemDetails {
     int? limit,
     double? maxDistance,
   }) async {
-    final qp = <String, Object?>{
-      'type': type,
-      'values': values.join(','),
-    };
+    final qp = <String, Object?>{'type': type, 'values': values.join(',')};
     if (limit != null) qp['limit'] = limit;
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
     return _http.requestJson(

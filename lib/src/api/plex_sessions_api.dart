@@ -7,6 +7,7 @@ import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
 import '../plex_server_models.dart';
+import '../plex_vocabulary.dart';
 
 /// `/status/sessions` and `/status/sessions/history/*` — "what's
 /// playing on the server right now" and "what was played in the past".
@@ -45,7 +46,7 @@ class PlexSessionsApi {
     int? librarySectionId,
     int start = 0,
     int size = 50,
-    String? sort,
+    PlexSort? sort,
   }) {
     final qp = <String, Object?>{
       'X-Plex-Container-Start': start,
@@ -73,10 +74,7 @@ class PlexSessionsApi {
   }) async {
     await _http.request<void>(
       '/status/sessions/terminate',
-      queryParameters: {
-        'sessionId': sessionId,
-        'reason': reason,
-      },
+      queryParameters: {'sessionId': sessionId, 'reason': reason},
     );
   }
 

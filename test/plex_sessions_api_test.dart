@@ -29,10 +29,7 @@ void main() {
               'title': 'Now Playing Track',
               'type': 'track',
               'viewOffset': 5000,
-              'Session': {
-                'id': 'sess-1',
-                'bandwidth': 1200,
-              },
+              'Session': {'id': 'sess-1', 'bandwidth': 1200},
             },
           ],
         },
@@ -51,88 +48,102 @@ void main() {
   });
 
   group('PlexSessionsApi.history', () {
-    test('issues GET /status/sessions/history/all and decodes the list',
-        () async {
-      final ctx = _makeApi({
-        'MediaContainer': {
-          'size': 1,
-          'Metadata': [
-            {
-              'historyKey': '/status/sessions/history/55',
-              'ratingKey': '67890',
-              'title': 'Watched Movie',
-              'type': 'movie',
-              'viewedAt': 1700000000,
-            },
-          ],
-        },
-      });
+    test(
+      'issues GET /status/sessions/history/all and decodes the list',
+      () async {
+        final ctx = _makeApi({
+          'MediaContainer': {
+            'size': 1,
+            'Metadata': [
+              {
+                'historyKey': '/status/sessions/history/55',
+                'ratingKey': '67890',
+                'title': 'Watched Movie',
+                'type': 'movie',
+                'viewedAt': 1700000000,
+              },
+            ],
+          },
+        });
 
-      final history = await ctx.api.history(size: 10);
+        final history = await ctx.api.history(size: 10);
 
-      final req = ctx.adapter.lastRequest!;
-      expect(req.method, 'GET');
-      expect(req.path, 'http://192.168.1.10:32400/status/sessions/history/all');
-      expect(history.items, hasLength(1));
-      expect(history.items.single.title, 'Watched Movie');
-    });
+        final req = ctx.adapter.lastRequest!;
+        expect(req.method, 'GET');
+        expect(
+          req.path,
+          'http://192.168.1.10:32400/status/sessions/history/all',
+        );
+        expect(history.items, hasLength(1));
+        expect(history.items.single.title, 'Watched Movie');
+      },
+    );
 
-    test('uses inclusive viewedAt>= / viewedAt<= operators for date bounds',
-        () async {
-      final ctx = _makeApi(const {'MediaContainer': <String, dynamic>{}});
+    test(
+      'uses inclusive viewedAt>= / viewedAt<= operators for date bounds',
+      () async {
+        final ctx = _makeApi(const {'MediaContainer': <String, dynamic>{}});
 
-      await ctx.api.history(mindate: 1000, maxdate: 2000);
+        await ctx.api.history(mindate: 1000, maxdate: 2000);
 
-      final qp = ctx.adapter.lastRequest!.queryParameters;
-      expect(qp['viewedAt>='], '1000');
-      expect(qp['viewedAt<='], '2000');
-      // The exclusive variants must not be emitted.
-      expect(qp.containsKey('viewedAt>'), isFalse);
-      expect(qp.containsKey('viewedAt<'), isFalse);
-    });
+        final qp = ctx.adapter.lastRequest!.queryParameters;
+        expect(qp['viewedAt>='], '1000');
+        expect(qp['viewedAt<='], '2000');
+        // The exclusive variants must not be emitted.
+        expect(qp.containsKey('viewedAt>'), isFalse);
+        expect(qp.containsKey('viewedAt<'), isFalse);
+      },
+    );
 
-    test('returns an empty page when the MediaContainer has no Metadata',
-        () async {
-      final ctx = _makeApi(const {'MediaContainer': <String, dynamic>{}});
+    test(
+      'returns an empty page when the MediaContainer has no Metadata',
+      () async {
+        final ctx = _makeApi(const {'MediaContainer': <String, dynamic>{}});
 
-      final history = await ctx.api.history();
+        final history = await ctx.api.history();
 
-      expect(history.items, isEmpty);
-      expect(history.totalSize, 0);
-    });
+        expect(history.items, isEmpty);
+        expect(history.totalSize, 0);
+      },
+    );
   });
 
   group('PlexSessionsApi.historyItem', () {
-    test('issues GET /status/sessions/history/{id} and returns first entry',
-        () async {
-      final ctx = _makeApi({
-        'MediaContainer': {
-          'size': 1,
-          'Metadata': [
-            {
-              'historyKey': '/status/sessions/history/55',
-              'ratingKey': '67890',
-              'title': 'Watched Movie',
-              'type': 'movie',
-              'viewedAt': 1700000000,
-            },
-            {
-              'ratingKey': '99999',
-              'title': 'Should Be Ignored',
-              'type': 'movie',
-            },
-          ],
-        },
-      });
+    test(
+      'issues GET /status/sessions/history/{id} and returns first entry',
+      () async {
+        final ctx = _makeApi({
+          'MediaContainer': {
+            'size': 1,
+            'Metadata': [
+              {
+                'historyKey': '/status/sessions/history/55',
+                'ratingKey': '67890',
+                'title': 'Watched Movie',
+                'type': 'movie',
+                'viewedAt': 1700000000,
+              },
+              {
+                'ratingKey': '99999',
+                'title': 'Should Be Ignored',
+                'type': 'movie',
+              },
+            ],
+          },
+        });
 
-      final item = await ctx.api.historyItem(historyId: 55);
+        final item = await ctx.api.historyItem(historyId: 55);
 
-      final req = ctx.adapter.lastRequest!;
-      expect(req.method, 'GET');
-      expect(req.path, 'http://192.168.1.10:32400/status/sessions/history/55');
-      expect(item, isNotNull);
-      expect(item!['title'], 'Watched Movie');
-    });
+        final req = ctx.adapter.lastRequest!;
+        expect(req.method, 'GET');
+        expect(
+          req.path,
+          'http://192.168.1.10:32400/status/sessions/history/55',
+        );
+        expect(item, isNotNull);
+        expect(item!['title'], 'Watched Movie');
+      },
+    );
 
     test('returns null when the MediaContainer is missing', () async {
       final ctx = _makeApi(const <String, dynamic>{});

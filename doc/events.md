@@ -96,5 +96,9 @@ the server sends an MP3 without its ID3v2 tag.
 `plex.downloadQueue` drives the server-side download queues that Plex's
 mobile apps use for offline sync: `create()`, `get()`,
 `add(queueId:, keys:)`, `items()`, `item()`, `remove()`, `restart()`,
-`itemDecision()` and `itemMedia()`. They return the server's maps. For a
-download of your own, `downloadToFile()` above is enough.
+`itemDecision()` and `itemMediaUrl()`. A queue is a `PlexDownloadQueue`
+(one per client and user: `create()` returns the existing one), an entry
+a `PlexDownloadQueueItem` with its `status`, `error` and `decision`; once
+an item is `available`, download `itemMediaUrl()` with
+`downloadToFile()`. For a download of your own, `downloadToFile()` above
+is enough.

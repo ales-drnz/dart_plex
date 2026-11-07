@@ -44,9 +44,9 @@ void main() {
 
   /// Temporary files left in the download folder.
   List<String> leftovers() => [
-        for (final f in dir.listSync(recursive: true))
-          if (f.path.endsWith('.part')) f.path,
-      ];
+    for (final f in dir.listSync(recursive: true))
+      if (f.path.endsWith('.part')) f.path,
+  ];
 
   tearDown(() async {
     client.close();

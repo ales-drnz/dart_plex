@@ -24,88 +24,84 @@ final _skip = _url == null || _token == null
     : null;
 
 void main() {
-  group(
-    'live PMS (read-only)',
-    () {
-      late PlexClient plex;
-      late String sectionId;
+  group('live PMS (read-only)', () {
+    late PlexClient plex;
+    late String sectionId;
 
-      setUpAll(() async {
-        plex = PlexClient(
-          credentials: const PlexCredentials(
-            clientIdentifier: 'dart-plex-live-tests',
-            product: 'dart_plex live tests',
-            version: '0.2.0',
-            device: 'live-tests',
-            deviceName: 'dart_plex live tests',
-            platform: 'Generic',
-          ),
-          retryPolicy: const PlexRetryPolicy(),
-        )..connect(_url!, accessToken: _token);
-        final sections = await plex.library.sections();
-        sectionId =
-            sections.firstWhere((s) => s.type == PlexLibraryType.music).id;
-      });
+    setUpAll(() async {
+      plex = PlexClient(
+        credentials: const PlexCredentials(
+          clientIdentifier: 'dart-plex-live-tests',
+          product: 'dart_plex live tests',
+          version: '0.2.0',
+          device: 'live-tests',
+          deviceName: 'dart_plex live tests',
+          platform: 'Generic',
+        ),
+        retryPolicy: const PlexRetryPolicy(),
+      )..connect(_url!, accessToken: _token);
+      final sections = await plex.library.sections();
+      sectionId = sections
+          .firstWhere((s) => s.type == PlexLibraryType.music)
+          .id;
+    });
 
-      tearDownAll(() => plex.close());
+    tearDownAll(() => plex.close());
 
-      test('identity', () async {
-        final id = await plex.server.identity();
-        expect(id.machineIdentifier, isNotEmpty);
-      });
+    test('identity', () async {
+      final id = await plex.server.identity();
+      expect(id.machineIdentifier, isNotEmpty);
+    });
 
-      test('an album page, its tracks and an artist count', () async {
-        final albums = await plex.library.allByType(
-          sectionId: sectionId,
-          type: PlexMetadataType.album,
-          size: 10,
-        );
-        expect(albums.items, isNotEmpty);
-        final album = albums.items.first;
-        final tracks =
-            await plex.library.children(ratingKey: album.ratingKey, size: 50);
-        expect(tracks, isNotEmpty);
-        expect(
-          await plex.library.countChildren(ratingKey: album.parentRatingKey!),
-          greaterThan(0),
-        );
-        expect(
-          tracks.first.parentThumbVersion ?? album.thumbVersion,
-          isNotNull,
-        );
-      });
+    test('an album page, its tracks and an artist count', () async {
+      final albums = await plex.library.allByType(
+        sectionId: sectionId,
+        type: PlexMetadataType.album,
+        size: 10,
+      );
+      expect(albums.items, isNotEmpty);
+      final album = albums.items.first;
+      final tracks = await plex.library.children(
+        ratingKey: album.ratingKey,
+        size: 50,
+      );
+      expect(tracks, isNotEmpty);
+      expect(
+        await plex.library.countChildren(ratingKey: album.parentRatingKey!),
+        greaterThan(0),
+      );
+      expect(tracks.first.parentThumbVersion ?? album.thumbVersion, isNotNull);
+    });
 
-      test('playlists narrow on the server', () async {
-        final all = await plex.playlists.list(type: 'audio', size: 100);
-        if (all.isEmpty) return markTestSkipped('no audio playlists');
-        final word = all.first.title.split(' ').first.toLowerCase();
-        final some = await plex.playlists.list(
-          type: 'audio',
-          filters: [PlexFilter.titleContains(word)],
-          size: 100,
-        );
-        expect(some, isNotEmpty);
-        expect(
-          some.every((p) => p.title.toLowerCase().contains(word)),
-          isTrue,
-        );
-      });
+    test('playlists narrow on the server', () async {
+      final all = await plex.playlists.list(
+        type: PlexMediaType.audio,
+        size: 100,
+      );
+      if (all.isEmpty) return markTestSkipped('no audio playlists');
+      final word = all.first.title.split(' ').first.toLowerCase();
+      final some = await plex.playlists.list(
+        type: PlexMediaType.audio,
+        filters: [PlexFilter.titleContains(word)],
+        size: 100,
+      );
+      expect(some, isNotEmpty);
+      expect(some.every((p) => p.title.toLowerCase().contains(word)), isTrue);
+    });
 
-      test('search one section', () async {
-        final albums = await plex.library.allByType(
-          sectionId: sectionId,
-          type: PlexMetadataType.track,
-          size: 1,
-        );
-        final title = albums.items.single.title;
-        final found = await plex.search.section(
-          sectionId: sectionId,
-          query: title,
-          type: PlexMetadataType.track,
-        );
-        expect(found.any((t) => t.title == title), isTrue);
-      });
-    },
-    skip: _skip,
-  );
+    test('search one section', () async {
+      final albums = await plex.library.allByType(
+        sectionId: sectionId,
+        type: PlexMetadataType.track,
+        size: 1,
+      );
+      final title = albums.items.single.title;
+      final found = await plex.search.section(
+        sectionId: sectionId,
+        query: title,
+        type: PlexMetadataType.track,
+      );
+      expect(found.any((t) => t.title == title), isTrue);
+    });
+  }, skip: _skip);
 }

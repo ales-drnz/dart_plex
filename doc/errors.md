@@ -14,11 +14,12 @@ try {
 }
 ```
 
-`PlexErrorType` is one of `connection`, `timeout`, `auth`, `notFound`,
-`badRequest`, `serverError`, `parse`, `state`, `cancelled` and
-`unknown`. The exception also carries the request `path`, the underlying
-`cause`, the original `stackTrace` and, when the server sent
-`Retry-After` (on a `429` or `503`), `retryAfter`.
+`PlexErrorType` is one of `connection`, `timeout`, `auth`,
+`passRequired`, `notFound`, `badRequest`, `serverError`, `parse`, `state`,
+`cancelled` and `unknown`. The exception also carries the request `path`,
+the underlying `cause`, the original `stackTrace`, the whole error `body`
+the server sent (`message` holds at most its first 512 bytes) and, when
+the server sent `Retry-After` (on a `429` or `503`), `retryAfter`.
 
 ### Classifying a failure
 
@@ -28,8 +29,10 @@ try {
 } on PlexException catch (e) {
   if (e.isCancelled) {
     // the caller gave up: not a failure, ignore it
+  } else if (e.isPassRequired) {
+    showPassNeeded(); // remote video needs a Plex Pass or Remote Watch Pass
   } else if (e.isAuthError) {
-    await signInAgain(); // 401 or 403: the server rejects the token
+    await signInAgain(); // 401, 403 or 498: the token is refused
   } else if (e.isTransient) {
     scheduleRetry(e.retryAfter); // network, 5xx or 429
   } else if (e.isNotFound) {
@@ -46,12 +49,13 @@ try {
 | `isTransient` | A failure that may pass if sent again: a network failure, a 5xx or a `429` |
 | `isNotFound` | The server answered `404` |
 | `isCancelled` | The request was cancelled through a `PlexCancelToken` |
-| `isAuthError` | `401` or `403`, or a sign-in answered without a token |
+| `isAuthError` | `401`, `403` or `498` (plex.tv's "token expired"), or a sign-in answered without a token |
+| `isPassRequired` | Playback refused for want of a Plex Pass or Remote Watch Pass (see [Streaming](https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html)); not an auth error |
 
-The client never fetches a new token on its own: on `isAuthError`, run
-the PIN flow (see
-[Client and sign-in](https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html))
-again.
+After `useJwt()` the client renews an expired JWT on its own, and retries
+the refused request once; `tokenRenewer` does the same for tokens you
+renew yourself. Otherwise, on `isAuthError`, sign in again (see
+[Client and sign-in](https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html)).
 
 ## Cancellation and retries
 

@@ -65,11 +65,7 @@ class PlexSearchApi {
   }) {
     return _http.requestJson(
       '/library/sections/$sectionId/search',
-      queryParameters: {
-        'query': query,
-        'type': type.value,
-        if (limit != null) 'limit': limit,
-      },
+      queryParameters: {'query': query, 'type': type.value, 'limit': ?limit},
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }

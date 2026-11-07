@@ -19,10 +19,8 @@ class PlexPreferencesApi {
   PlexPreferencesApi(this._http);
 
   /// `GET /:/prefs` — every preference.
-  Future<List<PlexSetting>> all() => _http.requestJson(
-        '/:/prefs',
-        itemsOf('Setting', PlexSetting.fromJson),
-      );
+  Future<List<PlexSetting>> all() =>
+      _http.requestJson('/:/prefs', itemsOf('Setting', PlexSetting.fromJson));
 
   /// `GET /:/prefs/get?id={id}` — fetch a single preference.
   ///

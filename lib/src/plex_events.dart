@@ -47,10 +47,10 @@ sealed class PlexEvent {
     Map<String, Object?> container,
   ) {
     List<Map<String, Object?>> entries(String key) => [
-          if (container[key] is List)
-            for (final e in container[key] as List)
-              if (e is Map<String, Object?>) e,
-        ];
+      if (container[key] is List)
+        for (final e in container[key] as List)
+          if (e is Map<String, Object?>) e,
+    ];
 
     switch (type) {
       case 'playing':
@@ -109,14 +109,14 @@ final class PlexPlaySessionEvent extends PlexEvent {
 
   /// Decodes a `PlaySessionStateNotification` entry.
   PlexPlaySessionEvent.fromJson(super.raw)
-      : sessionKey = asString(raw['sessionKey']),
-        clientIdentifier = asString(raw['clientIdentifier']),
-        ratingKey = asString(raw['ratingKey']) ?? '',
-        key = asString(raw['key']),
-        state = PlexPlayState.fromWire(asString(raw['state'])),
-        viewOffsetMs = asInt(raw['viewOffset']),
-        playQueueItemId = asInt(raw['playQueueItemID']),
-        playQueueId = asInt(raw['playQueueID']);
+    : sessionKey = asString(raw['sessionKey']),
+      clientIdentifier = asString(raw['clientIdentifier']),
+      ratingKey = asString(raw['ratingKey']) ?? '',
+      key = asString(raw['key']),
+      state = PlexPlayState.fromWire(asString(raw['state'])),
+      viewOffsetMs = asInt(raw['viewOffset']),
+      playQueueItemId = asInt(raw['playQueueItemID']),
+      playQueueId = asInt(raw['playQueueID']);
 }
 
 /// Play state of a session.
@@ -143,9 +143,9 @@ enum PlexPlayState {
 
   /// The state for [value]; [unknown] when unrecognised.
   static PlexPlayState fromWire(String? value) => values.firstWhere(
-        (s) => s.wire == value && s != unknown,
-        orElse: () => unknown,
-      );
+    (s) => s.wire == value && s != unknown,
+    orElse: () => unknown,
+  );
 }
 
 /// A library item was created, changed, analysed or deleted (frame type
@@ -190,16 +190,16 @@ final class PlexLibraryItemEvent extends PlexEvent {
 
   /// Decodes a `TimelineEntry`.
   PlexLibraryItemEvent.fromJson(super.raw)
-      : itemId = asString(raw['itemID']) ?? '',
-        parentItemId = asString(raw['parentItemID']),
-        rootItemId = asString(raw['rootItemID']),
-        sectionId = asString(raw['sectionID']),
-        type = PlexMetadataType.fromValue(asInt(raw['type'])),
-        title = asString(raw['title']) ?? '',
-        state = asInt(raw['state']),
-        metadataState = asString(raw['metadataState']),
-        mediaState = asString(raw['mediaState']),
-        updatedAt = asEpochSeconds(raw['updatedAt']);
+    : itemId = asString(raw['itemID']) ?? '',
+      parentItemId = asString(raw['parentItemID']),
+      rootItemId = asString(raw['rootItemID']),
+      sectionId = asString(raw['sectionID']),
+      type = PlexMetadataType.fromValue(asInt(raw['type'])),
+      title = asString(raw['title']) ?? '',
+      state = asInt(raw['state']),
+      metadataState = asString(raw['metadataState']),
+      mediaState = asString(raw['mediaState']),
+      updatedAt = asEpochSeconds(raw['updatedAt']);
 
   /// The item was just created (state 0 / `metadataState: created`).
   bool get isCreated => state == 0 || metadataState == 'created';
@@ -294,9 +294,9 @@ final class PlexStatusEvent extends PlexEvent {
 
   /// Decodes a `StatusNotification` entry.
   PlexStatusEvent.fromJson(super.raw)
-      : title = asString(raw['title']) ?? '',
-        description = asString(raw['description']),
-        notificationName = asString(raw['notificationName']);
+    : title = asString(raw['title']) ?? '',
+      description = asString(raw['description']),
+      notificationName = asString(raw['notificationName']);
 }
 
 /// A frame type without a typed event (`progress`, `reachability`,

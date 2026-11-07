@@ -45,16 +45,15 @@ maintenance tasks.
 
 ## Administration
 
-These calls need an admin token and return the server's maps where no
-model fits.
+These calls need an admin token.
 
 | Call | Does |
 | :--- | :--- |
-| `server.backgroundTasks()` | Lists background work: scans, intro detection |
+| `server.backgroundTasks()` | Background transcode jobs (optimizing, converting for download), as `PlexTranscodeJob` |
 | `server.transientToken()` | Issues a short-lived delegation token, for a cast target or a viewer link |
-| `server.securityResources(source:)` | Connection info for a source, for cross-server playback |
+| `server.securityResources(source:)` | Connection info and token for a source, for cross-server playback (`PlexSecurityResource`) |
 | `log.writeMessage(level:, message:, source:)` | Writes one line to the server log; `level` is 0 (error) to 4 (verbose) |
 | `log.writeBlock(body:)` | Appends a multi-line body to the server log |
 | `log.enablePapertrail(minutes:)` | Forwards the log to Papertrail for a while |
-| `updater.status()`, `check()`, `apply()` | Server software updates; `apply(tonight: true)` waits for the quiet hours |
-| `providers.list()`, `add(url:)`, `refresh()`, `delete(provider:)` | Media providers registered on the server |
+| `updater.status()`, `check()`, `apply()` | Server software updates (`PlexUpdaterStatus`, with its `releases`); `apply(tonight: true)` waits for the quiet hours |
+| `providers.list()`, `add(url:)`, `refresh()`, `delete(provider:)` | Media providers registered on the server (`PlexMediaProvider`, with its `features`) |

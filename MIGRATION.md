@@ -1,3 +1,116 @@
+# Migrating to 0.3.0
+
+0.3.0 needs Dart 3.10, types the answers that were still maps, types the
+sort and type parameters, and removes what 0.2 deprecated. Sign-in with a
+plex.tv JWT is new and optional: a legacy token keeps working.
+
+## Dart 3.10
+
+The SDK floor is `^3.10.0`. Flutter 3.38 ships Dart 3.10.
+
+## Removed
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| `PlexDVRsApi` | `PlexDvrsApi` |
+| `e.isRetriable`, `type.isRetriable` | `e.isNetworkFailure`, or `e.isTransient` to include 5xx and 429 |
+| `timeline(state: 'playing', …)`, `PlexPlaybackApi.statePlaying` | `timeline(playState: PlexPlayState.playing, …)` |
+| `timeline(playQueueItemId: '7', …)` | `timeline(playQueueItemID: 7, …)` |
+| `streaming.universalAudioUrl(…)` | `await streaming.startAudioTranscode(…)` |
+| `nearestToTrack(excludeParentID: 2)` | `nearestToTrack(excludeParentRatingKey: '2')` |
+
+## Sort and type parameters
+
+Strings that the server reads as a fixed vocabulary are typed. A value
+the package does not list is still one constructor away, since
+`PlexSort`, `PlexMediaType` and `PlexMarkerType` are extension types over
+the wire string.
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| `sort: 'titleSort:asc'` | `sort: PlexSort.titleSort.asc` |
+| `sort: 'addedAt:desc'` | `sort: PlexSort.addedAt.desc` |
+| `sort: 'viewedAt:desc'` | `sort: const PlexSort('viewedAt').desc` |
+| `playlists.list(type: 'audio')`, `create(type: 'audio')`, `playQueues.create(type: 'audio')` | `type: PlexMediaType.audio` |
+| `addSection(type: 'artist')` | `addSection(type: PlexLibraryType.music)` |
+| `firstCharacters(type: '9')`, `collections.create(type: '9')` | `type: PlexMetadataType.album` |
+| `createMarker(type: 'intro')` | `createMarker(type: PlexMarkerType.intro)` |
+| `startAudioTranscode(protocol: 'dash')`, `universalVideoUrl(protocol: 'hls')` | `protocol: PlexStreamingProtocol.dash` |
+| `library.tags()`, `sectionCommon(sectionId: s)` | `tags(type: …)`, `sectionCommon(sectionId: s, type: …)`: the server answers 400 without a type |
+
+## Typed answers
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| `downloadQueue.create()`, `get()` → map | `PlexDownloadQueue` |
+| `downloadQueue.items()`, `item()` → map | `PlexDownloadQueueItem` (`status`, `error`, `decision`) |
+| `downloadQueue.itemDecision()` → map | `PlexTranscodeDecision` |
+| `downloadQueue.itemMedia()` | `itemMediaUrl()`: the route answers the file |
+| `liveTv.sessions()`, `liveSession()` → maps | `PlexMetadata` |
+| `liveTv.dvrs()`, `dvrs.get()` → maps | `PlexDvr` (`key`, `devices`) |
+| `devices.grabbers()`, `list()`, `details()`, `channels()` → maps | `PlexMediaGrabber`, `PlexTunerDevice`, `PlexDeviceChannel` |
+| `subscriptions.list()`, `get()`, `create()`, `template()` → maps | `PlexMediaSubscription` |
+| `subscriptions.scheduledRecordings()` → map | `PlexMediaGrabOperation` |
+| `epg.*` → maps | `PlexEpgCountry`, `PlexEpgLanguage`, `PlexLineup`, `PlexEpgChannel`, `PlexChannelMapping` |
+| `library.tags()`, `matches()`, `person()` → maps | `PlexTag`, `PlexMetadata`, `PlexPerson` |
+| `library.sectionDetails()` → map | `PlexSectionDetails` (`views`) |
+| `playlists.generators()` → maps, `generators.first['id']` | `PlexPlayQueueGenerator`, `generators.first.id` |
+| `updater.status()` → map | `PlexUpdaterStatus` |
+| `server.securityResources()`, `backgroundTasks()` → maps | `PlexSecurityResource`, `PlexTranscodeJob` |
+| `providers.list()`, `add()` → map | `PlexMediaProvider` |
+| `streaming.lyrics()` → `String?` | `PlexLyrics?`: `.text` for the old string, `.lines` for the LRC lines |
+
+Each model keeps its entry in `raw`. The maps the package still returns
+(`autocomplete()`, `sectionCommon()`, `sectionPreferences()`,
+`streamLoudness()` and a few other admin reads) are unchanged.
+
+## plex.tv calls and tokens
+
+`account.tokenDetails()` and `connectedUsers()` ask plex.tv now; the
+server routes they called answered nothing useful.
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| `account.tokenDetails()` → map of the server | `PlexUser` the server token belongs to |
+| `account.connectedUsers()` → maps of the server | `PlexAccountUser`, with the servers shared |
+
+`connect(url, accessToken: t)` used to replace the only token, so plex.tv
+calls afterwards carried the server's token. The token it replaces is now
+kept as `accountToken` and plex.tv calls send it. Code that relied on the
+old behaviour sets it apart with `setAccountToken()`. `clearSession()`
+also drops the account token and any JWT session.
+
+## New error type
+
+`PlexErrorType.passRequired` is new: a refusal of remote video playback
+for want of a Plex Pass or Remote Watch Pass. It is not an auth error. A
+`switch` over `PlexErrorType` must handle it. `498` (plex.tv's "token
+expired") is an `auth` error.
+
+## Moving to JWT sign-in (optional)
+
+A legacy token keeps working. To move an existing sign-in to the 7-day
+JWT that the client refreshes on its own:
+
+```dart
+final key = await PlexDeviceKey.generate();
+await plex.account.registerJwtKey(key: key, token: legacyToken);
+await plex.useJwt(PlexJwtSession(key: key, onChanged: persist));
+```
+
+New sign-ins use `createJwtPin()` and `pollJwtPin()` instead of
+`createPin()` and `pollPin()`. See the Client and sign-in topic.
+
+## Connecting
+
+`bestConnection()` keeps its name and now follows `rankedConnections()`
+(local, remote, relay; HTTPS before HTTP; IPv4 before IPv6), still without
+checking that the connection answers. `connectToResource()` checks:
+
+| 0.2.x | 0.3.0 |
+| --- | --- |
+| `plex.connect(server.bestConnection()!.uri, accessToken: server.accessToken)` | `await plex.connectToResource(server)` |
+
 # Migrating to 0.2.0
 
 0.2.0 replaces Dio with `package:http`, names every id, and returns typed

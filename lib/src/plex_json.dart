@@ -15,19 +15,19 @@ String? asString(Object? v) => v == null ? null : '$v';
 
 /// An int, from an int, a double (truncated) or a numeric string.
 int? asInt(Object? v) => switch (v) {
-      int() => v,
-      double() => v.toInt(),
-      String() => int.tryParse(v),
-      _ => null,
-    };
+  int() => v,
+  double() => v.toInt(),
+  String() => int.tryParse(v),
+  _ => null,
+};
 
 /// A double, from a double, an int or a numeric string.
 double? asDouble(Object? v) => switch (v) {
-      double() => v,
-      int() => v.toDouble(),
-      String() => double.tryParse(v),
-      _ => null,
-    };
+  double() => v,
+  int() => v.toDouble(),
+  String() => double.tryParse(v),
+  _ => null,
+};
 
 /// `true` for `true`, `1` and `"1"`.
 bool asBool(Object? v) => v == true || v == 1 || v == '1';
@@ -56,7 +56,7 @@ DateTime? asEpochSeconds(Object? v) {
 /// The `tag` of each `{tag: …}` entry of a tag array (`Genre`, `Mood`,
 /// `Role`, …).
 List<String> tagNames(Object? v) => [
-      if (v is List)
-        for (final e in v)
-          if (e is Map && e['tag'] is String) e['tag'] as String,
-    ];
+  if (v is List)
+    for (final e in v)
+      if (e is Map && e['tag'] is String) e['tag'] as String,
+];

@@ -19,10 +19,10 @@ import 'package:http/io_client.dart';
 /// connection gunzips instead, on the same background isolate that decodes
 /// and parses the body (see [gunzip]).
 http.Client createDefaultClient(Duration connectTimeout) => IOClient(
-      HttpClient()
-        ..connectionTimeout = connectTimeout
-        ..autoUncompress = false,
-    );
+  HttpClient()
+    ..connectionTimeout = connectTimeout
+    ..autoUncompress = false,
+);
 
 /// Whether the default client leaves gzip bodies compressed for [gunzip].
 const bool defaultClientLeavesGzip = true;

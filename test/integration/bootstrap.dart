@@ -127,11 +127,7 @@ Future<void> main(List<String> args) async {
 
   // 3. Docker stack
   _step('Starting Docker stack (Plex ${env['PLEX_IMAGE_TAG'] ?? '1.41.x'})');
-  await _composeUp(
-    extraEnv: {
-      if (claimToken != null) 'PLEX_CLAIM': claimToken,
-    },
-  );
+  await _composeUp(extraEnv: {'PLEX_CLAIM': ?claimToken});
 
   // 4. Wait for PMS to respond
   _step('Waiting for $baseUrl/identity to respond');
@@ -153,8 +149,10 @@ Future<void> main(List<String> args) async {
   // connection plex.tv discovers (which may be a LAN IP). The
   // server's accessToken is what we need though.
   client.connect(baseUrl, accessToken: server.accessToken);
-  print('   ✓ Connected to ${server.name} '
-      '(machineId=${server.clientIdentifier})');
+  print(
+    '   ✓ Connected to ${server.name} '
+    '(machineId=${server.clientIdentifier})',
+  );
 
   // 5b. Require the token from every client.
   //
@@ -170,14 +168,15 @@ Future<void> main(List<String> args) async {
   // 6. Ensure Music library
   _step('Ensuring "Music" library exists');
   final sections = await client.library.sections();
-  if (sections
-      .any((s) => s.title == 'Music' && s.type == PlexLibraryType.music)) {
+  if (sections.any(
+    (s) => s.title == 'Music' && s.type == PlexLibraryType.music,
+  )) {
     print('   ✓ Music library already configured');
   } else {
     print('   ▶ Adding Music library (location=/data/Music)');
     await client.library.addSection(
       name: 'Music',
-      type: 'artist',
+      type: PlexLibraryType.music,
       scanner: 'Plex Music',
       agent: 'tv.plex.agents.music',
       language: 'en-US',
@@ -229,14 +228,16 @@ bool _isOurTestServer(PlexResource r) {
 Future<String> _requestClaimToken(String authToken, String clientId) async {
   // plex.tv issues a one-shot claim token for the given account.
   // Format: `claim-xxxxxxxxxxxxxxxx`. Expires in ~4 minutes.
-  final res = await http.get(
-    Uri.parse('https://plex.tv/api/claim/token.json'),
-    headers: {
-      'Accept': 'application/json',
-      'X-Plex-Token': authToken,
-      'X-Plex-Client-Identifier': clientId,
-    },
-  ).timeout(const Duration(seconds: 15));
+  final res = await http
+      .get(
+        Uri.parse('https://plex.tv/api/claim/token.json'),
+        headers: {
+          'Accept': 'application/json',
+          'X-Plex-Token': authToken,
+          'X-Plex-Client-Identifier': clientId,
+        },
+      )
+      .timeout(const Duration(seconds: 15));
   if (res.statusCode != 200) {
     throw StateError(
       'plex.tv refused claim token request: HTTP ${res.statusCode} ${res.body}',
@@ -356,10 +357,7 @@ Future<void> _composeUp({Map<String, String> extraEnv = const {}}) async {
   // `--wait` blocks until every service's healthcheck reports
   // healthy. The PLEX_CLAIM env var is passed via `extraEnv` (one-
   // shot, consumed by the container on first start).
-  final processEnv = {
-    ...Platform.environment,
-    ...extraEnv,
-  };
+  final processEnv = {...Platform.environment, ...extraEnv};
   final r = await Process.run(
     'docker',
     [
@@ -388,9 +386,9 @@ Future<void> _waitForHttp(String url, {int maxSeconds = 120}) async {
   final deadline = DateTime.now().add(Duration(seconds: maxSeconds));
   while (DateTime.now().isBefore(deadline)) {
     try {
-      final res = await http.get(Uri.parse(url)).timeout(
-            const Duration(seconds: 3),
-          );
+      final res = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 3));
       if (res.statusCode == 200) {
         print('   ✓ Server reachable');
         return;
@@ -419,8 +417,10 @@ Future<void> _ensureGenreTag(PlexClient client) async {
       type: PlexMetadataType.album,
     );
     if (existing.any((g) => g.id != null)) {
-      print('   ✓ Genre index already populated '
-          '(${existing.map((g) => g.title).join(', ')})');
+      print(
+        '   ✓ Genre index already populated '
+        '(${existing.map((g) => g.title).join(', ')})',
+      );
       return;
     }
     final albums = await client.library.allByType(
@@ -436,18 +436,17 @@ Future<void> _ensureGenreTag(PlexClient client) async {
     await client.library.updateSectionItems(
       sectionId: music.id,
       type: PlexMetadataType.album.value,
-      changes: {
-        'id': album.ratingKey,
-        'genre[0].tag.tag': 'Rock',
-      },
+      changes: {'id': album.ratingKey, 'genre[0].tag.tag': 'Rock'},
     );
     final after = await client.library.genres(
       sectionId: music.id,
       type: PlexMetadataType.album,
     );
     if (after.any((g) => g.id != null)) {
-      print('   ✓ Tagged "${album.title}" as Rock '
-          '(genre id ${after.firstWhere((g) => g.id != null).id})');
+      print(
+        '   ✓ Tagged "${album.title}" as Rock '
+        '(genre id ${after.firstWhere((g) => g.id != null).id})',
+      );
     } else {
       print('   ⚠ Tag did not take — genre filter tests will skip');
     }
@@ -456,10 +455,7 @@ Future<void> _ensureGenreTag(PlexClient client) async {
   }
 }
 
-Future<void> _waitForScan(
-  PlexClient client, {
-  int maxSeconds = 60,
-}) async {
+Future<void> _waitForScan(PlexClient client, {int maxSeconds = 60}) async {
   // Find the Music section we just created.
   final sections = await client.library.sections();
   final music = sections.firstWhere(
@@ -485,8 +481,10 @@ Future<void> _waitForScan(
     }
     await Future<void>.delayed(const Duration(seconds: 2));
   }
-  print('   ⚠ Scan didn\'t settle within ${maxSeconds}s — '
-      'final count: $lastCount tracks');
+  print(
+    '   ⚠ Scan didn\'t settle within ${maxSeconds}s — '
+    'final count: $lastCount tracks',
+  );
 }
 
 // ─── Generic helpers ────────────────────────────────────────────────

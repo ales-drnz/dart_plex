@@ -63,7 +63,8 @@ final class PlexRetryPolicy {
     final m = method.toUpperCase();
     if (m != 'GET' && m != 'HEAD') return null;
     final status = error.statusCode;
-    final retriable = error.isNetworkFailure ||
+    final retriable =
+        error.isNetworkFailure ||
         status == 502 ||
         status == 503 ||
         status == 504 ||

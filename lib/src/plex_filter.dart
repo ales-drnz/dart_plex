@@ -133,14 +133,13 @@ final class PlexFilter {
     String field,
     List<int> tagIds, {
     bool exclude = false,
-  }) =>
-      PlexFilter(
-        field: field,
-        operator: exclude
-            ? PlexFilterOperator.doesNotMatch
-            : PlexFilterOperator.matches,
-        values: [for (final id in tagIds) '$id'],
-      );
+  }) => PlexFilter(
+    field: field,
+    operator: exclude
+        ? PlexFilterOperator.doesNotMatch
+        : PlexFilterOperator.matches,
+    values: [for (final id in tagIds) '$id'],
+  );
 
   /// The `genre` field, by tag id — `?genre={tagId}`.
   ///
@@ -154,8 +153,7 @@ final class PlexFilter {
     String field,
     num value, {
     PlexFilterOperator operator = PlexFilterOperator.matches,
-  }) =>
-      PlexFilter(field: field, operator: operator, values: ['$value']);
+  }) => PlexFilter(field: field, operator: operator, values: ['$value']);
 
   /// Released in exactly [year] — `?year={year}`.
   factory PlexFilter.year(int year) => PlexFilter.number('year', year);
@@ -171,10 +169,10 @@ final class PlexFilter {
   /// User rating strictly above [rating] on Plex's 0..10 scale —
   /// `?userRating>>={rating}`.
   factory PlexFilter.ratingAbove(num rating) => PlexFilter.number(
-        'userRating',
-        rating,
-        operator: PlexFilterOperator.greaterThan,
-      );
+    'userRating',
+    rating,
+    operator: PlexFilterOperator.greaterThan,
+  );
 
   /// Everything the user has rated at all — `?userRating>>=0`.
   ///
@@ -189,19 +187,15 @@ final class PlexFilter {
     String field,
     String value, {
     PlexFilterOperator operator = PlexFilterOperator.matches,
-  }) =>
-      PlexFilter(field: field, operator: operator, values: [value]);
+  }) => PlexFilter(field: field, operator: operator, values: [value]);
 
   /// Titles containing [text] — `?title={text}`.
   factory PlexFilter.titleContains(String text) =>
       PlexFilter.text('title', text);
 
   /// Titles equal to [text] — `?title=={text}`.
-  factory PlexFilter.titleIs(String text) => PlexFilter.text(
-        'title',
-        text,
-        operator: PlexFilterOperator.isExactly,
-      );
+  factory PlexFilter.titleIs(String text) =>
+      PlexFilter.text('title', text, operator: PlexFilterOperator.isExactly);
 
   /// Titles starting with [character] — the A-Z scrubber bucket.
   ///
@@ -235,6 +229,77 @@ final class PlexFilter {
   /// 1.43.2 the two partition a section exactly, and marking one of
   /// three tracks played moves it from one bucket to the other.
   factory PlexFilter.played() => PlexFilter.flag('unwatched', value: false);
+
+  // Media fields PMS 1.43.2 filters on (its `includeMeta=1` field list for
+  // movie and show sections; each one narrowed a section, verified).
+
+  /// Items with a Dolby Atmos audio track — `?atmos=1` (or `0` for none).
+  factory PlexFilter.atmos({bool value = true}) =>
+      PlexFilter.flag('atmos', value: value);
+
+  /// Items with Dolby Vision video — `?dovi=1`.
+  factory PlexFilter.dolbyVision({bool value = true}) =>
+      PlexFilter.flag('dovi', value: value);
+
+  /// Items with HDR video — `?hdr=1`.
+  factory PlexFilter.hdr({bool value = true}) =>
+      PlexFilter.flag('hdr', value: value);
+
+  /// Items started and not finished — `?inProgress=1`.
+  factory PlexFilter.inProgress({bool value = true}) =>
+      PlexFilter.flag('inProgress', value: value);
+
+  /// Items with more than one version — `?duplicate=1`.
+  factory PlexFilter.duplicate({bool value = true}) =>
+      PlexFilter.flag('duplicate', value: value);
+
+  /// Items with any of [codecs] as their video codec (`h264`, `hevc`,
+  /// `av1`, …) — `?videoCodec=hevc,av1`. The values a section has are
+  /// listed by [PlexLibraryApi.filterValues] for its `videoCodec` filter.
+  factory PlexFilter.videoCodec(List<String> codecs, {bool exclude = false}) =>
+      PlexFilter._values('videoCodec', codecs, exclude);
+
+  /// Items with any of [codecs] as an audio codec (`aac`, `eac3`,
+  /// `truehd`, …) — `?audioCodec=…`.
+  factory PlexFilter.audioCodec(List<String> codecs, {bool exclude = false}) =>
+      PlexFilter._values('audioCodec', codecs, exclude);
+
+  /// Items with any of [codecs] as a subtitle codec (`srt`, `pgs`, `ass`,
+  /// …) — `?subtitleCodec=…`.
+  factory PlexFilter.subtitleCodec(
+    List<String> codecs, {
+    bool exclude = false,
+  }) => PlexFilter._values('subtitleCodec', codecs, exclude);
+
+  /// Items with any of [layouts] as an audio channel layout (`stereo`,
+  /// `5.1`, `7.1`, … as [PlexStream.audioChannelLayout] spells them) —
+  /// `?audioLayout=…`.
+  factory PlexFilter.audioLayout(
+    List<String> layouts, {
+    bool exclude = false,
+  }) => PlexFilter._values('audioLayout', layouts, exclude);
+
+  /// Items with an audio track in any of [languages] (ISO codes as the
+  /// section lists them) — `?audioLanguage=…`.
+  factory PlexFilter.audioLanguage(
+    List<String> languages, {
+    bool exclude = false,
+  }) => PlexFilter._values('audioLanguage', languages, exclude);
+
+  /// Items with subtitles in any of [languages] — `?subtitleLanguage=…`.
+  factory PlexFilter.subtitleLanguage(
+    List<String> languages, {
+    bool exclude = false,
+  }) => PlexFilter._values('subtitleLanguage', languages, exclude);
+
+  factory PlexFilter._values(String field, List<String> values, bool exclude) =>
+      PlexFilter(
+        field: field,
+        operator: exclude
+            ? PlexFilterOperator.doesNotMatch
+            : PlexFilterOperator.matches,
+        values: values,
+      );
 
   /// Query-parameter name this condition sends — [field] followed by
   /// [PlexFilterOperator.wire].

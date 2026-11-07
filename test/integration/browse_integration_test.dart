@@ -14,73 +14,74 @@ import '_fixture.dart';
 /// ([PlexSearchApi], [PlexHubsApi], [PlexStreamingApi],
 /// [PlexCollectionsApi]).
 void main() {
-  group(
-    'Plex browse APIs',
-    () {
-      late PlexClient plex;
-      late PlexBootstrapCache cache;
-      late PlexLibrarySection musicSection;
-      late List<String> trackRatingKeys;
+  group('Plex browse APIs', () {
+    late PlexClient plex;
+    late PlexBootstrapCache cache;
+    late PlexLibrarySection musicSection;
+    late List<String> trackRatingKeys;
 
-      setUpAll(() async {
-        plex = plexFromCache();
-        if (bootstrapSkipReason != null) return;
-        cache = PlexBootstrapCache.load();
-        final sections = await plex.library.sections();
-        musicSection = sections.firstWhere((s) => s.title == 'Music');
-        final page = await plex.library.allByType(
-          sectionId: musicSection.id,
-          type: PlexMetadataType.track,
-          size: 3,
-        );
-        trackRatingKeys = [for (final m in page.items) m.ratingKey];
-      });
+    setUpAll(() async {
+      plex = plexFromCache();
+      if (bootstrapSkipReason != null) return;
+      cache = PlexBootstrapCache.load();
+      final sections = await plex.library.sections();
+      musicSection = sections.firstWhere((s) => s.title == 'Music');
+      final page = await plex.library.allByType(
+        sectionId: musicSection.id,
+        type: PlexMetadataType.track,
+        size: 3,
+      );
+      trackRatingKeys = [for (final m in page.items) m.ratingKey];
+    });
 
-      test(
-          'search.flat returns a metadata list (legacy endpoint, may be empty)',
-          () async {
+    test(
+      'search.flat returns a metadata list (legacy endpoint, may be empty)',
+      () async {
         // The legacy /search endpoint behaves differently in modern PMS
         // builds — it often returns no results even for content that's
         // present in hubs.search. We just verify the shape is right.
         final results = await plex.search.flat(query: 'Track');
         expect(results, isA<List<PlexMetadata>>());
-      });
+      },
+    );
 
-      test('search.voice accepts a natural-language query', () async {
-        final results = await plex.search.voice(query: 'play test artist');
-        expect(results, isA<List<PlexHub>>());
-      });
+    test('search.voice accepts a natural-language query', () async {
+      final results = await plex.search.voice(query: 'play test artist');
+      expect(results, isA<List<PlexHub>>());
+    });
 
-      test('hubs.global returns the home hubs', () async {
-        final hubs = await plex.hubs.global(count: 5);
-        expect(hubs, isA<List<PlexHub>>());
-      });
+    test('hubs.global returns the home hubs', () async {
+      final hubs = await plex.hubs.global(count: 5);
+      expect(hubs, isA<List<PlexHub>>());
+    });
 
-      test('hubs.forSection returns the section hubs', () async {
-        final hubs = await plex.hubs.forSection(
-          sectionId: musicSection.id,
-          count: 5,
-        );
-        expect(hubs, isA<List<PlexHub>>());
-      });
+    test('hubs.forSection returns the section hubs', () async {
+      final hubs = await plex.hubs.forSection(
+        sectionId: musicSection.id,
+        count: 5,
+      );
+      expect(hubs, isA<List<PlexHub>>());
+    });
 
-      test('hubs.continueWatching returns a (typically empty) list', () async {
-        final items = await plex.hubs.continueWatching(count: 5);
-        expect(items, isA<List<PlexMetadata>>());
-      });
+    test('hubs.continueWatching returns a (typically empty) list', () async {
+      final items = await plex.hubs.continueWatching(count: 5);
+      expect(items, isA<List<PlexMetadata>>());
+    });
 
-      test('streaming.universalAudioUrl builds a signed URL', () {
-        final url = plex.streaming.universalAudioUrl(
-          ratingKey: trackRatingKeys.first,
-          session: 'dart-plex-it-stream',
-        );
-        expect(url, contains('/transcode/universal/start'));
-        expect(url, contains('X-Plex-Token='));
-        expect(url, contains('session=dart-plex-it-stream'));
-      });
+    test('streaming.startAudioTranscode builds a signed URL', () async {
+      final t = await plex.streaming.startAudioTranscode(
+        ratingKey: trackRatingKeys.first,
+        session: 'dart-plex-it-stream',
+      );
+      expect(t.url, contains('/transcode/universal/start'));
+      expect(t.url, contains('X-Plex-Token='));
+      expect(t.url, contains('session=dart-plex-it-stream'));
+      await plex.streaming.stopUniversal(session: t.session);
+    });
 
-      test('collections create returns a ratingKey + items endpoint responds',
-          () async {
+    test(
+      'collections create returns a ratingKey + items endpoint responds',
+      () async {
         // Plex's `addItem`/`items` semantics for collections behave
         // differently than playlists (server tag model vs. linked rows);
         // we only smoke-test that the lifecycle endpoints are reachable.
@@ -97,8 +98,9 @@ void main() {
 
         // items() endpoint should respond with a list (may be empty
         // depending on server tag-propagation delay).
-        final items =
-            await plex.collections.items(collectionId: created.ratingKey);
+        final items = await plex.collections.items(
+          collectionId: created.ratingKey,
+        );
         expect(items, isA<List<PlexMetadata>>());
 
         // Cover image URL builder.
@@ -108,8 +110,7 @@ void main() {
         );
         expect(cover, contains('/library/collections/${created.ratingKey}'));
         expect(cover, contains('X-Plex-Token='));
-      });
-    },
-    skip: bootstrapSkipReason,
-  );
+      },
+    );
+  }, skip: bootstrapSkipReason);
 }

@@ -11,6 +11,10 @@ for (final s in sections) {
 
 `PlexLibraryType` is `music`, `movie`, `show`, `photo` or `unknown`.
 `id` is the section key that every section call takes as `sectionId`.
+`sectionDetails(sectionId:)` returns the section's views (`all`, by
+genre, search, …) as `PlexSectionDetails`, and `folder(sectionId:)` its
+folders as on disk: a folder's `key` carries the `parent` value that
+opens it.
 Each section also carries `agent`, `scanner`, `language`, `locations`,
 `scannedAt` and `createdAt`.
 
@@ -22,7 +26,7 @@ final page = await plex.library.allByType(
   type: PlexMetadataType.album,
   start: 100,
   size: 100,
-  sort: 'titleSort:asc',
+  sort: PlexSort.titleSort.asc,
 );
 print('Got ${page.items.length} of ${page.totalSize}');
 
@@ -49,8 +53,14 @@ count always matches what `allByType()` would list; it takes the same
 | `trailer` | 5 | `playlist` | 15 |
 | `artist` | 8 | `collection` | 18 |
 
-Sort examples: `'titleSort:asc'`, `'addedAt:desc'`,
-`'lastViewedAt:desc'`, `'originallyAvailableAt:desc'`, `'random:<seed>'`.
+`sort` takes a `PlexSort`: `PlexSort.titleSort`, `PlexSort.addedAt.desc`,
+`PlexSort.lastViewedAt.desc`, `PlexSort.originallyAvailableAt.desc`,
+`PlexSort.random`, and `then()` for ties
+(`PlexSort.year.desc.then(PlexSort.titleSort)`). The constants are the
+sorts PMS 1.43.2 offers on music and movie sections; any other is
+`PlexSort('field')`, since `PlexSort` is an extension type over the wire
+string. The same type goes to `children()`, `firstCharacters()`,
+`playlists.list()`, `sessions.history()` and `account.watchlist()`.
 
 ## Filters
 
@@ -89,6 +99,16 @@ pick:
 | `PlexFilter.studio('A24')` | `studio=A24` |
 | `PlexFilter.contentRating('PG')` | `contentRating=PG` |
 | `PlexFilter.resolution('4k')` | `resolution=4k` |
+| `PlexFilter.hdr()`, `dolbyVision()`, `atmos()` | `hdr=1`, `dovi=1`, `atmos=1` |
+| `PlexFilter.videoCodec(['hevc', 'av1'])` | `videoCodec=hevc,av1` |
+| `PlexFilter.audioCodec(['truehd'])`, `subtitleCodec(['pgs'])` | `audioCodec=truehd`, `subtitleCodec=pgs` |
+| `PlexFilter.audioLayout(['5.1'])` | `audioLayout=5.1` |
+| `PlexFilter.audioLanguage(['ita'])`, `subtitleLanguage(['eng'])` | `audioLanguage=ita`, `subtitleLanguage=eng` |
+| `PlexFilter.inProgress()`, `duplicate()` | `inProgress=1`, `duplicate=1` |
+
+The media fields (`hdr` onwards) are those of PMS 1.43.2's movie and show
+sections; each narrowed a section on that version. Their values are what
+the section lists (`filterValues()`), e.g. `h264` for a video codec.
 
 Conditions in the list are ANDed; several values in one condition are
 ORed. Tag fields (genre, mood, style) take the numeric tag id, never the
@@ -172,7 +192,29 @@ out.
 `styles`, `roles` (a track's performers when it has more than one),
 counts (`leafCount`, `childCount`, `viewedLeafCount`, `viewCount`,
 `skipCount`), dates (`addedAt`, `lastViewedAt`, `originallyAvailableAt`,
-`lastRatedAt`), `userRating`, `durationMs` and `raw`.
+`lastRatedAt`), `userRating`, `durationMs`, `editionTitle` (a movie's or
+show's edition), `images` with `squareArt` and `logo`, and `raw`.
+
+### Markers and chapters
+
+```dart
+final episode = await plex.library.item(
+  ratingKey: key,
+  includeMarkers: true,
+  includeChapters: true,
+);
+final intro = episode!.markersOf(PlexMarkerType.intro).firstOrNull;
+if (intro != null) skipButton(from: intro.start, to: intro.end);
+for (final c in episode.chapters) {
+  print('${c.index}. ${c.title} at ${c.start}');
+}
+```
+
+The server sends markers and chapters only when asked. A `PlexMarker`
+has a `type` (`PlexMarkerType.intro`, `credits`, `commercial`,
+`bookmark`, `resume`, or any other the server sends), `start`, `end` and,
+for credits, `isFinal`. `createMarker()` and `editMarker()` take the same
+type.
 
 ## Children and leaves
 
@@ -183,7 +225,7 @@ final tracks = await plex.library.children(ratingKey: album.ratingKey);
 // Sorted and paged.
 final newestAlbums = await plex.library.children(
   ratingKey: artist.ratingKey,
-  sort: 'year:desc',
+  sort: PlexSort.year.desc,
   size: 20,
 );
 
@@ -220,7 +262,7 @@ final newAnywhere = await plex.library.recentlyAdded(size: 20);
 // The letters a section's titles start with, for an A-Z scrubber.
 final letters = await plex.library.firstCharacters(
   sectionId: musicLib.id,
-  type: '${PlexMetadataType.album.value}',
+  type: PlexMetadataType.album,
 );
 
 // Suggestions while the user types.
@@ -235,6 +277,7 @@ In a music section `recentlyAdded()` returns albums: the server ignores a
 type there, so the call takes none. Jump to a letter of the index with
 `PlexFilter.firstCharacter('A')` on `allByType()`. `autocomplete()` needs
 `type`: the server answers 400 without it. It returns the server's map.
+`sectionCommon()` needs a type too.
 
 ## Albums, folders and categories
 
@@ -267,7 +310,7 @@ final seed = PlexPlayQueuesApi.seedFromItems(
 final collection = await plex.collections.create(
   sectionId: musicLib.id,
   title: 'Road trip',
-  type: '${PlexMetadataType.album.value}',
+  type: PlexMetadataType.album,
   seedUri: seed,
 );
 final items = await plex.collections.items(collectionId: collection.ratingKey);
@@ -315,12 +358,12 @@ The editing and maintenance calls:
 | Detection | `detectIntros`, `detectCredits`, `detectAds`, `detectVoiceActivity`, `generateChapterThumbs`, `startBifGeneration` |
 | Markers | `createMarker`, `editMarker`, `deleteMarker` |
 | Artwork and extras | `itemArtworkUrl`, `setItemArtwork`, `extras`, `addExtra`, `addSubtitles`, `chapterImageUrl`, `itemFileUrl` |
-| Item reads | `relatedItems`, `itemTree`, `topUsers`, `person`, `personMedia` |
+| Item reads | `relatedItems`, `itemTree`, `topUsers`, `person` (`PlexPerson`), `personMedia` |
 | Streams and parts | `streamUrl`, `setStreamOffset`, `deleteStream`, `streamLoudness`, `streamLevels`, `setPartStreamSelection`, `partFileUrl`, `partIndex`, `partBifThumbUrl` |
-| Sections | `addSection`, `editSection`, `deleteSection`, `sectionDetails`, `sectionPreferences`, `setSectionPreferences`, `defaultSectionPrefs`, `sectionCommon`, `sectionsAll`, `sectionCompositeImageUrl` |
+| Sections | `addSection` (with a `PlexLibraryType`), `editSection`, `deleteSection`, `sectionDetails`, `folder`, `sectionPreferences`, `setSectionPreferences`, `defaultSectionPrefs`, `sectionCommon`, `sectionsAll`, `sectionCompositeImageUrl` |
 | Scanning | `refreshSection`, `cancelSectionRefresh`, `analyzeSection`, `refreshAllSections`, `stopAllRefreshes`, `emptyTrash` |
 | Housekeeping | `deleteSectionIndexes`, `deleteSectionIntros`, `deleteCaches`, `cleanBundles`, `optimizeDatabase`, `ingestTransientItem` |
-| Index reads | `tags`, `randomArtwork`, `matches` |
+| Index reads | `tags` (`PlexTag`, ready for `PlexFilter.of`), `randomArtwork`, `matches` (`PlexMetadata`) |
 
 ## Similar items and sonic radio
 

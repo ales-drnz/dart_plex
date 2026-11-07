@@ -21,34 +21,19 @@ class PlexLiveTvApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.liveTv].
   PlexLiveTvApi(this._http);
 
-  /// `GET /livetv/sessions` — currently-streaming Live TV sessions.
-  Future<List<Map<String, Object?>>> sessions() async {
-    final res = await _http.request<Map<String, Object?>>('/livetv/sessions');
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, Object?>) return const [];
-    final list = container['Metadata'];
-    if (list is! List) return const [];
-    return [
-      for (final e in list)
-        if (e is Map<String, Object?>) e,
-    ];
-  }
+  /// `GET /livetv/sessions` — currently-streaming Live TV sessions, as the
+  /// items being watched.
+  Future<List<PlexMetadata>> sessions() => _http.requestJson(
+    '/livetv/sessions',
+    itemsOf('Metadata', PlexMetadata.fromJson),
+  );
 
   /// `GET /livetv/dvrs` — configured DVR backends.
-  Future<List<Map<String, Object?>>> dvrs() async {
-    final res = await _http.request<Map<String, Object?>>('/livetv/dvrs');
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, Object?>) return const [];
-    final list = container['Dvr'];
-    if (list is! List) return const [];
-    return [
-      for (final e in list)
-        if (e is Map<String, Object?>) e,
-    ];
-  }
+  Future<List<PlexDvr>> dvrs() =>
+      _http.requestJson('/livetv/dvrs', PlexDvr.listOf);
 
-  /// Helper to drill into the EPG inside a Live TV DVR. The id comes
-  /// from [dvrs] → entry's `key` field. Returns the channel listing.
+  /// Helper to drill into the EPG inside a Live TV DVR: [dvrKey] is
+  /// [PlexDvr.key]. Returns the channel listing.
   Future<List<PlexMetadata>> dvrChannels({required String dvrKey}) async {
     return _http.requestJson(
       '$dvrKey/channels',
@@ -60,14 +45,18 @@ class PlexLiveTvApi {
   // Live session reads / segments
   // ---------------------------------------------------------------------------
 
-  /// `GET /livetv/sessions/{sessionId}` — fetch a single live
-  /// session (status, currently-tuned channel, decision).
-  Future<Map<String, Object?>> liveSession({required String sessionId}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/livetv/sessions/$sessionId',
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /livetv/sessions/{sessionId}` — a single live session, as the
+  /// item being watched (with the tuned channel in its media), or `null`
+  /// when the answer holds none.
+  Future<PlexMetadata?> liveSession({required String sessionId}) =>
+      _http.requestJson(
+        '/livetv/sessions/$sessionId',
+        (json) => PlexMediaContainer.fromJson(
+          json is Map<String, Object?> ? json : const {},
+          'Metadata',
+          PlexMetadata.fromJson,
+        ).items.firstOrNull,
+      );
 
   /// `GET /livetv/sessions/{sessionId}/{consumerId}/index.m3u8` —
   /// URL for the HLS playlist of one consumer attached to a live

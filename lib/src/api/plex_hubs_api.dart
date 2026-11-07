@@ -259,10 +259,7 @@ class PlexHubsApi {
     await _http.request<void>(
       '/hubs/sections/$sectionId/manage/move',
       method: 'PUT',
-      queryParameters: {
-        'identifier': identifier,
-        'after': afterIdentifier,
-      },
+      queryParameters: {'identifier': identifier, 'after': afterIdentifier},
     );
   }
 

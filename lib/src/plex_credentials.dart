@@ -118,18 +118,17 @@ final class PlexCredentials {
     String? model,
     String? deviceVendor,
     String? marketplace,
-  }) =>
-      PlexCredentials(
-        clientIdentifier: clientIdentifier ?? this.clientIdentifier,
-        product: product ?? this.product,
-        version: version ?? this.version,
-        device: device ?? this.device,
-        deviceName: deviceName ?? this.deviceName,
-        platform: platform ?? this.platform,
-        platformVersion: platformVersion ?? this.platformVersion,
-        clientProfileExtra: clientProfileExtra ?? this.clientProfileExtra,
-        model: model ?? this.model,
-        deviceVendor: deviceVendor ?? this.deviceVendor,
-        marketplace: marketplace ?? this.marketplace,
-      );
+  }) => PlexCredentials(
+    clientIdentifier: clientIdentifier ?? this.clientIdentifier,
+    product: product ?? this.product,
+    version: version ?? this.version,
+    device: device ?? this.device,
+    deviceName: deviceName ?? this.deviceName,
+    platform: platform ?? this.platform,
+    platformVersion: platformVersion ?? this.platformVersion,
+    clientProfileExtra: clientProfileExtra ?? this.clientProfileExtra,
+    model: model ?? this.model,
+    deviceVendor: deviceVendor ?? this.deviceVendor,
+    marketplace: marketplace ?? this.marketplace,
+  );
 }

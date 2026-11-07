@@ -666,27 +666,31 @@ void main() {
     // transcode) is read from the sibling directPlayDecisionCode /
     // transcodeDecisionCode fields, NOT from the 2xxx band.
 
-    test('1xxx general code with a direct-play sub-code is playable + direct',
-        () {
-      const d = PlexTranscodeDecision(
-        code: 1001,
-        raw: {'directPlayDecisionCode': 1000},
-      );
-      expect(d.isPlayable, isTrue);
-      expect(d.isDirect, isTrue);
-      expect(d.isTranscode, isFalse);
-    });
+    test(
+      '1xxx general code with a direct-play sub-code is playable + direct',
+      () {
+        const d = PlexTranscodeDecision(
+          code: 1001,
+          raw: {'directPlayDecisionCode': 1000},
+        );
+        expect(d.isPlayable, isTrue);
+        expect(d.isDirect, isTrue);
+        expect(d.isTranscode, isFalse);
+      },
+    );
 
-    test('1xxx general code with a transcode sub-code is playable + transcode',
-        () {
-      const d = PlexTranscodeDecision(
-        code: 1001,
-        raw: {'transcodeDecisionCode': 1001},
-      );
-      expect(d.isPlayable, isTrue);
-      expect(d.isDirect, isFalse);
-      expect(d.isTranscode, isTrue);
-    });
+    test(
+      '1xxx general code with a transcode sub-code is playable + transcode',
+      () {
+        const d = PlexTranscodeDecision(
+          code: 1001,
+          raw: {'transcodeDecisionCode': 1001},
+        );
+        expect(d.isPlayable, isTrue);
+        expect(d.isDirect, isFalse);
+        expect(d.isTranscode, isTrue);
+      },
+    );
 
     test('1999 is still in the playable band', () {
       const d = PlexTranscodeDecision(code: 1999, raw: {});

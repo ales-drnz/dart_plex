@@ -88,29 +88,26 @@ void main() {
       expect(_titleOf(received.single), _title);
     });
 
-    test(
-      'a multi-byte character split across two chunks survives',
-      () async {
-        final ctx = _makeApi();
-        final frame = _frame(_title);
-        final bytes = utf8.encode(frame);
-        // `È` is `C3 88`; cut between the two so the first chunk ends on an
-        // incomplete sequence and the second opens on an orphaned
-        // continuation byte. Decoding each chunk on its own turns both
-        // halves into U+FFFD.
-        final at = _splitInsideChar(frame, 'È');
-        expect(bytes[at - 1], 0xC3);
-        expect(bytes[at], 0x88);
+    test('a multi-byte character split across two chunks survives', () async {
+      final ctx = _makeApi();
+      final frame = _frame(_title);
+      final bytes = utf8.encode(frame);
+      // `È` is `C3 88`; cut between the two so the first chunk ends on an
+      // incomplete sequence and the second opens on an orphaned
+      // continuation byte. Decoding each chunk on its own turns both
+      // halves into U+FFFD.
+      final at = _splitInsideChar(frame, 'È');
+      expect(bytes[at - 1], 0xC3);
+      expect(bytes[at], 0x88);
 
-        final received = await _pump(
-          ctx,
-          [bytes.sublist(0, at), bytes.sublist(at)],
-        );
+      final received = await _pump(ctx, [
+        bytes.sublist(0, at),
+        bytes.sublist(at),
+      ]);
 
-        expect(_titleOf(received.single), _title);
-        expect(_titleOf(received.single), isNot(contains(_replacement)));
-      },
-    );
+      expect(_titleOf(received.single), _title);
+      expect(_titleOf(received.single), isNot(contains(_replacement)));
+    });
 
     test('every byte boundary in the frame is a safe place to split', () async {
       final frame = _frame(_title);
@@ -120,10 +117,10 @@ void main() {
       // hand-picked offset: the real stream splits wherever it likes.
       for (var at = 1; at < bytes.length; at++) {
         final ctx = _makeApi();
-        final received = await _pump(
-          ctx,
-          [bytes.sublist(0, at), bytes.sublist(at)],
-        );
+        final received = await _pump(ctx, [
+          bytes.sublist(0, at),
+          bytes.sublist(at),
+        ]);
         expect(
           _titleOf(received.single),
           _title,
@@ -132,18 +129,20 @@ void main() {
       }
     });
 
-    test('a frame spread over many single-byte chunks still assembles',
-        () async {
-      final ctx = _makeApi();
-      final bytes = utf8.encode(_frame(_title));
+    test(
+      'a frame spread over many single-byte chunks still assembles',
+      () async {
+        final ctx = _makeApi();
+        final bytes = utf8.encode(_frame(_title));
 
-      final oneByteEach = [
-        for (final byte in bytes) <int>[byte],
-      ];
-      final received = await _pump(ctx, oneByteEach);
+        final oneByteEach = [
+          for (final byte in bytes) <int>[byte],
+        ];
+        final received = await _pump(ctx, oneByteEach);
 
-      expect(_titleOf(received.single), _title);
-    });
+        expect(_titleOf(received.single), _title);
+      },
+    );
 
     test('two frames in one chunk are both emitted', () async {
       final ctx = _makeApi();
@@ -196,17 +195,19 @@ void main() {
   });
 
   group('PlexNotificationsApi.connectEventSource request', () {
-    test('GETs the eventsource route with the token and Accept header',
-        () async {
-      final ctx = _makeApi();
-      await _pump(ctx, [utf8.encode(_frame(_title))]);
+    test(
+      'GETs the eventsource route with the token and Accept header',
+      () async {
+        final ctx = _makeApi();
+        await _pump(ctx, [utf8.encode(_frame(_title))]);
 
-      final req = ctx.adapter.lastRequest!;
-      expect(req.method, 'GET');
-      expect(req.uri.path, '/:/eventsource/notifications');
-      expect(req.uri.queryParameters['X-Plex-Token'], 'tok');
-      expect(req.headers['Accept'], 'text/event-stream');
-    });
+        final req = ctx.adapter.lastRequest!;
+        expect(req.method, 'GET');
+        expect(req.uri.path, '/:/eventsource/notifications');
+        expect(req.uri.queryParameters['X-Plex-Token'], 'tok');
+        expect(req.headers['Accept'], 'text/event-stream');
+      },
+    );
   });
 }
 

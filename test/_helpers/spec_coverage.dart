@@ -9,9 +9,9 @@ import 'package:yaml/yaml.dart';
 /// Soft floor for [computePlexLocalCoverage] used as a regression
 /// tripwire by `test/spec_drift_watchdog_test.dart`.
 ///
-/// Measured coverage is ~0.59 (203/344 spec paths) against the spec
-/// pinned at LukeHagar/plex-api-spec@3f0fb272b29c (2026-10-11), which grew
-/// from 196 to 344 paths. Most of what is unwrapped is player remote
+/// Measured coverage is ~0.61 (209/345 spec paths) against the spec
+/// pinned at LukeHagar/plex-api-spec@23137a920c17 (2026-11-07); the
+/// 0.2 pin, 3f0fb272b29c, had 344 paths and grew from 196. Most of what is unwrapped is player remote
 /// control, sync, account and Live TV management, out of scope for this
 /// package; several music routes the spec lists answer 404 on PMS 1.43.2
 /// (`/library/metadata/{id}/parent`, `/grandparent`,
@@ -55,8 +55,13 @@ const double plexLocalCoverageFloor = 0.55;
     if (path is! String || ops is! Map) return;
     for (final method in ops.keys) {
       if (method is String &&
-          {'get', 'post', 'put', 'delete', 'patch'}
-              .contains(method.toLowerCase())) {
+          {
+            'get',
+            'post',
+            'put',
+            'delete',
+            'patch',
+          }.contains(method.toLowerCase())) {
         specPaths.add(path);
       }
     }

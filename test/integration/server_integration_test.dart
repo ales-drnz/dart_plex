@@ -12,57 +12,53 @@ import '_fixture.dart';
 
 /// Smoke tests for [PlexServerApi] against a live PMS.
 void main() {
-  group(
-    'Plex server',
-    () {
-      late PlexClient plex;
-      late PlexBootstrapCache cache;
+  group('Plex server', () {
+    late PlexClient plex;
+    late PlexBootstrapCache cache;
 
-      setUpAll(() {
-        cache = PlexBootstrapCache.load();
-        plex = plexFromCache();
-      });
+    setUpAll(() {
+      cache = PlexBootstrapCache.load();
+      plex = plexFromCache();
+    });
 
-      test('identity returns the machine identifier from the bootstrap',
-          () async {
+    test(
+      'identity returns the machine identifier from the bootstrap',
+      () async {
         final id = await plex.server.identity();
         expect(id.machineIdentifier, cache.machineIdentifier);
         expect(id.version, isNotEmpty);
         expect(id.claimed, isTrue);
-      });
+      },
+    );
 
-      test('info returns extended server metadata', () async {
-        final info = await plex.server.info();
-        expect(info.machineIdentifier, cache.machineIdentifier);
-        expect(info.platform, isNotEmpty);
-        expect(info.friendlyName, isNotEmpty);
-        expect(info.transcoderAudio, isTrue);
-      });
+    test('info returns extended server metadata', () async {
+      final info = await plex.server.info();
+      expect(info.machineIdentifier, cache.machineIdentifier);
+      expect(info.platform, isNotEmpty);
+      expect(info.friendlyName, isNotEmpty);
+      expect(info.transcoderAudio, isTrue);
+    });
 
-      test('ping returns true for a reachable PMS', () async {
-        expect(await plex.server.ping(), isTrue);
-      });
+    test('ping returns true for a reachable PMS', () async {
+      expect(await plex.server.ping(), isTrue);
+    });
 
-      test(
-          'the server answers 401 without the token, so the suite checks '
-          'that the transport sends it', () async {
-        final anonymous = PlexClient(
-          credentials: plex.credentials,
-        )..connect(cache.baseUrl);
-        addTearDown(anonymous.close);
-        await expectLater(
-          anonymous.library.sections(),
-          throwsA(
-            isA<PlexException>().having((e) => e.isAuthError, 'auth', true),
-          ),
-        );
-      });
+    test('the server answers 401 without the token, so the suite checks '
+        'that the transport sends it', () async {
+      final anonymous = PlexClient(credentials: plex.credentials)
+        ..connect(cache.baseUrl);
+      addTearDown(anonymous.close);
+      await expectLater(
+        anonymous.library.sections(),
+        throwsA(
+          isA<PlexException>().having((e) => e.isAuthError, 'auth', true),
+        ),
+      );
+    });
 
-      test('backgroundTasks is callable', () async {
-        final bg = await plex.server.backgroundTasks();
-        expect(bg, isNotEmpty);
-      });
-    },
-    skip: bootstrapSkipReason,
-  );
+    test('backgroundTasks is callable', () async {
+      final bg = await plex.server.backgroundTasks();
+      expect(bg, isA<List<PlexTranscodeJob>>());
+    });
+  }, skip: bootstrapSkipReason);
 }

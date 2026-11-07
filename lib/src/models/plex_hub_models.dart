@@ -60,20 +60,20 @@ final class PlexHub {
 
   /// Parses one `<Hub>` entry from `/hubs` or `/hubs/search`.
   factory PlexHub.fromJson(Map<String, Object?> json) => PlexHub(
-        key: asString(json['key']) ?? '',
-        hubKey: asString(json['hubKey']) ?? '',
-        hubIdentifier: asString(json['hubIdentifier']) ?? '',
-        title: asString(json['title']) ?? '',
-        type: asString(json['type']),
-        size: asInt(json['size']) ?? 0,
-        more: json['more'] == true,
-        items: [
-          if (json['Metadata'] is List)
-            for (final m in json['Metadata'] as List)
-              if (m is Map<String, Object?>) PlexMetadata.fromJson(m),
-        ],
-        raw: json,
-      );
+    key: asString(json['key']) ?? '',
+    hubKey: asString(json['hubKey']) ?? '',
+    hubIdentifier: asString(json['hubIdentifier']) ?? '',
+    title: asString(json['title']) ?? '',
+    type: asString(json['type']),
+    size: asInt(json['size']) ?? 0,
+    more: json['more'] == true,
+    items: [
+      if (json['Metadata'] is List)
+        for (final m in json['Metadata'] as List)
+          if (m is Map<String, Object?>) PlexMetadata.fromJson(m),
+    ],
+    raw: json,
+  );
 }
 
 // ---------------------------------------------------------------------------

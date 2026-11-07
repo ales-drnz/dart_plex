@@ -28,6 +28,7 @@ The other constructor arguments are optional:
 | `receiveTimeout` | 30 s | Also bounds every pause inside a response body |
 | `jsonIsolateThreshold` | 50 KB | Responses this large or larger are decoded and parsed on a background isolate |
 | `retryPolicy` | `PlexRetryPolicy.none` | See [Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html) |
+| `tokenRenewer` | none | Renews a token refused with `401` or `498`, see When a token is refused below |
 
 Above `jsonIsolateThreshold` the JSON decode and the walk that builds the
 typed models both run on a background isolate, and so does the gzip
@@ -75,8 +76,8 @@ still decodes and parses the JSON.
 ### Closing
 
 ```dart
-plex.clearSession(); // drops the token, keeps the server
-plex.disconnect();   // drops the token and the server; the client stays usable
+plex.clearSession(); // drops the tokens and the JWT session, keeps the server
+plex.disconnect();   // drops them and the server; the client stays usable
 plex.close();        // releases the HTTP client
 ```
 
@@ -111,18 +112,100 @@ final plex = PlexClient(
 
 ## Sign-in and server discovery
 
-<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/sign_in_flow.png" width="100%" alt="Sign-in: createPin, the user enters the code at plex.tv/link, pollPin until a token, setToken; then fetchResources, bestConnection and connect">
+<img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/sign_in_flow.png" width="100%" alt="Sign-in: createJwtPin with the device key, the user signs in at the Auth App, pollJwtPin until a JWT, useJwt; then fetchResources and connectToResource">
 
-Sign-in talks to plex.tv and returns a token. `setToken` applies it to the
-client; no call applies it for you.
+Sign-in talks to plex.tv and returns a token. Two tokens matter
+afterwards: the account token (`plex.accountToken`), sent to plex.tv, and
+the server's (`plex.token`), sent to the server you connect to. Neither
+is assumed to last.
 
-### PIN flow
+### JWT sign-in (new apps)
 
-The PIN flow works for every account, two-factor authentication
-included. The user enters a 4-character code at `plex.tv/link`:
+plex.tv signs a device in with an Ed25519 key pair instead of a password
+or a long-lived token: the device registers the public key once, then
+asks for a JWT that lasts 7 days and can be refreshed at any time, also
+after it has expired, by signing a short-lived request with the private
+key. Generate the key once per install:
 
 ```dart
-final pin = await plex.account.createPin();
+final key = await PlexDeviceKey.generate();
+var pin = await plex.account.createJwtPin(key: key);
+launchUrl(Uri.parse(plex.account.authAppUrl(pin))); // the user signs in there
+
+while (!pin.isAuthenticated) {
+  await Future<void>.delayed(const Duration(seconds: 1));
+  pin = await plex.account.pollJwtPin(id: pin.id, key: key);
+  if (pin.isExpired) throw StateError('PIN expired');
+}
+
+final session = PlexJwtSession(
+  key: key,
+  token: PlexJwt.parse(pin.authToken!),
+  onChanged: (s) => secureStorage.write('plex', jsonEncode(s.toJson())),
+);
+session.onChanged!(session);
+await plex.useJwt(session);
+```
+
+`createJwtPin` sends the public key with a strong PIN, whose code is for
+the Auth App URL (`authAppUrl`); pass `strong: false` for a 4-character
+code to type at `plex.tv/link`. `pollJwtPin` signs a device JWT (with a
+nonce, reused across polls while it is valid) and answers the plex.tv JWT
+once the user has signed in.
+
+`useJwt` makes the session's token the account token (and the server
+token, while there is none) and keeps it fresh: before a plex.tv call when
+it expires within a day (`PlexJwtSession.refreshBefore`), and after
+plex.tv or a server refuses it with `401` or `498` ("token expired"). Each
+new token goes to `onChanged`: persist the session there. On the next
+start, read it back and hand it to the client:
+
+```dart
+final session = await PlexJwtSession.fromJson(
+  jsonDecode(await secureStorage.read('plex')) as Map<String, Object?>,
+  onChanged: (s) => secureStorage.write('plex', jsonEncode(s.toJson())),
+);
+await plex.useJwt(session); // refreshes now if the token is old
+```
+
+`toJson()` holds the private key: store it where the platform keeps
+secrets. The signing is pure Dart (`package:cryptography`), the same on
+every platform including the web. `PlexJwt` reads a token's claims
+(`expiresAt`, `issuedAt`, `thumbprint`) without verifying them: the token
+came from plex.tv over HTTPS, and plex.tv and the servers check it.
+
+The steps are also available one by one: `authNonce()`,
+`PlexDeviceKey.deviceJwt()`, `exchangeDeviceJwt()`, and `refreshJwt()`
+for all three.
+
+### Moving a legacy token to JWT
+
+An app that already holds a legacy token registers the key with it, then
+refreshes for the first JWT. Plex's documentation says the legacy token
+stops working once the device has a JWT.
+
+```dart
+final key = await PlexDeviceKey.generate();
+await plex.account.registerJwtKey(key: key, token: legacyToken);
+final session = PlexJwtSession(key: key, onChanged: save);
+await plex.useJwt(session); // no token yet: refreshJwt runs now
+```
+
+### When a token is refused
+
+`plex.tokenRenewer` is called with the refused token when a request gets
+`401` or `498`; the request is retried once with the token it returns, or
+fails with it when it returns `null`. Concurrent refusals share one call.
+`useJwt` installs one that refreshes the JWT; set your own to renew
+tokens another way, for example by asking the user to sign in again.
+
+### Legacy PIN flow
+
+`createPin()` and `pollPin()` end with a legacy token, which does not
+expire:
+
+```dart
+final pin = await plex.account.createPin(strong: false);
 print('Open https://plex.tv/link and enter ${pin.code}');
 
 while (true) {
@@ -136,9 +219,6 @@ while (true) {
 }
 ```
 
-`createPin()` asks for a strong (JWT) PIN; pass `strong: false` for the
-classic kind. A PIN expires after about 15 minutes (`expiresAt`).
-
 ### Username and password
 
 ```dart
@@ -149,8 +229,8 @@ final user = await plex.account.signInWithPassword(
 plex.setToken(user.authToken);
 ```
 
-Accounts with two-factor authentication cannot use this flow; prefer the
-PIN flow. Bad credentials throw a `PlexException` of type `auth`.
+Accounts with two-factor authentication cannot use this flow; prefer a
+PIN. Bad credentials throw a `PlexException` of type `auth`.
 
 ### Account and sign-out
 
@@ -159,20 +239,51 @@ final me = await plex.account.currentUser();
 print('${me.username} (${me.email}), Plex Pass: ${me.hasPlexPass}');
 
 await plex.account.signOut(); // invalidates the token at plex.tv
-plex.setToken(null);
+plex.clearSession();
 ```
 
 `PlexUser` carries `id`, `uuid`, `username`, `email`, `thumb`,
-`authToken` and `hasPlexPass`. Once connected to a server,
-`tokenDetails()` describes the token in use and `connectedUsers()` lists
-the server's users (admin only); both return the server's maps.
+`authToken`, `hasPlexPass`, `restricted`, `home`, `homeAdmin`,
+`protected`, `subscriptionFeatures` and `raw`. `tokenDetails()` is the
+user the server token belongs to.
+
+### Plex Home, friends, watchlist
+
+```dart
+final home = await plex.account.homeUsers();     // PlexHomeUser
+final kids = await plex.account.managedUsers();  // the restricted ones
+final kid = await plex.account.switchHomeUser(userId: kids.first.id, pin: '1234');
+plex.setAccountToken(kid.authToken);              // plex.tv calls as that user
+
+final users = await plex.account.connectedUsers(); // shares, per server
+final friends = await plex.account.friends();
+final where = await plex.account.geoip();
+```
+
+`homeUsers`, `switchHomeUser` and `connectedUsers` read the routes
+python-plexapi reads (`plex.tv/api/home/users`, `…/switch`,
+`plex.tv/api/users/`), which plex.tv answers in XML; the package reads the
+XML into the same models. After a switch, fetch the servers again: they
+come with that user's tokens.
+
+The watchlist lives on Plex's discover provider, with plex.tv's own
+metadata:
+
+```dart
+final page = await plex.account.watchlist(
+  filter: PlexWatchlistFilter.released,
+  sort: PlexSort.watchlistedAt.desc,
+  type: PlexMetadataType.movie,
+);
+final key = PlexAccountApi.discoverKeyOf(page.items.first.guid!);
+await plex.account.removeFromWatchlist(ratingKey: key);
+```
 
 ### Finding servers
 
 ```dart
-final servers = await plex.account.fetchResources(includeRelay: false);
+final servers = await plex.account.fetchResources();
 final server = servers.firstWhere((s) => s.owned);
-final connection = server.bestConnection();
 ```
 
 `includeHttps`, `includeRelay` and `includeIPv6` are on by default.
@@ -181,27 +292,53 @@ leaving out players and clients.
 
 Each `PlexResource` carries `name`, `clientIdentifier`, `platform`,
 `productVersion`, `owned`, `home`, `relay`, `presence`, `httpsRequired`,
-`accessToken` (the token for that server) and `connections`.
+`accessToken` (the token for that server), `connections` and `raw`.
 
-`bestConnection()` returns `null` when there are no connections, and
-otherwise picks in this order:
-
-1. Local, not relayed
-2. HTTPS, not relayed
-3. Any connection not relayed
-4. Relay
+`rankedConnections()` orders the connections as python-plexapi does:
+local before remote before relay, HTTPS before HTTP, IPv4 before IPv6,
+leaving out the local addresses of a server you neither own nor share a
+Home with. `bestConnection()` is the first of them, unchecked.
 
 Each `PlexServerConnection` has `protocol`, `address`, `port`, `uri`,
-`local`, `relay` and `ipv6`, so you can apply your own choice, for
-example race the candidates with a short timeout.
+`local`, `relay`, `ipv6`, `kind` (`PlexConnectionKind.local`, `remote` or
+`relay`) and `httpUri`. An IPv6 `uri` is bracketed
+(`http://[2001:db8::2]:32400`) even when plex.tv sent it without.
 
 ### Connecting to a server
 
 ```dart
-plex.connect(connection.uri, accessToken: server.accessToken);
+final connection = await plex.connectToResource(server);
+print('${connection.uri} (${plex.connectionKind})');
 ```
 
-Pass the resource's `accessToken`: a shared server does not accept the
-account token. A client talks to one server at a time; `connect()` again
-to switch, or create a second `PlexClient` with the same credentials to
-keep two servers.
+`connectToResource` tries every ranked connection at once
+(`GET /identity`, which needs no token, checking the machine identifier),
+takes the best-ranked one that answers within `timeout` (10 s) without
+waiting for worse ones once it has, connects with the resource's
+`accessToken`, and checks the token on the server. `findConnection` does
+the first part alone.
+
+When the server refuses the resource's token with `401`, the token
+`account.devices()` lists for that server is tried instead. What is known
+about server tokens after a JWT sign-in, and what is not:
+
+- plex.tv answers `/api/v2/resources` for a JWT as for a legacy token,
+  with an `accessToken` per server. For an owned server it can be the
+  account token itself — then the server must accept JWTs, and
+  `useJwt` renews it on the server too.
+- Servers were reported to refuse the token handed out after a JWT
+  sign-in. The `devices` fallback follows that report; whether plex.tv
+  still lists device tokens at `/api/v2/devices`, and for which accounts,
+  is not documented and could not be verified for this release.
+
+`connect()` and `connectTo()` remain for a URL or a connection you chose:
+
+```dart
+plex.connectTo(server.rankedConnections().first, accessToken: server.accessToken);
+plex.connect('http://[fd00::12]:32400', accessToken: server.accessToken);
+```
+
+With an `accessToken`, the token it replaces stays the account token for
+plex.tv calls. `connectionKind` is `null` after a plain `connect()`. A
+client talks to one server at a time; connect again to switch, or create
+a second `PlexClient` with the same credentials to keep two servers.

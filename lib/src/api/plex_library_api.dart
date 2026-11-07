@@ -10,6 +10,7 @@ import '../plex_filter.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
 import '../plex_query.dart';
+import '../plex_vocabulary.dart';
 
 part 'plex_library_item_details.dart';
 part 'plex_library_item_editing.dart';
@@ -54,8 +55,9 @@ class PlexLibraryApi
   /// Pass a [PlexMetadataType]; see its members for the wire integers
   /// the server expects (the single source of truth for those values).
   ///
-  /// `sort` examples: `'titleSort:asc'`, `'addedAt:desc'`,
-  /// `'lastViewedAt:desc'`, `'originallyAvailableAt:desc'`.
+  /// [sort] orders the page: `PlexSort.titleSort`, `PlexSort.addedAt.desc`,
+  /// `PlexSort.lastViewedAt.desc`, … (a field the section offers, see
+  /// [PlexSort]).
   ///
   /// [filters] narrows the result set. Each [PlexFilter] travels as its
   /// own query parameter — `[PlexFilter.genre(6), PlexFilter.yearAfter(2009)]`
@@ -71,7 +73,7 @@ class PlexLibraryApi
     required PlexMetadataType type,
     int start = 0,
     int size = 50,
-    String? sort,
+    PlexSort? sort,
     List<PlexFilter> filters = const [],
   }) async {
     final qp = <String, Object?>{
@@ -162,12 +164,11 @@ class PlexLibraryApi
   Future<List<PlexTag>> genres({
     required String sectionId,
     required PlexMetadataType type,
-  }) =>
-      _tagIndex(
-        path: '/library/sections/$sectionId/genre',
-        field: 'genre',
-        queryParameters: {'type': type.value},
-      );
+  }) => _tagIndex(
+    path: '/library/sections/$sectionId/genre',
+    field: 'genre',
+    queryParameters: {'type': type.value},
+  );
 
   /// Values a facet can take — the moods, styles, decades or labels
   /// behind a [PlexLibraryFilter] returned by [filters].
@@ -194,11 +195,7 @@ class PlexLibraryApi
     final uri = Uri.parse(key);
     final qp = <String, Object?>{...uri.queryParameters};
     if (type != null) qp['type'] = type.value;
-    return _tagIndex(
-      path: uri.path,
-      field: filter.field,
-      queryParameters: qp,
-    );
+    return _tagIndex(path: uri.path, field: filter.field, queryParameters: qp);
   }
 
   /// Fetch a tag index (`/library/sections/{id}/genre`, `/mood`, …) and
@@ -220,9 +217,21 @@ class PlexLibraryApi
   // -------------------------------------------------------------------------
 
   /// Full metadata for one item (`/library/metadata/{ratingKey}`).
-  Future<PlexMetadata?> item({required String ratingKey}) async {
+  ///
+  /// [includeMarkers] adds the intro, credits and commercial markers
+  /// ([PlexMetadata.markers]) and [includeChapters] the chapters
+  /// ([PlexMetadata.chapters]); the server leaves both out otherwise.
+  Future<PlexMetadata?> item({
+    required String ratingKey,
+    bool includeMarkers = false,
+    bool includeChapters = false,
+  }) async {
     final res = await _http.request<Map<String, Object?>>(
       '/library/metadata/$ratingKey',
+      queryParameters: {
+        if (includeMarkers) 'includeMarkers': 1,
+        if (includeChapters) 'includeChapters': 1,
+      },
     );
     final c = PlexMediaContainer.fromJson(
       res.data ?? const {},
@@ -249,10 +258,7 @@ class PlexLibraryApi
     await _http.request<void>(
       '/library/metadata/$ids',
       method: 'PUT',
-      queryParameters: {
-        if (type != null) 'type': type.value,
-        ...args,
-      },
+      queryParameters: {if (type != null) 'type': type.value, ...args},
     );
   }
 
@@ -261,10 +267,7 @@ class PlexLibraryApi
   /// [deleteMediaItem], which only removes one media version.
   ///
   /// Set [proxy] to also delete proxy items associated with the item.
-  Future<void> deleteMetadataItem({
-    required String ids,
-    bool? proxy,
-  }) async {
+  Future<void> deleteMetadataItem({required String ids, bool? proxy}) async {
     final qp = <String, Object?>{};
     if (proxy != null) qp['proxy'] = proxy ? 1 : 0;
     await _http.request<void>(
@@ -279,14 +282,14 @@ class PlexLibraryApi
   ///
   /// [size] (with [start], default 0) reads one page; a page shorter than
   /// [size] is the last. Without it the server answers every child.
-  /// [sort] takes the section sort syntax, e.g. `'year:desc'` or
-  /// `'titleSort'` (verified on PMS 1.43.2). For the number of children
-  /// alone use [countChildren].
+  /// [sort] takes the section sort syntax, e.g. `PlexSort.year.desc` or
+  /// `PlexSort.titleSort` (verified on PMS 1.43.2). For the number of
+  /// children alone use [countChildren].
   Future<List<PlexMetadata>> children({
     required String ratingKey,
     int? start,
     int? size,
-    String? sort,
+    PlexSort? sort,
   }) {
     final qp = containerPage(start: start, size: size);
     if (sort != null) qp['sort'] = sort;
@@ -392,34 +395,23 @@ class PlexLibraryApi
   ///
   /// [excludeParentRatingKey] / [excludeGrandparentRatingKey] leave out the
   /// tracks of one album / artist — pass the ratingKey as you have it
-  /// (e.g. `track.parentRatingKey`). The `int` forms are deprecated.
+  /// (e.g. `track.parentRatingKey`).
   Future<List<PlexMetadata>> nearestToTrack({
     required String ratingKey,
     int? limit,
     double? maxDistance,
     String? excludeParentRatingKey,
     String? excludeGrandparentRatingKey,
-    @Deprecated('Use excludeParentRatingKey') int? excludeParentID,
-    @Deprecated('Use excludeGrandparentRatingKey') int? excludeGrandparentID,
   }) {
-    if (excludeParentRatingKey != null && excludeParentID != null) {
-      throw ArgumentError(
-        'Pass excludeParentRatingKey or excludeParentID, not both.',
-      );
-    }
-    if (excludeGrandparentRatingKey != null && excludeGrandparentID != null) {
-      throw ArgumentError(
-        'Pass excludeGrandparentRatingKey or excludeGrandparentID, not both.',
-      );
-    }
-    final parent = excludeParentRatingKey ?? excludeParentID?.toString();
-    final grandparent =
-        excludeGrandparentRatingKey ?? excludeGrandparentID?.toString();
     final qp = <String, Object?>{};
     if (limit != null) qp['limit'] = limit;
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
-    if (parent != null) qp['excludeParentID'] = parent;
-    if (grandparent != null) qp['excludeGrandparentID'] = grandparent;
+    if (excludeParentRatingKey != null) {
+      qp['excludeParentID'] = excludeParentRatingKey;
+    }
+    if (excludeGrandparentRatingKey != null) {
+      qp['excludeGrandparentID'] = excludeGrandparentRatingKey;
+    }
     return _http.requestJson(
       '/library/metadata/$ratingKey/nearest',
       queryParameters: qp.isEmpty ? null : qp,
@@ -543,13 +535,37 @@ class PlexLibraryApi
   /// Provider Only view). Lighter than [sections]; useful for the
   /// "primary library" entry point.
   Future<List<PlexLibrarySection>> sectionsAll() async {
-    final res =
-        await _http.request<Map<String, Object?>>('/library/sections/all');
+    final res = await _http.request<Map<String, Object?>>(
+      '/library/sections/all',
+    );
     return PlexMediaContainer.fromJson(
       res.data ?? const {},
       'Directory',
       PlexLibrarySection.fromJson,
     ).items;
+  }
+
+  /// `GET /library/sections/{sectionId}/folder` — the section's folders
+  /// and the items directly in them, as on disk (the API document's
+  /// `getSectionFolder`).
+  ///
+  /// Without [parent] it lists the root. A folder entry's
+  /// [PlexMetadata.key] is `/library/sections/{id}/folder?parent=…`:
+  /// pass that `parent` value (not a rating key) to open it. Pages with
+  /// [size] (and [start], default 0).
+  Future<PlexMediaContainer<PlexMetadata>> folder({
+    required String sectionId,
+    String? parent,
+    int? start,
+    int? size,
+  }) {
+    final qp = containerPage(start: start, size: size);
+    if (parent != null) qp['parent'] = parent;
+    return _http.requestJson(
+      '/library/sections/$sectionId/folder',
+      queryParameters: qp.isEmpty ? null : qp,
+      containerOf('Metadata', PlexMetadata.fromJson),
+    );
   }
 
   /// `POST /library/sections` — add a new section to the server.
@@ -562,7 +578,7 @@ class PlexLibraryApi
   /// `prefs[<name>]=<value>` form the server requires.
   Future<void> addSection({
     required String name,
-    required String type,
+    required PlexLibraryType type,
     required String scanner,
     required String agent,
     required List<String> locations,
@@ -574,7 +590,7 @@ class PlexLibraryApi
   }) async {
     final qp = <String, Object?>{
       'name': name,
-      'type': type,
+      'type': type.wire,
       'scanner': scanner,
       'agent': agent,
       'location': locations,
@@ -635,11 +651,16 @@ class PlexLibraryApi
     );
   }
 
-  /// `GET /library/tags` — every tag value across the library.
-  Future<Map<String, Object?>> tags() async {
-    final res = await _http.request<Map<String, Object?>>('/library/tags');
-    return res.data ?? const {};
-  }
+  /// `GET /library/tags` — every tag of the items of [type] across the
+  /// library (genres, moods, …), each ready for [PlexFilter.of] (verified
+  /// on PMS 1.43.2: entries carry `filter: genre=5`; without a type the
+  /// server answers 400).
+  Future<List<PlexTag>> tags({required PlexMetadataType type}) =>
+      _http.requestJson(
+        '/library/tags',
+        queryParameters: {'type': type.value},
+        itemsOf('Directory', PlexTag.fromJson),
+      );
 
   /// `GET /library/randomArtwork?sections={ids}` — random backdrop
   /// across the supplied sections. Useful as a screensaver source.
@@ -653,14 +674,15 @@ class PlexLibraryApi
     return res.data ?? const {};
   }
 
-  /// `GET /library/matches` — query the metadata-agent match cache.
-  Future<Map<String, Object?>> matches(Map<String, Object?> filters) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/matches',
-      queryParameters: filters,
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /library/matches` — the metadata the agents match for a
+  /// description: [filters] holds the route's parameters (`type`,
+  /// `title`, `year`, `guid`, `path`, …).
+  Future<List<PlexMetadata>> matches(Map<String, Object?> filters) =>
+      _http.requestJson(
+        '/library/matches',
+        queryParameters: filters,
+        itemsOf('Metadata', PlexMetadata.fromJson),
+      );
 
   /// `POST /library/file?url={path}&virtualFilePath={...}` — ingest
   /// a file from disk without first scanning it via a section.

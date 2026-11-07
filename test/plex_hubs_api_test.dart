@@ -23,11 +23,7 @@ import '_helpers/capturing_client.dart';
           'size': 1,
           'more': true,
           'Metadata': [
-            {
-              'ratingKey': '67890',
-              'title': 'Greatest Hits',
-              'type': 'album',
-            },
+            {'ratingKey': '67890', 'title': 'Greatest Hits', 'type': 'album'},
           ],
         },
       ],
@@ -99,8 +95,11 @@ void main() {
 
     test('adds both onlyTransient and count when both provided', () async {
       final ctx = _makeApi();
-      await ctx.api
-          .forMetadata(metadataId: '12345', onlyTransient: true, count: 12);
+      await ctx.api.forMetadata(
+        metadataId: '12345',
+        onlyTransient: true,
+        count: 12,
+      );
 
       final qp = ctx.adapter.lastRequest!.queryParameters;
       expect(qp['onlyTransient'], '1');

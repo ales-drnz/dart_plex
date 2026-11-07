@@ -13,35 +13,34 @@ import '_fixture.dart';
 /// Smoke tests for the play queue lifecycle ([PlexPlayQueuesApi])
 /// against a live PMS seeded by `bootstrap.dart`.
 void main() {
-  group(
-    'Plex playQueues',
-    () {
-      late PlexClient plex;
-      late PlexBootstrapCache cache;
-      late List<String> trackRatingKeys;
+  group('Plex playQueues', () {
+    late PlexClient plex;
+    late PlexBootstrapCache cache;
+    late List<String> trackRatingKeys;
 
-      setUpAll(() async {
-        plex = plexFromCache();
-        if (bootstrapSkipReason != null) return;
-        cache = PlexBootstrapCache.load();
-        final sections = await plex.library.sections();
-        final music = sections.firstWhere((s) => s.title == 'Music');
-        final page = await plex.library.allByType(
-          sectionId: music.id,
-          type: PlexMetadataType.track,
-          size: 3,
-        );
-        trackRatingKeys = [for (final m in page.items) m.ratingKey];
-      });
+    setUpAll(() async {
+      plex = plexFromCache();
+      if (bootstrapSkipReason != null) return;
+      cache = PlexBootstrapCache.load();
+      final sections = await plex.library.sections();
+      final music = sections.firstWhere((s) => s.title == 'Music');
+      final page = await plex.library.allByType(
+        sectionId: music.id,
+        type: PlexMetadataType.track,
+        size: 3,
+      );
+      trackRatingKeys = [for (final m in page.items) m.ratingKey];
+    });
 
-      test('continuous queue: create -> items -> addItems -> reset -> clear',
-          () async {
+    test(
+      'continuous queue: create -> items -> addItems -> reset -> clear',
+      () async {
         final seedUri = PlexPlayQueuesApi.seedFromItems(
           machineIdentifier: cache.machineIdentifier,
           ratingKeys: trackRatingKeys.take(2).toList(),
         );
         final queue = await plex.playQueues.create(
-          type: 'audio',
+          type: PlexMediaType.audio,
           uri: seedUri,
         );
         expect(queue.id, greaterThan(0));
@@ -71,26 +70,25 @@ void main() {
         await plex.playQueues.clear(playQueueId: queueId);
         entries = await plex.playQueues.items(playQueueId: queueId);
         expect(entries.length, lessThan(trackRatingKeys.length));
-      });
+      },
+    );
 
-      test('non-continuous queue: shuffle + unshuffle round trip', () async {
-        // Plex restricts shuffle/unshuffle to queues without an Up Next
-        // area, so we create with `continuous: false` for this test.
-        final seedUri = PlexPlayQueuesApi.seedFromItems(
-          machineIdentifier: cache.machineIdentifier,
-          ratingKeys: trackRatingKeys.take(2).toList(),
-        );
-        final queue = await plex.playQueues.create(
-          type: 'audio',
-          uri: seedUri,
-          continuous: false,
-        );
-        expect(queue.id, greaterThan(0));
+    test('non-continuous queue: shuffle + unshuffle round trip', () async {
+      // Plex restricts shuffle/unshuffle to queues without an Up Next
+      // area, so we create with `continuous: false` for this test.
+      final seedUri = PlexPlayQueuesApi.seedFromItems(
+        machineIdentifier: cache.machineIdentifier,
+        ratingKeys: trackRatingKeys.take(2).toList(),
+      );
+      final queue = await plex.playQueues.create(
+        type: PlexMediaType.audio,
+        uri: seedUri,
+        continuous: false,
+      );
+      expect(queue.id, greaterThan(0));
 
-        await plex.playQueues.shuffle(playQueueId: queue.id);
-        await plex.playQueues.unshuffle(playQueueId: queue.id);
-      });
-    },
-    skip: bootstrapSkipReason,
-  );
+      await plex.playQueues.shuffle(playQueueId: queue.id);
+      await plex.playQueues.unshuffle(playQueueId: queue.id);
+    });
+  }, skip: bootstrapSkipReason);
 }

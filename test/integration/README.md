@@ -85,15 +85,22 @@ library — roughly 30-40 endpoints across:
 - Image transcoding URLs (`images`, `ultraBlur`)
 - Play queues and playlists (`playQueues`, `playlists`)
 
+`video_integration_test.dart` creates a movie section of the seed's
+`/data/Movies` for its video transcodes and media filters, and deletes
+it afterwards.
+
 Destructive admin endpoints (deleteSection, uninstallPlugin, …),
 hardware-dependent endpoints (DVR tuner discovery, EPG lineup
 fetching), and external-service-dependent endpoints (TMDB metadata
 lookup) are tagged `@Tags(['destructive'])` / `@Tags(['hardware'])`
 / `@Tags(['external'])` and skipped by default.
 
-## Why no CI?
+## CI
 
-These tests require Docker, a Plex test account, and several minutes
-per cold start. They are designed to run on a contributor's machine
-before opening a PR, not on every push. The spec drift watchdog is
-the lightweight counterpart and runs on every `dart test`.
+These tests need Docker, a Plex test account, and several minutes per
+cold start, so they do not run on every push. The `integration` job of
+`.github/workflows/ci.yml` runs them on demand (Actions → CI → Run
+workflow, with "integration" ticked), from the `PLEX_TEST_USERNAME` and
+`PLEX_TEST_PASSWORD` (or `PLEX_TEST_TOKEN`) repository secrets. The spec
+drift watchdog is the lightweight counterpart and runs on every
+`dart test`; it skips when the upstream document cannot be fetched.

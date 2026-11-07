@@ -64,7 +64,8 @@ final class PlexPlayQueue {
     return PlexPlayQueue(
       id: asInt(container['playQueueID']) ?? 0,
       selectedItemId: asInt(container['playQueueSelectedItemID']),
-      shuffled: container['playQueueShuffled'] == true ||
+      shuffled:
+          container['playQueueShuffled'] == true ||
           container['playQueueShuffled'] == 1,
       version: asInt(container['playQueueVersion']),
       items: [

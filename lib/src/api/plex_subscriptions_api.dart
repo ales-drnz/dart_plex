@@ -4,6 +4,7 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_models.dart';
 
 /// `/media/subscriptions/*` — DVR recording subscriptions.
 ///
@@ -18,20 +19,20 @@ class PlexSubscriptionsApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.subscriptions].
   PlexSubscriptionsApi(this._http);
 
-  /// `GET /media/subscriptions` — list every subscription.
-  Future<Map<String, Object?>> list({
+  /// `GET /media/subscriptions` — every subscription; with
+  /// [includeGrabs] their recordings, with [includeStorage] the space
+  /// they use.
+  Future<List<PlexMediaSubscription>> list({
     bool includeGrabs = false,
     bool includeStorage = false,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/subscriptions',
-      queryParameters: {
-        'includeGrabs': includeGrabs ? 1 : 0,
-        'includeStorage': includeStorage ? 1 : 0,
-      },
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/media/subscriptions',
+    PlexMediaSubscription.listOf,
+    queryParameters: {
+      'includeGrabs': includeGrabs ? 1 : 0,
+      'includeStorage': includeStorage ? 1 : 0,
+    },
+  );
 
   /// `POST /media/subscriptions` — create a new recording rule.
   ///
@@ -39,7 +40,10 @@ class PlexSubscriptionsApi {
   /// show/season), matching the spec's integer `type` parameter.
   /// [hints], [prefs] and [params] travel as `hints[key]=value` (and so
   /// on), the form PMS reads.
-  Future<Map<String, Object?>> create({
+  ///
+  /// Returns the subscription created, or `null` when the answer holds
+  /// none.
+  Future<PlexMediaSubscription?> create({
     required int targetLibrarySectionID,
     int? targetSectionLocationID,
     int? type,
@@ -57,58 +61,66 @@ class PlexSubscriptionsApi {
     if (hints != null) qp['hints'] = hints;
     if (prefs != null) qp['prefs'] = prefs;
     if (params != null) qp['params'] = params;
-    final res = await _http.request<Map<String, Object?>>(
+    return _http.requestJson(
       '/media/subscriptions',
+      (json) => PlexMediaSubscription.listOf(json).firstOrNull,
       method: 'POST',
       queryParameters: qp,
     );
-    return res.data ?? const {};
   }
 
   /// `POST /media/subscriptions/process` — re-evaluate every
   /// subscription against the current EPG (used after the guide
   /// reloads).
   Future<void> processAll() async {
-    await _http.request<void>(
-      '/media/subscriptions/process',
-      method: 'POST',
-    );
+    await _http.request<void>('/media/subscriptions/process', method: 'POST');
   }
 
   /// `GET /media/subscriptions/scheduled` — every recording the DVR
-  /// plans to make, grouped by start time.
-  Future<Map<String, Object?>> scheduledRecordings() async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/subscriptions/scheduled',
-    );
-    return res.data ?? const {};
+  /// plans to make.
+  Future<List<PlexMediaGrabOperation>> scheduledRecordings() =>
+      _http.requestJson(
+        '/media/subscriptions/scheduled',
+        PlexMediaGrabOperation.listOf,
+      );
+
+  /// `GET /media/subscriptions/template?guid={guid}` — the subscriptions
+  /// the server proposes for a program: one per way of recording it
+  /// (this airing, the whole show, …), each with its default settings.
+  Future<List<PlexMediaSubscription>> template({required String guid}) =>
+      _http.requestJson(
+        '/media/subscriptions/template',
+        _templates,
+        queryParameters: {'guid': guid},
+      );
+
+  /// `SubscriptionTemplate[].MediaSubscription[]`, flattened.
+  static List<PlexMediaSubscription> _templates(Object? json) {
+    final c = json is Map<String, Object?> ? json['MediaContainer'] : null;
+    final templates = c is Map<String, Object?>
+        ? c['SubscriptionTemplate']
+        : null;
+    return [
+      if (templates is List)
+        for (final t in templates)
+          if (t is Map<String, Object?>) ...PlexMediaSubscription.listOf(t),
+    ];
   }
 
-  /// `GET /media/subscriptions/template?guid={guid}` — fetch the
-  /// default subscription template for a program.
-  Future<Map<String, Object?>> template({required String guid}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/subscriptions/template',
-      queryParameters: {'guid': guid},
-    );
-    return res.data ?? const {};
-  }
-
-  /// `GET /media/subscriptions/{subscriptionId}` — one subscription.
-  Future<Map<String, Object?>> get({
+  /// `GET /media/subscriptions/{subscriptionId}` — one subscription, or
+  /// `null` when the answer holds none.
+  Future<PlexMediaSubscription?> get({
     required String subscriptionId,
     bool includeGrabs = false,
     bool includeStorage = false,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/subscriptions/$subscriptionId',
-      queryParameters: {
-        'includeGrabs': includeGrabs ? 1 : 0,
-        'includeStorage': includeStorage ? 1 : 0,
-      },
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/media/subscriptions/$subscriptionId',
+    (json) => PlexMediaSubscription.listOf(json).firstOrNull,
+    queryParameters: {
+      'includeGrabs': includeGrabs ? 1 : 0,
+      'includeStorage': includeStorage ? 1 : 0,
+    },
+  );
 
   /// `PUT /media/subscriptions/{subscriptionId}?prefs[key]=value` — edit
   /// a subscription's preferences.
@@ -141,10 +153,7 @@ class PlexSubscriptionsApi {
   /// Pass [after] to place this subscription immediately after the
   /// subscription with that id. Omit it to insert at the beginning of
   /// the list.
-  Future<void> reorder({
-    required String subscriptionId,
-    String? after,
-  }) async {
+  Future<void> reorder({required String subscriptionId, String? after}) async {
     await _http.request<void>(
       '/media/subscriptions/$subscriptionId/move',
       method: 'PUT',

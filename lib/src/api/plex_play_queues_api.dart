@@ -6,6 +6,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_vocabulary.dart';
 import 'plex_server_api.dart';
 
 /// `/playQueues/*` — Plex's canonical playback queue model.
@@ -31,7 +32,7 @@ class PlexPlayQueuesApi {
   /// album, an artist (with `allLeaves` semantics), or an arbitrary
   /// list of rating keys.
   ///
-  /// [type] is `'audio' | 'video' | 'photo'`.
+  /// [type] is [PlexMediaType.audio], `video` or `photo`.
   ///
   /// [uri] is the Plex queue URI to seed from. Build it from a list of
   /// rating keys with [seedFromItems], or pass `'server://{machineId}'
@@ -52,7 +53,7 @@ class PlexPlayQueuesApi {
   /// (needed by every subsequent call: [items], [addItems],
   /// [removeItem], …) plus the queue's initial contents.
   Future<PlexPlayQueue> create({
-    required String type,
+    required PlexMediaType type,
     required String uri,
     String? key,
     bool shuffle = false,
@@ -89,9 +90,7 @@ class PlexPlayQueuesApi {
     int? center,
     int? window,
   }) async {
-    final qp = <String, Object?>{
-      'includeChapters': includeChapters ? 1 : 0,
-    };
+    final qp = <String, Object?>{'includeChapters': includeChapters ? 1 : 0};
     if (center != null) qp['center'] = center;
     if (window != null) qp['window'] = window;
     return _http.requestJson(
@@ -118,8 +117,8 @@ class PlexPlayQueuesApi {
       'Pass exactly one of uri or playlistId.',
     );
     final qp = <String, Object?>{
-      if (uri != null) 'uri': uri,
-      if (playlistId != null) 'playlistID': playlistId,
+      'uri': ?uri,
+      'playlistID': ?playlistId,
       if (playNext) 'next': 1,
     };
     await _http.request<void>(
@@ -140,9 +139,7 @@ class PlexPlayQueuesApi {
     await _http.request<void>(
       '/playQueues/$playQueueId/items/$playQueueItemId/move',
       method: 'PUT',
-      queryParameters: {
-        if (afterPlaylistItemId != null) 'after': afterPlaylistItemId,
-      },
+      queryParameters: {'after': ?afterPlaylistItemId},
     );
   }
 
@@ -188,10 +185,7 @@ class PlexPlayQueuesApi {
   /// item is the current item again. Does not change the queue
   /// contents.
   Future<void> reset({required int playQueueId}) async {
-    await _http.request<void>(
-      '/playQueues/$playQueueId/reset',
-      method: 'PUT',
-    );
+    await _http.request<void>('/playQueues/$playQueueId/reset', method: 'PUT');
   }
 
   /// Build a "seed from a list of items" URI suitable for [create] and

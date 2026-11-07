@@ -41,14 +41,13 @@ PlexConnection _connection(
   Duration connectTimeout = const Duration(seconds: 15),
   Duration receiveTimeout = const Duration(seconds: 30),
   int jsonIsolateThreshold = PlexConnection.defaultJsonIsolateThreshold,
-}) =>
-    PlexConnection(
-      credentials: _credentials,
-      httpClient: client,
-      connectTimeout: connectTimeout,
-      receiveTimeout: receiveTimeout,
-      jsonIsolateThreshold: jsonIsolateThreshold,
-    )..baseUrl = 'https://pms.example.test/';
+}) => PlexConnection(
+  credentials: _credentials,
+  httpClient: client,
+  connectTimeout: connectTimeout,
+  receiveTimeout: receiveTimeout,
+  jsonIsolateThreshold: jsonIsolateThreshold,
+)..baseUrl = 'https://pms.example.test/';
 
 /// The [PlexException] that [call] fails with.
 Future<PlexException> _caught(Future<Object?> call) async {
@@ -170,22 +169,19 @@ void main() {
         extraHeaders: const {'Content-Type': 'application/octet-stream'},
       );
       expect(adapter.last!.body, [1, 2, 3]);
-      expect(
-        adapter.last!.headers['Content-Type'],
-        'application/octet-stream',
-      );
+      expect(adapter.last!.headers['Content-Type'], 'application/octet-stream');
     });
 
     test('decodes JSON, text and bytes', () async {
       adapter.respond = (r) => switch (r.uri.path) {
-            '/json' => CannedResponse.json({'k': 'v'}),
-            '/text' => CannedResponse(
-                200,
-                utf8.encode('hello'),
-                contentType: 'text/css',
-              ),
-            _ => CannedResponse(200, [9, 8], contentType: 'image/jpeg'),
-          };
+        '/json' => CannedResponse.json({'k': 'v'}),
+        '/text' => CannedResponse(
+          200,
+          utf8.encode('hello'),
+          contentType: 'text/css',
+        ),
+        _ => CannedResponse(200, [9, 8], contentType: 'image/jpeg'),
+      };
       final json = await conn.request<Map<String, dynamic>>('/json');
       expect(json.data, {'k': 'v'});
       final text = await conn.request<String>('/text');
@@ -314,8 +310,11 @@ void main() {
       await expectLater(
         conn.request<void>('/x', cancelToken: token),
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.cancelled),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.cancelled,
+          ),
         ),
       );
       // The capturing client records only after reading the body: give a
@@ -339,8 +338,11 @@ void main() {
       await expectLater(
         call,
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.cancelled),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.cancelled,
+          ),
         ),
       );
       // The abort trigger reached the client, so a real one closes the socket.
@@ -354,8 +356,11 @@ void main() {
         _FnClient((r) async => http.StreamedResponse(body.stream, 200)),
       );
       final token = PlexCancelToken();
-      final call =
-          conn.requestBytes('/x', absoluteUrl: false, cancelToken: token);
+      final call = conn.requestBytes(
+        '/x',
+        absoluteUrl: false,
+        cancelToken: token,
+      );
       await Future<void>.delayed(Duration.zero);
       body.add([1, 2]);
       await Future<void>.delayed(Duration.zero);
@@ -363,8 +368,11 @@ void main() {
       await expectLater(
         call,
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.cancelled),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.cancelled,
+          ),
         ),
       );
       await body.close();
@@ -383,10 +391,7 @@ void main() {
       final token = PlexCancelToken();
       final view = client.withCancelToken(token);
       final calls = [
-        view.library.allByType(
-          sectionId: '1',
-          type: PlexMetadataType.album,
-        ),
+        view.library.allByType(sectionId: '1', type: PlexMetadataType.album),
         view.playlists.items(playlistId: 'p1'),
         view.hubs.global(),
       ];
@@ -397,8 +402,11 @@ void main() {
         await expectLater(
           call,
           throwsA(
-            isA<PlexException>()
-                .having((e) => e.type, 'type', PlexErrorType.cancelled),
+            isA<PlexException>().having(
+              (e) => e.type,
+              'type',
+              PlexErrorType.cancelled,
+            ),
           ),
         );
       }
@@ -454,8 +462,11 @@ void main() {
       await expectLater(
         conn.requestJson<int>('/x', (json) => (json! as Map)['n'] as int),
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.parse),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.parse,
+          ),
         ),
       );
     });
@@ -498,8 +509,11 @@ void main() {
       await expectLater(
         conn.requestStream('/dl', absoluteUrl: false),
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.notFound),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.notFound,
+          ),
         ),
       );
     });
@@ -513,8 +527,9 @@ void main() {
     setUp(() async {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       server.listen((req) async {
-        final gz =
-            (req.headers.value('accept-encoding') ?? '').contains('gzip');
+        final gz = (req.headers.value('accept-encoding') ?? '').contains(
+          'gzip',
+        );
         final body = utf8.encode(
           jsonEncode({
             'Items': [
@@ -758,11 +773,7 @@ void main() {
         await conn.request<void>('/x', cancelToken: token);
       }
       await conn
-          .requestStream(
-            '/x',
-            absoluteUrl: false,
-            cancelToken: token,
-          )
+          .requestStream('/x', absoluteUrl: false, cancelToken: token)
           .then((r) => r.stream.drain<void>());
       expect(token.listenerCount, 0);
     });
@@ -785,14 +796,10 @@ void main() {
         BytesAdapter(utf8.encode('{"a":1}'), contentType: 'application/json'),
       );
       await expectLater(
-        conn.requestJson<int>(
-          '/x',
-          (json) {
-            token.cancel();
-            return 1;
-          },
-          cancelToken: token,
-        ),
+        conn.requestJson<int>('/x', (json) {
+          token.cancel();
+          return 1;
+        }, cancelToken: token),
         throwsA(
           isA<PlexException>().having((e) => e.isCancelled, 'cancelled', true),
         ),
@@ -837,24 +844,29 @@ void main() {
       expect(got, [1, 2]);
     });
 
-    test('a server that stalls while the listener reads still times out',
-        () async {
-      final body = StreamController<List<int>>();
-      final conn = _connection(
-        _FnClient((r) async => http.StreamedResponse(body.stream, 200)),
-        receiveTimeout: const Duration(milliseconds: 50),
-      );
-      final res = await conn.requestStream('/x', absoluteUrl: false);
-      body.add([1]);
-      await expectLater(
-        res.stream.drain<void>(),
-        throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.timeout),
-        ),
-      );
-      await body.close();
-    });
+    test(
+      'a server that stalls while the listener reads still times out',
+      () async {
+        final body = StreamController<List<int>>();
+        final conn = _connection(
+          _FnClient((r) async => http.StreamedResponse(body.stream, 200)),
+          receiveTimeout: const Duration(milliseconds: 50),
+        );
+        final res = await conn.requestStream('/x', absoluteUrl: false);
+        body.add([1]);
+        await expectLater(
+          res.stream.drain<void>(),
+          throwsA(
+            isA<PlexException>().having(
+              (e) => e.type,
+              'type',
+              PlexErrorType.timeout,
+            ),
+          ),
+        );
+        await body.close();
+      },
+    );
   });
 
   group('failures that used to escape untyped', () {
@@ -863,8 +875,11 @@ void main() {
       await expectLater(
         conn.requestJson<int>('/x', (_) => throw RangeError('x')),
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.parse),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.parse,
+          ),
         ),
       );
     });
@@ -874,14 +889,16 @@ void main() {
       await expectLater(
         conn.request<void>('http://[bad', absoluteUrl: true),
         throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.state),
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.state,
+          ),
         ),
       );
     });
 
-    test(
-        'closing the client mid-request is a state error, not a network '
+    test('closing the client mid-request is a state error, not a network '
         'failure', () async {
       final pending = Completer<http.StreamedResponse>();
       late PlexConnection conn;
@@ -902,10 +919,8 @@ void main() {
     test('a redirect loop is not a network failure', () async {
       final conn = _connection(
         _FnClient(
-          (r) async => throw http.ClientException(
-            'Redirect limit exceeded',
-            r.url,
-          ),
+          (r) async =>
+              throw http.ClientException('Redirect limit exceeded', r.url),
         ),
       );
       final e = await _caught(conn.request<void>('/x'));
@@ -950,24 +965,32 @@ void main() {
       expect(e.message, contains('plain failure'));
     });
 
-    test('a gzip body cut short is a parse error, not a short answer',
-        () async {
-      await expectLater(
-        conn.request<Object?>('/truncated'),
-        throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.parse),
-        ),
-      );
-      final res = await conn.requestStream('/truncated', absoluteUrl: false);
-      await expectLater(
-        res.stream.drain<void>(),
-        throwsA(
-          isA<PlexException>()
-              .having((e) => e.type, 'type', PlexErrorType.parse),
-        ),
-      );
-    });
+    test(
+      'a gzip body cut short is a parse error, not a short answer',
+      () async {
+        await expectLater(
+          conn.request<Object?>('/truncated'),
+          throwsA(
+            isA<PlexException>().having(
+              (e) => e.type,
+              'type',
+              PlexErrorType.parse,
+            ),
+          ),
+        );
+        final res = await conn.requestStream('/truncated', absoluteUrl: false);
+        await expectLater(
+          res.stream.drain<void>(),
+          throwsA(
+            isA<PlexException>().having(
+              (e) => e.type,
+              'type',
+              PlexErrorType.parse,
+            ),
+          ),
+        );
+      },
+    );
   });
 
   group('client ownership', () {

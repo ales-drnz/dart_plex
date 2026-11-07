@@ -4,22 +4,27 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_models.dart';
 
 /// `/updater/*` — server software update lifecycle.
 ///
 /// Wraps the `Updater` OpenAPI tag (3 operations). Admin only.
+///
+/// {@category Server}
 class PlexUpdaterApi {
   final PlexConnection _http;
 
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.updater].
   PlexUpdaterApi(this._http);
 
-  /// `GET /updater/status` — current update state (last check,
-  /// downloaded version, install ready).
-  Future<Map<String, Object?>> status() async {
-    final res = await _http.request<Map<String, Object?>>('/updater/status');
-    return res.data ?? const {};
-  }
+  /// `GET /updater/status` — current update state (last check, releases
+  /// on offer, install ready).
+  Future<PlexUpdaterStatus> status() => _http.requestJson(
+    '/updater/status',
+    (json) => PlexUpdaterStatus.fromJson(
+      json is Map<String, Object?> ? json : const {},
+    ),
+  );
 
   /// `PUT /updater/check?download={bool}` — run an update check.
   /// Pass [download] = true to also download the new version.
@@ -39,10 +44,7 @@ class PlexUpdaterApi {
     await _http.request<void>(
       '/updater/apply',
       method: 'PUT',
-      queryParameters: {
-        'tonight': tonight ? 1 : 0,
-        'skip': skip ? 1 : 0,
-      },
+      queryParameters: {'tonight': tonight ? 1 : 0, 'skip': skip ? 1 : 0},
     );
   }
 }

@@ -108,10 +108,10 @@ class PlexTranscoderApi {
   }
 
   /// `GET /{transcodeType}/:/transcode/universal/start.{extension}` —
-  /// URL to start a transcode session. The audio/video variants
-  /// also exist on [PlexStreamingApi.universalAudioUrl] /
-  /// [PlexStreamingApi.universalVideoUrl] (which wrap this with the
-  /// consumer-friendly defaults); this method is the raw path-builder.
+  /// URL to start a transcode session. [PlexStreamingApi.startAudioTranscode]
+  /// and [PlexStreamingApi.startVideoTranscode] make the decision PMS
+  /// requires first and build this URL for you; this method is the raw
+  /// path-builder.
   String startUrl({
     required String transcodeType,
     required String extension,

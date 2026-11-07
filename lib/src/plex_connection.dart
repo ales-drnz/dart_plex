@@ -14,7 +14,8 @@ import 'plex_credentials.dart';
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
 import 'transport/platform_io.dart'
-    if (dart.library.js_interop) 'transport/platform_web.dart' as platform;
+    if (dart.library.js_interop) 'transport/platform_web.dart'
+    as platform;
 import 'transport/plex_cancel_token.dart';
 import 'transport/plex_response.dart';
 import 'transport/plex_retry_policy.dart';
@@ -36,6 +37,8 @@ final class _Shared {
   final bool inflates;
   String? baseUrl;
   String? token;
+  Future<String?> Function(String? rejected)? tokenRenewer;
+  Future<String?>? renewing;
   bool closed = false;
 
   _Shared({
@@ -99,28 +102,26 @@ final class PlexConnection {
     Duration receiveTimeout = const Duration(seconds: 30),
     int jsonIsolateThreshold = defaultJsonIsolateThreshold,
     PlexRetryPolicy retryPolicy = PlexRetryPolicy.none,
-  })  : _shared = _Shared(
-          client: httpClient ?? platform.createDefaultClient(connectTimeout),
-          ownsClient: httpClient == null,
-          connectTimeout: connectTimeout,
-          receiveTimeout: receiveTimeout,
-          jsonIsolateThreshold: jsonIsolateThreshold,
-          inflates: httpClient == null && platform.defaultClientLeavesGzip,
-          retryPolicy: retryPolicy,
-        ),
-        scopeToken = null;
+  }) : _shared = _Shared(
+         client: httpClient ?? platform.createDefaultClient(connectTimeout),
+         ownsClient: httpClient == null,
+         connectTimeout: connectTimeout,
+         receiveTimeout: receiveTimeout,
+         jsonIsolateThreshold: jsonIsolateThreshold,
+         inflates: httpClient == null && platform.defaultClientLeavesGzip,
+         retryPolicy: retryPolicy,
+       ),
+       scopeToken = null;
 
   /// A view of [parent] whose requests are cancelled by [cancelToken].
   ///
   /// The view shares [parent]'s client, credentials, base URL and token:
   /// a later `setToken` or `connect` on either is seen by both. A token
   /// passed to an individual [request] still wins.
-  PlexConnection.scoped(
-    PlexConnection parent,
-    PlexCancelToken cancelToken,
-  )   : _shared = parent._shared,
-        credentials = parent.credentials,
-        scopeToken = cancelToken;
+  PlexConnection.scoped(PlexConnection parent, PlexCancelToken cancelToken)
+    : _shared = parent._shared,
+      credentials = parent.credentials,
+      scopeToken = cancelToken;
 
   /// Effective isolate threshold for this connection. For tests.
   @visibleForTesting
@@ -141,6 +142,17 @@ final class PlexConnection {
 
   /// Sets or clears the `X-Plex-Token` sent on every request.
   set token(String? value) => _shared.token = value;
+
+  /// Called when a request is refused with `401` or `498` (an expired
+  /// plex.tv JWT): it gets the token that was refused and returns the one
+  /// to retry with, or `null` to let the error through. Concurrent
+  /// refusals share one call. Each request is retried once.
+  Future<String?> Function(String? rejected)? get tokenRenewer =>
+      _shared.tokenRenewer;
+
+  /// Sets or clears [tokenRenewer].
+  set tokenRenewer(Future<String?> Function(String? rejected)? value) =>
+      _shared.tokenRenewer = value;
 
   /// Whether a PMS base URL and a token are both set.
   bool get isAuthenticated => baseUrl != null && token != null;
@@ -167,9 +179,9 @@ final class PlexConnection {
   /// Headers sent on every request: the `X-Plex-*` identity, `Accept:
   /// application/json` (PMS answers XML otherwise) and the token.
   Map<String, String> get _baseHeaders => {
-        ...credentials.toHeaders(),
-        if (token != null) 'X-Plex-Token': token!,
-      };
+    ...credentials.toHeaders(),
+    'X-Plex-Token': ?token,
+  };
 
   /// Issues an HTTP request relative to [baseUrl] (or absolute when
   /// `absoluteUrl` is `true`) and decodes the body per [responseType].
@@ -205,10 +217,7 @@ final class PlexConnection {
     );
     final Object? decoded;
     try {
-      decoded = await _decode(
-        exchange,
-        responseType ?? PlexResponseType.json,
-      );
+      decoded = await _decode(exchange, responseType ?? PlexResponseType.json);
     } on FormatException catch (e, st) {
       throw _parseError(e, st, exchange.uri);
     }
@@ -285,14 +294,13 @@ final class PlexConnection {
     Map<String, Object?>? queryParameters,
     bool absoluteUrl = true,
     PlexCancelToken? cancelToken,
-  }) =>
-      request<Uint8List>(
-        url,
-        queryParameters: queryParameters,
-        absoluteUrl: absoluteUrl,
-        responseType: PlexResponseType.bytes,
-        cancelToken: cancelToken,
-      );
+  }) => request<Uint8List>(
+    url,
+    queryParameters: queryParameters,
+    absoluteUrl: absoluteUrl,
+    responseType: PlexResponseType.bytes,
+    cancelToken: cancelToken,
+  );
 
   /// Opens a GET whose body is delivered as it arrives, for downloads.
   ///
@@ -346,11 +354,13 @@ final class PlexConnection {
     final body = _guard(opened);
     return PlexStreamedResponse(
       stream: gzipped
-          ? platform.gunzipStream(body).handleError(
-                (Object e, StackTrace st) =>
-                    throw _parseError(e, st, opened.uri),
-                test: (e) => e is FormatException,
-              )
+          ? platform
+                .gunzipStream(body)
+                .handleError(
+                  (Object e, StackTrace st) =>
+                      throw _parseError(e, st, opened.uri),
+                  test: (e) => e is FormatException,
+                )
           : body,
       statusCode: res.statusCode,
       headers: res.headers,
@@ -369,20 +379,19 @@ final class PlexConnection {
     required Map<String, String>? extraHeaders,
     required bool absoluteUrl,
     required PlexCancelToken? cancelToken,
-  }) =>
-      _retrying(
-        method,
-        cancelToken,
-        () => _exchangeOnce(
-          path,
-          method: method,
-          queryParameters: queryParameters,
-          data: data,
-          extraHeaders: extraHeaders,
-          absoluteUrl: absoluteUrl,
-          cancelToken: cancelToken,
-        ),
-      );
+  }) => _retrying(
+    method,
+    cancelToken,
+    () => _exchangeOnce(
+      path,
+      method: method,
+      queryParameters: queryParameters,
+      data: data,
+      extraHeaders: extraHeaders,
+      absoluteUrl: absoluteUrl,
+      cancelToken: cancelToken,
+    ),
+  );
 
   /// Runs [attempt] under the client's [PlexRetryPolicy].
   Future<T> _retrying<T>(
@@ -391,10 +400,18 @@ final class PlexConnection {
     Future<T> Function() attempt,
   ) async {
     final token = cancelToken ?? scopeToken;
-    for (var n = 1;; n++) {
+    var renewed = false;
+    for (var n = 1; ; n++) {
+      final sent = _shared.token;
       try {
         return await attempt();
       } on PlexException catch (e) {
+        if (!renewed &&
+            (e.statusCode == 401 || e.statusCode == 498) &&
+            await _renewToken(sent)) {
+          renewed = true;
+          continue;
+        }
         final wait = _shared.retryPolicy.delayAfter(
           e,
           attempt: n,
@@ -415,6 +432,25 @@ final class PlexConnection {
         }
       }
     }
+  }
+
+  /// Asks [tokenRenewer] for a token to replace [rejected]; true when there
+  /// is a different one to retry with.
+  Future<bool> _renewToken(String? rejected) async {
+    final renew = _shared.tokenRenewer;
+    if (renew == null) return false;
+    if (_shared.token != rejected) return true;
+    final String? fresh;
+    try {
+      fresh = await (_shared.renewing ??= renew(
+        rejected,
+      ).whenComplete(() => _shared.renewing = null));
+    } catch (_) {
+      return false;
+    }
+    if (fresh == null || fresh == rejected) return false;
+    if (_shared.token == rejected) _shared.token = fresh;
+    return true;
   }
 
   Future<_Exchange> _exchangeOnce(
@@ -487,9 +523,14 @@ final class PlexConnection {
       uri,
       abortTrigger: abort.future,
     );
-    request.headers.addAll(_baseHeaders);
-    if (_shared.inflates) request.headers['Accept-Encoding'] = 'gzip';
-    if (extraHeaders != null) request.headers.addAll(extraHeaders);
+    // An empty extra header removes the header: `X-Plex-Token: ''`.
+    request.headers.addAll(
+      {
+        ..._baseHeaders,
+        if (_shared.inflates) 'Accept-Encoding': 'gzip',
+        ...?extraHeaders,
+      }..removeWhere((_, value) => value.isEmpty),
+    );
     _encodeBody(request, data);
 
     final opened = _Opened(uri, abort, token, _shared.receiveTimeout);
@@ -796,6 +837,7 @@ final class PlexConnection {
       statusCode: status,
       path: uri.toString(),
       retryAfter: _retryAfter(headers['retry-after']),
+      body: body.isEmpty ? null : utf8.decode(body, allowMalformed: true),
     );
   }
 
@@ -845,10 +887,10 @@ final class PlexConnection {
     final type = text.contains('timed out')
         ? PlexErrorType.timeout
         : e is http.ClientException && text.contains('Redirect')
-            ? PlexErrorType.unknown
-            : e is http.ClientException
-                ? PlexErrorType.connection
-                : PlexErrorType.unknown;
+        ? PlexErrorType.unknown
+        : e is http.ClientException
+        ? PlexErrorType.connection
+        : PlexErrorType.unknown;
     return PlexException(
       text,
       type: type,
@@ -859,26 +901,25 @@ final class PlexConnection {
   }
 
   PlexException _parseError(Object e, StackTrace st, Uri uri) => PlexException(
-        'Could not decode the response: $e',
-        type: PlexErrorType.parse,
-        path: uri.toString(),
-        cause: e,
-        stackTrace: st,
-      );
+    'Could not decode the response: $e',
+    type: PlexErrorType.parse,
+    path: uri.toString(),
+    cause: e,
+    stackTrace: st,
+  );
 
   static PlexException _timeout(
     String message,
     Uri uri, [
     Object? cause,
     StackTrace? st,
-  ]) =>
-      PlexException(
-        message,
-        type: PlexErrorType.timeout,
-        path: uri.toString(),
-        cause: cause,
-        stackTrace: st ?? StackTrace.current,
-      );
+  ]) => PlexException(
+    message,
+    type: PlexErrorType.timeout,
+    path: uri.toString(),
+    cause: cause,
+    stackTrace: st ?? StackTrace.current,
+  );
 
   /// Throws a cancellation when the token for this request was cancelled
   /// while its body was being decoded.
@@ -888,10 +929,10 @@ final class PlexConnection {
   }
 
   static PlexException _cancelled(Uri uri) => PlexException(
-        'Request cancelled',
-        type: PlexErrorType.cancelled,
-        path: uri.toString(),
-      );
+    'Request cancelled',
+    type: PlexErrorType.cancelled,
+    path: uri.toString(),
+  );
 }
 
 /// Decodes a JSON body; `null` when empty. Top-level so it can run on
@@ -903,8 +944,9 @@ final class PlexConnection {
 Object? _jsonOf(Uint8List bytes) =>
     bytes.isEmpty ? null : _utf8Json.convert(bytes);
 
-final Converter<List<int>, Object?> _utf8Json =
-    const Utf8Decoder().fuse(const JsonDecoder());
+final Converter<List<int>, Object?> _utf8Json = const Utf8Decoder().fuse(
+  const JsonDecoder(),
+);
 
 /// A request whose headers have arrived.
 final class _Opened {

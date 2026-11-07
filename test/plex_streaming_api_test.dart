@@ -23,7 +23,8 @@ import '_helpers/capturing_client.dart';
 /// Latin-1 read of UTF-8 bytes (`C3 88` becomes `Ã` plus U+0088, a C1
 /// control that does not draw) next to the lowercase ones, which double
 /// up into two visible characters instead.
-const _lrc = '[00:12.00]È già mattina\n'
+const _lrc =
+    '[00:12.00]È già mattina\n'
     '[00:15.30]À Ì Ò Ù É / è ì ò ù é\n';
 
 const _bomUtf8 = [0xEF, 0xBB, 0xBF];
@@ -59,7 +60,9 @@ void main() {
     test('UTF-8 bytes round-trip unchanged', () async {
       final ctx = _makeApi(utf8.encode(_lrc));
 
-      final lyrics = await ctx.api.lyrics(streamKey: '/library/streams/12345');
+      final lyrics = (await ctx.api.lyrics(
+        streamKey: '/library/streams/12345',
+      ))?.text;
 
       expect(lyrics, _lrc);
       // The two halves of the reported asymmetry, spelled out: an accented
@@ -73,7 +76,9 @@ void main() {
     test('a UTF-8 BOM is stripped, not handed to the LRC parser', () async {
       final ctx = _makeApi([..._bomUtf8, ...utf8.encode(_lrc)]);
 
-      final lyrics = await ctx.api.lyrics(streamKey: '/library/streams/12345');
+      final lyrics = (await ctx.api.lyrics(
+        streamKey: '/library/streams/12345',
+      ))?.text;
 
       expect(lyrics, _lrc);
       expect(lyrics!.codeUnitAt(0), isNot(0xFEFF));
@@ -88,8 +93,9 @@ void main() {
       () async {
         final ctx = _makeApi(_utf16le(_lrc));
 
-        final lyrics =
-            await ctx.api.lyrics(streamKey: '/library/streams/12345');
+        final lyrics = (await ctx.api.lyrics(
+          streamKey: '/library/streams/12345',
+        ))?.text;
 
         expect(lyrics, _lrc);
         expect(lyrics, isNot(contains('\u0000')));
@@ -99,7 +105,9 @@ void main() {
     test('UTF-16 BE with a BOM decodes too', () async {
       final ctx = _makeApi(_utf16be(_lrc));
 
-      final lyrics = await ctx.api.lyrics(streamKey: '/library/streams/12345');
+      final lyrics = (await ctx.api.lyrics(
+        streamKey: '/library/streams/12345',
+      ))?.text;
 
       expect(lyrics, _lrc);
       expect(lyrics, isNot(contains('\u0000')));
@@ -116,8 +124,9 @@ void main() {
         expect(() => utf8.decode(bytes), throwsFormatException);
 
         final ctx = _makeApi(bytes);
-        final lyrics =
-            await ctx.api.lyrics(streamKey: '/library/streams/12345');
+        final lyrics = (await ctx.api.lyrics(
+          streamKey: '/library/streams/12345',
+        ))?.text;
 
         expect(lyrics, _lrc);
         expect(lyrics, isNot(contains(_replacement)));
@@ -151,18 +160,22 @@ void main() {
         contentType: 'text/plain; charset=iso-8859-1',
       );
 
-      final lyrics = await ctx.api.lyrics(streamKey: '/library/streams/12345');
+      final lyrics = (await ctx.api.lyrics(
+        streamKey: '/library/streams/12345',
+      ))?.text;
 
       expect(lyrics, latin1.decode(bytes));
     });
 
     test('a BOM outranks a contradicting charset', () async {
-      final ctx = _makeApi(
-        [..._bomUtf8, ...utf8.encode(_lrc)],
-        contentType: 'text/plain; charset=iso-8859-1',
-      );
+      final ctx = _makeApi([
+        ..._bomUtf8,
+        ...utf8.encode(_lrc),
+      ], contentType: 'text/plain; charset=iso-8859-1');
 
-      final lyrics = await ctx.api.lyrics(streamKey: '/library/streams/12345');
+      final lyrics = (await ctx.api.lyrics(
+        streamKey: '/library/streams/12345',
+      ))?.text;
 
       expect(lyrics, _lrc);
     });
@@ -173,7 +186,9 @@ void main() {
         contentType: 'text/plain; charset=utf-8',
       );
 
-      final lyrics = await ctx.api.lyrics(streamKey: '/library/streams/12345');
+      final lyrics = (await ctx.api.lyrics(
+        streamKey: '/library/streams/12345',
+      ))?.text;
 
       expect(lyrics, _lrc);
       expect(lyrics, isNot(contains(_replacement)));
@@ -185,7 +200,9 @@ void main() {
         contentType: 'text/plain; charset=windows-1252',
       );
 
-      final lyrics = await ctx.api.lyrics(streamKey: '/library/streams/12345');
+      final lyrics = (await ctx.api.lyrics(
+        streamKey: '/library/streams/12345',
+      ))?.text;
 
       expect(lyrics, _lrc);
     });
@@ -212,8 +229,9 @@ void _stopUniversalTests() {
     Future<void> stopWith(int status) {
       final adapter = CapturingAdapter()
         ..respond = (_) => CannedResponse(status, const []);
-      return PlexStreamingApi(testConnection(adapter))
-          .stopUniversal(session: 's1');
+      return PlexStreamingApi(
+        testConnection(adapter),
+      ).stopUniversal(session: 's1');
     }
 
     test('a session that is already gone (404) is not an error', () async {

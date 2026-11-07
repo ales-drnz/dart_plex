@@ -15,8 +15,8 @@
 /// * every query parameter is one the route declares, spelt with the
 ///   same case (PMS reads `excludeParentID`, not `excludeParentId`).
 ///
-/// Deprecated methods are called too: they still ship. A map parameter
-/// that nests (`prefs[key]=…`) is checked by its outer name.
+/// A map parameter that nests (`prefs[key]=…`) is checked by its outer
+/// name.
 ///
 /// PMS ignores a query parameter it does not know and answers 200 with
 /// a *wider* result, so a misspelt or misplaced parameter is invisible
@@ -78,7 +78,8 @@ const _allowedExtras = <String, Map<String, String>>{
     'type': 'type=10&title.query=Tra answered tracks; verified on PMS 1.43.2',
   },
   'GET /library/sections/{sectionId}/common': {
-    'type': 'required: 400 without it, and type 8/9/10 answer different '
+    'type':
+        'required: 400 without it, and type 8/9/10 answer different '
         'bodies; verified on PMS 1.43.2',
   },
   'PUT /library/sections/{sectionId}': {
@@ -99,9 +100,7 @@ const _allowedExtras = <String, Map<String, String>>{
     'smart':
         'smart=0 for a regular playlist; verified on PMS 1.43.2 (integration)',
   },
-  'PUT /playlists/{playlistId}': {
-    'title': 'renames; verified on PMS 1.43.2',
-  },
+  'PUT /playlists/{playlistId}': {'title': 'renames; verified on PMS 1.43.2'},
   'GET /playQueues/{playQueueId}': {
     'window': 'window=1 around center answered 3 items; verified on PMS 1.43.2',
     'center': 'centres the window on that item; verified on PMS 1.43.2',
@@ -123,7 +122,8 @@ const _allowedExtras = <String, Map<String, String>>{
     'viewedAt<=': 'narrowed 3 plays to 1; verified on PMS 1.43.2',
   },
   'GET /hubs': {
-    'includeMeta': 'no effect observed on 1.43.2 (identical bodies with, '
+    'includeMeta':
+        'no effect observed on 1.43.2 (identical bodies with, '
         'without and with garbage); sent as 0.1 did',
   },
   'GET /hubs/sections/{sectionId}': {
@@ -135,8 +135,6 @@ const _allowedExtras = <String, Map<String, String>>{
     'container': 'NOT verified: video transcode',
     'fastSeek': 'sent by the verified music start too',
     'maxAudioBitrate': 'NOT verified for video; no effect on music',
-    'audioChannels': 'deprecated universalAudioUrl only, sent as 0.1 did; '
-        'NOT verified (startAudioTranscode replaces it)',
     'session': 'session id for ping/stop; verified on PMS 1.43.2',
   },
   'GET /{transcodeType}/:/transcode/universal/decision': {
@@ -220,16 +218,16 @@ const _extraRoutes = <String, Map<String, List<String>>>{
   },
   // POST answers 200 with an empty container, GET and PUT 404, on PMS
   // 1.43.2 without tuners: the document's GET is the wrong one.
-  '/media/grabbers/devices/discover': {
-    'POST': [],
-  },
+  '/media/grabbers/devices/discover': {'POST': []},
 };
 
 /// Arguments that must not be the generic stand-in, per method.
 const _overrides = <String, Map<Symbol, Object?>>{
   // Exactly one of uri / playlistId.
   'PlexPlayQueuesApi.addItems': {#playlistId: #omit},
-  'PlexStreamingApi.startAudioTranscode': {#protocol: 'hls'},
+  'PlexStreamingApi.startAudioTranscode': {
+    #protocol: PlexStreamingProtocol.hls,
+  },
   'PlexStreamingApi.directFileUrl': {#partKey: '/library/parts/1/2/file.flac'},
 };
 
@@ -545,8 +543,10 @@ void main() {
     }
 
     // ignore: avoid_print
-    print('spec contract: $calls requests checked; not called: '
-        '${uncalled.length}\n  ${uncalled.join('\n  ')}');
+    print(
+      'spec contract: $calls requests checked; not called: '
+      '${uncalled.length}\n  ${uncalled.join('\n  ')}',
+    );
     expect(violations, isEmpty, reason: violations.join('\n'));
     expect(uncalled, isEmpty, reason: 'every method must be exercised');
     expect(calls, greaterThan(200));

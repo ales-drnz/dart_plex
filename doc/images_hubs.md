@@ -14,6 +14,11 @@ final url = plex.images.transcodeUrl(
 final bytes = await plex.images.fetch(sourcePath: item.thumb!); // Uint8List?
 ```
 
+Besides `thumb` and `art`, an item lists its artwork in `images`
+(`PlexImage`: `type` and `url`); `squareArt` is the 1:1 background
+(`backgroundSquare`) and `logo` the title logo (`clearLogo`), when the
+server has them. Any of these paths goes to `transcodeUrl()`.
+
 The server resizes the image (500 × 500 by default) and sends a JPEG.
 `fetch()` returns `null` on 404 and throws a `PlexException` on other
 failures, so "no artwork" and "try again later" stay apart. For blur,

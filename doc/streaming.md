@@ -2,9 +2,11 @@ Build stream URLs for audio and video, manage transcode sessions, and read lyric
 
 <img src="https://raw.githubusercontent.com/ales-drnz/dart_plex/main/imgs/diagrams/audio_transcode_sequence.png" width="100%" alt="Audio transcode: startAudioTranscode makes the decision and returns the URL; the player opens it; pingUniversal while paused; stopUniversal at the end">
 
-The streaming calls return URLs; none of them fetches the audio. Hand the
-URL to your audio engine (mpv, AVPlayer, ExoPlayer). The URL carries
+The streaming calls return URLs; none of them fetches the media. Hand the
+URL to your player (mpv, AVPlayer, ExoPlayer). The URL carries
 `X-Plex-Token` in its query, so segment requests need no headers.
+`PlexStreamingProtocol` names the protocol: `hls` (an `.m3u8` of MPEG-TS
+segments), `dash` (an `.mpd` of fragmented MP4) or `http` (one stream).
 
 ## Audio transcode
 
@@ -12,7 +14,7 @@ URL to your audio engine (mpv, AVPlayer, ExoPlayer). The URL carries
 final transcode = await plex.streaming.startAudioTranscode(
   ratingKey: track.ratingKey,
   session: 'my-uuid',   // one per playback session
-  protocol: 'dash',     // 'hls' (default, an .m3u8) or 'dash' (an .mpd)
+  protocol: PlexStreamingProtocol.dash, // hls (default) or dash
   maxBitrateKbps: 128,
 );
 if (transcode.decision.isPlayable) {
@@ -67,12 +69,38 @@ session is gone. `stopUniversal()` returns normally when the session no
 longer exists, or never started: the server creates a DASH session with
 its first segment.
 
+## Video transcode
+
+```dart
+final transcode = await plex.streaming.startVideoTranscode(
+  ratingKey: movie.ratingKey,
+  session: 'my-uuid',
+  protocol: PlexStreamingProtocol.hls, // hls, dash or http
+  maxVideoBitrateKbps: 8000,
+  videoResolution: '1920x1080',
+);
+if (transcode.decision.isPlayable) {
+  print(transcode.url); // start.m3u8, start.mpd or start.mkv
+}
+```
+
+The video counterpart of `startAudioTranscode()`: a decision for
+`session`, then the `start` URL with the same parameters. PMS 1.43.2
+answers "no conversion profile found" (decision code 4005) unless the
+client profile names a target, so the call sends
+`X-Plex-Client-Profile-Name` (`Generic` by default) and a `videoProfile`
+target for the protocol (`PlexStreamingApi.videoProfileExtra()`:
+`videoCodec` `h264` and `audioCodec` `aac` by default, in MPEG-TS, MP4 or
+Matroska). Verified for all three protocols on PMS 1.43.2.
+`directStream` (on by default) lets the server copy what it need not
+re-encode.
+
 ## Video decision
 
-For video, ask the server for a decision first. It weighs the source
-against your client profile and answers with `generalDecisionCode`: 1xxx
-means playback can succeed; 2xxx (general), 3xxx (direct play) and 4xxx
-(transcode) are errors.
+To make the decision yourself, call `decisionUniversal()`. The server
+weighs the source against your client profile and answers with
+`generalDecisionCode`: 1xxx means playback can succeed; 2xxx (general),
+3xxx (direct play) and 4xxx (transcode) are errors.
 
 ```dart
 final decision = await plex.streaming.decisionUniversal(
@@ -80,21 +108,18 @@ final decision = await plex.streaming.decisionUniversal(
     'path': '/library/metadata/$ratingKey',
     'mediaIndex': 0,
     'partIndex': 0,
-    'protocol': 'hls',
+    'protocol': PlexStreamingProtocol.hls.wire,
     'directPlay': 0,
     'directStream': 1,
     'videoResolution': '1920x1080',
     'maxVideoBitrate': 8000,
-    'videoCodec': 'h264',
-    'audioCodec': 'aac',
     'session': 'my-uuid',
+    'X-Plex-Client-Profile-Name': 'Generic',
   },
-  extraHeaders: const {
-    // The profile for this call only, instead of
-    // PlexCredentials.clientProfileExtra.
-    'X-Plex-Client-Profile-Extra':
-        'add-transcode-target(type=videoProfile&context=streaming'
-            '&protocol=hls&container=mpegts&videoCodec=h264&audioCodec=aac)',
+  extraHeaders: {
+    'X-Plex-Client-Profile-Extra': PlexStreamingApi.videoProfileExtra(
+      protocol: PlexStreamingProtocol.hls,
+    ),
   },
 );
 
@@ -103,34 +128,43 @@ if (decision.isDirect) {
 } else if (decision.isTranscode) {
   // the server transcodes
 } else {
-  // not playable: bandwidth, codec mismatch, permissions
+  print(decision.text); // why not: bandwidth, codec, the remote pass
 }
 ```
 
 `transcodeType` is `'video'` by default; `'music'` and `'photo'` reach
 the other transcoders. `isDirect` and `isTranscode` read
-`directPlayDecisionCode` and `transcodeDecisionCode`; the whole answer is
-in `raw`.
+`directPlayDecisionCode` and `transcodeDecisionCode`; `text` is the
+server's own explanation and the whole answer is in `raw`.
 
-## Video URL
+## Remote playback and the pass
 
-```dart
-final url = plex.streaming.universalVideoUrl(
-  ratingKey: ratingKey,
-  videoResolution: '1920x1080',
-  videoBitrate: 8000,
-  audioBitrate: 256,
-  videoCodec: 'h264',
-  audioCodec: 'aac',
-  subtitleSize: 100,
-  session: 'my-uuid',
-);
-```
+Since April 2025 Plex requires a Plex Pass (on the server owner's
+account) or a Remote Watch Pass (on the viewer's) to stream personal
+video to a device outside the server's network. `plex.connectionKind`
+says how the client reaches the server (`local`, `remote` or `relay`,
+known after `connectToResource` or `connectTo`).
 
-`protocol` (`'hls'` by default) and `container` (`'mpegts'`) pick the
-target. The extension follows the protocol: `.m3u8` for HLS, `.mpd` for
-DASH, the container otherwise. Bitrates are in kbps. The URL follows the
-decision the server already made for the session.
+A refusal for that reason is a `PlexException` of type
+`PlexErrorType.passRequired` (`isPassRequired`), with the server's whole
+answer in `body`. It is not an auth error: the token works, do not sign
+the user out. PMS documents no code for it, so the decision calls
+(`decisionUniversal`, `startVideoTranscode`, `startAudioTranscode`)
+recognise it from:
+
+- the answer's text — an error body, or a decision's
+  `generalDecisionText`, `transcodeDecisionText` or
+  `directPlayDecisionText` — naming "Plex Pass" or "Remote Watch", or
+  remote playback as requiring a subscription or not allowed
+  (`PlexStreamingApi.mentionsPass`);
+- a `403` on a decision while the client reaches the server through a
+  remote or relay connection: local playback never needs the pass, and a
+  `403` with a valid token is what remote clients reported.
+
+Neither rule could be checked against a real refusal for this release.
+A refusal they miss stays the error it was (an auth or bad-request
+error, or an unplayable decision): when in doubt, read `connectionKind`
+and `body`. Music is not covered by the requirement.
 
 ## Transcoder URLs
 
@@ -163,11 +197,22 @@ final full = await plex.library.item(ratingKey: track.ratingKey);
 final lyricsStream = full!.media.first.parts.first.streams
     .firstWhere((s) => s.isLyrics);
 final lyrics = await plex.streaming.lyrics(streamKey: lyricsStream.key!);
+for (final line in lyrics?.lines ?? const <PlexLyricLine>[]) {
+  print('${line.start} ${line.text}');
+}
 ```
 
 The lyrics are a stream of the full item (`isLyrics`, stream type 4).
-`lyrics()` returns the text, LRC or plain, or `null` when there is none.
-It decodes the file whatever its encoding: a byte-order mark first
+`lyrics()` returns `PlexLyrics`, or `null` when there is none: `text` is
+the file as decoded, `lines` its lines read as LRC. A line has `start`
+(`null` when unsynced), `text` and, for enhanced LRC, word `cues`
+(`position`, `endPosition`, `start`), the shape of dart_jellyfin's
+`JellyfinLyricLine`. Several `[mm:ss.xx]` on one line repeat it, ID tags
+(`[ar:…]`) go to `metadata`, and `[offset:±ms]` is applied to every time.
+`toLrc()` (with `enhanced: true` for word times) and `toPlainText()` write
+it back.
+
+The file is decoded whatever its encoding: a byte-order mark first
 (removed, so the first `[mm:ss.xx]` still starts its line), then the
 response's `charset`, then UTF-8 with Latin-1 as the fallback.
 
@@ -183,7 +228,8 @@ if (audio != null && audio.hasLoudness) {
 ```
 
 An analysed audio stream carries `gain`, `albumGain`, `peak`,
-`albumPeak`, `loudness` (LUFS) and `lra` (LU), from the server's own
-analysis. They survive a transcode that drops the file's ReplayGain tags:
+`albumPeak`, `albumRange`, `loudness` (LUFS), `lra` (LU), `startRamp` and
+`endRamp`, from the server's own analysis, and `canNormalizeLoudness`
+says whether the server can level it. They survive a transcode that drops the file's ReplayGain tags:
 read them from the original stream and apply the gain to the transcoded
 audio. `audioStream` is the selected audio stream of the first part.

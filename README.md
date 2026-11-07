@@ -25,7 +25,7 @@ Add `dart_plex` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_plex: ^0.2.2
+  dart_plex: ^0.3.0
 ```
 
 ---
@@ -41,15 +41,15 @@ dependencies:
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/key-round.png" width="32"></td>
-<td valign="middle"><b>Both sign-in flows</b><br>the <a href="https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html">PIN flow</a> at <code>plex.tv/link</code> and <a href="https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html">username and password</a>.</td>
+<td valign="middle"><b>JWT sign-in</b><br>an Ed25519 <a href="https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html">device key</a> and 7-day plex.tv tokens the client refreshes on its own, with the legacy PIN and password flows still there.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/globe.png" width="32"></td>
-<td valign="middle"><b>Server discovery</b><br><code>fetchResources()</code> lists owned and shared servers; <a href="https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html"><code>bestConnection()</code></a> picks local first, then HTTPS, then relay.</td>
+<td valign="middle"><b>Server discovery</b><br><code>fetchResources()</code> lists owned and shared servers; <a href="https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html"><code>connectToResource()</code></a> tries every connection at once and takes the best that answers, IPv6 included.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/layers.png" width="32"></td>
 <td valign="middle"><b>One client</b><br>a <code>PlexClient</code> holds the identity, the server and the token, and every sub-API works through it.</td>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/audio-lines.png" width="32"></td>
-<td valign="middle"><b>Audio streaming</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html"><code>startAudioTranscode()</code></a> starts an HLS or DASH transcode with a bitrate cap; <a href="https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html"><code>directFileUrl()</code></a> gives the original file.</td>
+<td valign="middle"><b>Streaming</b><br><a href="https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html"><code>startAudioTranscode()</code></a> and <code>startVideoTranscode()</code> make the decision and return the URL; <a href="https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html"><code>directFileUrl()</code></a> gives the original file.</td>
 </tr>
 <tr>
 <td valign="middle"><img src="https://raw.githubusercontent.com/ales-drnz/svg-icons/main/png/sliders-horizontal.png" width="32"></td>
@@ -90,20 +90,24 @@ Future<void> main() async {
     ),
   );
 
-  // 1. Sign in: the user enters the code at plex.tv/link.
-  final pin = await plex.account.createPin();
-  print('Enter ${pin.code} at https://plex.tv/link');
-  var state = pin;
-  while (!state.isAuthenticated) {
-    await Future<void>.delayed(const Duration(seconds: 2));
-    state = await plex.account.pollPin(id: pin.id);
+  // 1. Sign in with a device key: the user approves the PIN in a browser.
+  final key = await PlexDeviceKey.generate(); // persist it, see Client and sign-in
+  var pin = await plex.account.createJwtPin(key: key);
+  print('Sign in at ${plex.account.authAppUrl(pin)}');
+  while (!pin.isAuthenticated) {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    pin = await plex.account.pollJwtPin(id: pin.id, key: key);
   }
-  plex.setToken(state.authToken);
+  // The JWT lasts 7 days; the client refreshes it with the key.
+  await plex.useJwt(
+    PlexJwtSession(key: key, token: PlexJwt.parse(pin.authToken!)),
+  );
 
-  // 2. Find the user's server and connect to it.
+  // 2. Find the user's server and connect through the best connection
+  //    that answers.
   final servers = await plex.account.fetchResources();
   final server = servers.firstWhere((s) => s.owned);
-  plex.connect(server.bestConnection()!.uri, accessToken: server.accessToken);
+  await plex.connectToResource(server);
 
   // 3. Browse the music library.
   final sections = await plex.library.sections();
@@ -111,7 +115,7 @@ Future<void> main() async {
   final albums = await plex.library.allByType(
     sectionId: music.id,
     type: PlexMetadataType.album,
-    sort: 'titleSort:asc',
+    sort: PlexSort.titleSort.asc,
   );
 
   // 4. Stream the first track of the first album.
@@ -174,7 +178,7 @@ final page = await plex.library.allByType(
   sectionId: music.id,
   type: PlexMetadataType.album,
   filters: [PlexFilter.genre(6), PlexFilter.yearAfter(2009)],
-  sort: 'addedAt:desc',
+  sort: PlexSort.addedAt.desc,
 );
 print('Got ${page.items.length} of ${page.totalSize}');
 ```
@@ -199,7 +203,7 @@ Send a report on every state change and every 10 s while playing. See [Playback 
 ```dart
 final playlist = await plex.playlists.create(
   title: 'My Mix',
-  type: 'audio',
+  type: PlexMediaType.audio,
   machineIdentifier: machineId,
   itemRatingKeys: const ['12345', '12346'],
 );
@@ -219,7 +223,7 @@ await plex.streaming.pingUniversal(session: sessionId); // every 30 s while paus
 await plex.streaming.stopUniversal(session: sessionId); // when the user leaves
 ```
 
-The calls return URLs and never fetch the audio. See [Streaming](https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html) for direct files, video decisions, transcoder URLs, lyrics and loudness.
+The calls return URLs and never fetch the audio. See [Streaming](https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html) for video transcodes over HLS, DASH or HTTP, the remote-streaming pass, direct files, transcoder URLs, lyrics and loudness.
 
 ### Live TV
 
@@ -229,7 +233,7 @@ await plex.dvrs.tuneChannel(dvrId: dvrId, channel: '2.1');
 final rules = await plex.subscriptions.list();
 ```
 
-Most Live TV calls return the server's maps. See [Live TV](https://pub.dev/documentation/dart_plex/latest/topics/Live%20TV-topic.html) for sessions, DVRs, recording rules, tuners and the program guide.
+The answers are typed (`PlexDvr`, `PlexMediaSubscription`, …). See [Live TV](https://pub.dev/documentation/dart_plex/latest/topics/Live%20TV-topic.html) for sessions, DVRs, recording rules, tuners and the program guide.
 
 ### Errors
 
@@ -237,7 +241,8 @@ Most Live TV calls return the server's maps. See [Live TV](https://pub.dev/docum
 try {
   await plex.library.sections();
 } on PlexException catch (e) {
-  if (e.isAuthError) await signInAgain();
+  if (e.isPassRequired) showPassNeeded(); // remote video needs a pass
+  else if (e.isAuthError) await signInAgain();
   else if (e.isTransient) scheduleRetry(e.retryAfter);
   else showError(e.message);
 }
@@ -282,13 +287,13 @@ See [Images and hubs](https://pub.dev/documentation/dart_plex/latest/topics/Imag
 ## Documentation
 
 - [API reference](https://pub.dev/documentation/dart_plex/latest/), with these guides:
-  - [Client and sign-in](https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html): the client, credentials, the HTTP stack, tests, the PIN flow and server discovery
+  - [Client and sign-in](https://pub.dev/documentation/dart_plex/latest/topics/Client%20and%20sign-in-topic.html): the client, credentials, the HTTP stack, tests, JWT and PIN sign-in, Plex Home, the watchlist and connecting to a server
   - [Server](https://pub.dev/documentation/dart_plex/latest/topics/Server-topic.html): identity, activities, butler tasks, settings and administration
   - [Library](https://pub.dev/documentation/dart_plex/latest/topics/Library-topic.html): sections, items, filters, collections, editing and sonic radio
   - [Playlists](https://pub.dev/documentation/dart_plex/latest/topics/Playlists-topic.html): listing, creating and editing playlists, smart playlists and import
   - [Search](https://pub.dev/documentation/dart_plex/latest/topics/Search-topic.html): hub, section, flat and voice search
   - [Playback and play queues](https://pub.dev/documentation/dart_plex/latest/topics/Playback%20and%20play%20queues-topic.html): timeline reports, ratings, sessions, history and play queues
-  - [Streaming](https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html): audio and video transcodes, direct files, lyrics and loudness
+  - [Streaming](https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html): audio and video transcodes, the remote-streaming pass, direct files, lyrics and loudness
   - [Images and hubs](https://pub.dev/documentation/dart_plex/latest/topics/Images%20and%20hubs-topic.html): resized artwork, cache keys, UltraBlur and hubs
   - [Live TV](https://pub.dev/documentation/dart_plex/latest/topics/Live%20TV-topic.html): live sessions, DVRs, recording rules, tuners and the guide
   - [Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html): typed errors, cancellation, retries and paging

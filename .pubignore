@@ -19,6 +19,8 @@ pubspec.lock
 # Docs
 docs/
 
+.github/
+
 # AI tooling
 .claude/
 CLAUDE.md

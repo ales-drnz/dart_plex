@@ -21,7 +21,8 @@ A `PlexResponse<T>` carries `data`, `statusCode`, `headers` (lower-case
 names), `contentType` and the requested `uri`. `method` takes `'POST'`,
 `'PUT'` or `'DELETE'`, and `get()`, `post()`, `put()` and `delete()` are
 shorthands. `extraHeaders`, `data`, `absoluteUrl` and `cancelToken` are
-optional. `responseType` picks the decoding: `PlexResponseType.json`
+optional. An `extraHeaders` entry replaces the header of the same name,
+and an empty value removes it: `{'X-Plex-Token': ''}` sends no token. `responseType` picks the decoding: `PlexResponseType.json`
 (JSON when the server says so, text otherwise), `bytes` or `plain`.
 
 ## Raw bytes and streams

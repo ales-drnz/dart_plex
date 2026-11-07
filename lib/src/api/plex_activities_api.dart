@@ -21,16 +21,13 @@ class PlexActivitiesApi {
 
   /// `GET /activities` — list running activities.
   Future<List<PlexActivity>> list() => _http.requestJson(
-        '/activities',
-        itemsOf('Activity', PlexActivity.fromJson),
-      );
+    '/activities',
+    itemsOf('Activity', PlexActivity.fromJson),
+  );
 
   /// `DELETE /activities/{activityId}` — cancel a running activity
   /// (best-effort; some activity types cannot be cancelled).
   Future<void> cancel({required String activityId}) async {
-    await _http.request<void>(
-      '/activities/$activityId',
-      method: 'DELETE',
-    );
+    await _http.request<void>('/activities/$activityId', method: 'DELETE');
   }
 }

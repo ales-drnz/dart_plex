@@ -2,9 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-/// A Dart client for Plex Media Server 1.43.
+/// A Dart client for Plex Media Server 1.43 and plex.tv.
 ///
-/// [PlexClient] holds the client identity, the server and the token, and
+/// [PlexClient] holds the client identity, the server and the tokens, and
 /// exposes one sub-API per domain:
 ///
 /// ```dart
@@ -19,17 +19,21 @@
 ///   ),
 /// );
 ///
-/// // The user enters pin.code at plex.tv/link.
-/// var pin = await plex.account.createPin();
+/// // Sign in with a device key: the user approves the pin in a browser.
+/// final key = await PlexDeviceKey.generate();
+/// var pin = await plex.account.createJwtPin(key: key);
+/// openBrowser(plex.account.authAppUrl(pin));
 /// while (!pin.isAuthenticated) {
-///   await Future<void>.delayed(const Duration(seconds: 2));
-///   pin = await plex.account.pollPin(id: pin.id);
+///   await Future<void>.delayed(const Duration(seconds: 1));
+///   pin = await plex.account.pollJwtPin(id: pin.id, key: key);
 /// }
-/// plex.setToken(pin.authToken);
+/// await plex.useJwt(
+///   PlexJwtSession(key: key, token: PlexJwt.parse(pin.authToken!)),
+/// );
 ///
 /// final servers = await plex.account.fetchResources();
 /// final server = servers.firstWhere((s) => s.owned);
-/// plex.connect(server.bestConnection()!.uri, accessToken: server.accessToken);
+/// await plex.connectToResource(server);
 ///
 /// final sections = await plex.library.sections();
 /// final music = sections.firstWhere((s) => s.type == PlexLibraryType.music);
@@ -76,9 +80,11 @@ export 'src/plex_error_type.dart';
 export 'src/plex_events.dart';
 export 'src/plex_exception.dart';
 export 'src/plex_filter.dart';
+export 'src/plex_jwt.dart' show PlexDeviceKey, PlexJwt, PlexJwtSession;
 export 'src/plex_models.dart';
 export 'src/plex_paging.dart';
 export 'src/plex_server_models.dart';
+export 'src/plex_vocabulary.dart';
 export 'src/transport/plex_cancel_token.dart';
 export 'src/transport/plex_response.dart';
 export 'src/transport/plex_retry_policy.dart';

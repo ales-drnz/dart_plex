@@ -33,10 +33,7 @@ void main() {
     final req = adapter.last!;
     expect(req.method, 'POST');
     expect(req.uri.toString(), 'https://plex.tv/users/sign_in.json');
-    expect(
-      req.headers['Content-Type'],
-      'application/x-www-form-urlencoded',
-    );
+    expect(req.headers['Content-Type'], 'application/x-www-form-urlencoded');
     expect(
       utf8.decode(req.body),
       'user%5Blogin%5D=me%40example.com&user%5Bpassword%5D=p%26ss+word',

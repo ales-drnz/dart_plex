@@ -125,16 +125,16 @@ def client_lifecycle(t):
     return d
 
 def sign_in_flow(t):
-    d = D('sign_in_flow', 900, 300, t, 'Sign-in with a PIN, then the best connection to a server')
+    d = D('sign_in_flow', 900, 300, t, 'Sign-in with a device key and a JWT, then the best connection to a server')
     d.band(20, 20, 680, 120, 'plex.tv')
-    d.node(140, 85, 190, 60, 'createPin()', 'a 4-character code', role='lib')
-    d.node(360, 85, 190, 60, 'plex.tv/link', 'the user enters it', role='neutral', mono=False)
-    d.node(580, 85, 190, 60, 'pollPin(id:)', 'polled until authToken', role='lib')
-    d.node(790, 85, 150, 60, 'setToken()', role='app')
+    d.node(140, 85, 190, 60, 'createJwtPin(key:)', 'the public key, a PIN', role='lib', size=14)
+    d.node(360, 85, 190, 60, 'Auth App', 'the user signs in', role='neutral', mono=False)
+    d.node(580, 85, 190, 60, 'pollJwtPin()', 'until a 7-day JWT', role='lib')
+    d.node(790, 85, 150, 60, 'useJwt()', 'refreshed with the key', role='app', size=14)
     d.arrow('M235,85 L263,85'); d.arrow('M455,85 L483,85'); d.arrow('M675,85 L713,85')
     d.node(140, 235, 190, 60, 'fetchResources()', 'owned and shared servers', role='lib')
-    d.node(470, 235, 330, 60, 'bestConnection()', 'local, then https, then direct, then relay', role='lib')
-    d.node(790, 235, 150, 60, 'connect()', 'server and token', role='app', size=14)
+    d.node(470, 235, 330, 60, 'connectToResource()', 'every connection at once, the best that answers', role='lib')
+    d.node(790, 235, 150, 60, 'sub-APIs', 'server and token', role='app', size=14)
     d.arrow('M790,117 L790,160 L140,160 L140,203', kind='sec')
     d.arrow('M235,235 L303,235'); d.arrow('M635,235 L713,235')
     return d

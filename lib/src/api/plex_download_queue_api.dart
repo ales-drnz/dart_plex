@@ -4,6 +4,7 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_models.dart';
 import 'plex_play_queues_api.dart';
 import 'plex_streaming_api.dart';
 
@@ -22,22 +23,14 @@ class PlexDownloadQueueApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.downloadQueue].
   PlexDownloadQueueApi(this._http);
 
-  /// `POST /downloadQueue` — create a new download queue.
-  Future<Map<String, Object?>> create() async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/downloadQueue',
-      method: 'POST',
-    );
-    return res.data ?? const {};
-  }
+  /// `POST /downloadQueue` — this client's download queue, created when
+  /// it has none (one per client and user; verified on PMS 1.43.2).
+  Future<PlexDownloadQueue> create() =>
+      _http.requestJson('/downloadQueue', PlexDownloadQueue.of, method: 'POST');
 
-  /// `GET /downloadQueue/{queueId}` — fetch a queue's status.
-  Future<Map<String, Object?>> get({required String queueId}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/downloadQueue/$queueId',
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /downloadQueue/{queueId}` — a queue's status.
+  Future<PlexDownloadQueue> get({required String queueId}) =>
+      _http.requestJson('/downloadQueue/$queueId', PlexDownloadQueue.of);
 
   /// `POST /downloadQueue/{queueId}/add?keys={ratingKeysJoinedByComma}` —
   /// queue items for offline sync.
@@ -52,32 +45,27 @@ class PlexDownloadQueueApi {
     );
   }
 
-  /// `GET /downloadQueue/{queueId}/items` — every item in the queue.
-  Future<Map<String, Object?>> items({required String queueId}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/downloadQueue/$queueId/items',
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /downloadQueue/{queueId}/items` — every item in the queue, with
+  /// its status and decision.
+  Future<List<PlexDownloadQueueItem>> items({required String queueId}) =>
+      _http.requestJson(
+        '/downloadQueue/$queueId/items',
+        PlexDownloadQueueItem.listOf,
+      );
 
-  /// `GET /downloadQueue/{queueId}/items/{itemId}` — one queued
-  /// item.
-  Future<Map<String, Object?>> item({
+  /// `GET /downloadQueue/{queueId}/items/{itemId}` — one queued item, or
+  /// `null` when the answer holds none.
+  Future<PlexDownloadQueueItem?> item({
     required String queueId,
     required String itemId,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/downloadQueue/$queueId/items/$itemId',
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/downloadQueue/$queueId/items/$itemId',
+    (json) => PlexDownloadQueueItem.listOf(json).firstOrNull,
+  );
 
   /// `DELETE /downloadQueue/{queueId}/items/{itemId}` — remove an
   /// item from the queue.
-  Future<void> remove({
-    required String queueId,
-    required String itemId,
-  }) async {
+  Future<void> remove({required String queueId, required String itemId}) async {
     await _http.request<void>(
       '/downloadQueue/$queueId/items/$itemId',
       method: 'DELETE',
@@ -98,27 +86,33 @@ class PlexDownloadQueueApi {
   }
 
   /// `GET /downloadQueue/{queueId}/item/{itemId}/decision` — the
-  /// decision document for a queued item (which media source, what
-  /// transcode profile).
-  Future<Map<String, Object?>> itemDecision({
+  /// decision for a queued item (which media source, what transcode
+  /// profile); [PlexTranscodeDecision.raw] holds the item's metadata.
+  Future<PlexTranscodeDecision> itemDecision({
     required String queueId,
     required String itemId,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/downloadQueue/$queueId/item/$itemId/decision',
+  }) => _http.requestJson(
+    '/downloadQueue/$queueId/item/$itemId/decision',
+    _decision,
+  );
+
+  static PlexTranscodeDecision _decision(Object? json) {
+    final c = json is Map<String, Object?> ? json['MediaContainer'] : null;
+    final container = c is Map<String, Object?> ? c : const <String, Object?>{};
+    final code = container['generalDecisionCode'];
+    return PlexTranscodeDecision(
+      code: code is int ? code : int.tryParse('$code'),
+      raw: container,
     );
-    return res.data ?? const {};
   }
 
-  /// `GET /downloadQueue/{queueId}/item/{itemId}/media` — the media
-  /// payload (used by the mobile downloader to fetch bytes).
-  Future<Map<String, Object?>> itemMedia({
-    required String queueId,
-    required String itemId,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/downloadQueue/$queueId/item/$itemId/media',
-    );
-    return res.data ?? const {};
+  /// `GET /downloadQueue/{queueId}/item/{itemId}/media` — the URL of the
+  /// item's file, once it is `available`: the media itself, not JSON, so
+  /// it is a URL (with the token) to hand to `downloadToFile` or
+  /// [PlexClient.requestStream].
+  String itemMediaUrl({required String queueId, required String itemId}) {
+    final base = _http.baseUrl;
+    final token = Uri.encodeQueryComponent(_http.token ?? '');
+    return '$base/downloadQueue/$queueId/item/$itemId/media?X-Plex-Token=$token';
   }
 }

@@ -94,7 +94,7 @@ final history = await plex.sessions.history(
           .millisecondsSinceEpoch ~/
       1000,
   size: 100,
-  sort: 'viewedAt:desc',
+  sort: const PlexSort('viewedAt').desc,
 );
 print('${history.items.length} of ${history.totalSize}');
 for (final h in history.items) {
@@ -134,7 +134,7 @@ another device can add to it. Local playback works without one, from
 final machineId = (await plex.server.identity()).machineIdentifier;
 
 final queue = await plex.playQueues.create(
-  type: 'audio',
+  type: PlexMediaType.audio,
   uri: PlexPlayQueuesApi.seedFromItems(
     machineIdentifier: machineId,
     ratingKeys: const ['12345', '12346', '12347'],

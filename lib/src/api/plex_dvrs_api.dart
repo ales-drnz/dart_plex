@@ -4,6 +4,7 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_models.dart';
 import 'plex_live_tv_api.dart';
 
 /// `/livetv/dvrs/*` — Plex DVR backend configuration.
@@ -20,12 +21,12 @@ class PlexDvrsApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.dvrs].
   PlexDvrsApi(this._http);
 
-  /// `GET /livetv/dvrs/{dvrId}` — one DVR's full configuration.
-  Future<Map<String, Object?>> get({required String dvrId}) async {
-    final res =
-        await _http.request<Map<String, Object?>>('/livetv/dvrs/$dvrId');
-    return res.data ?? const {};
-  }
+  /// `GET /livetv/dvrs/{dvrId}` — one DVR's full configuration, or
+  /// `null` when the answer holds none.
+  Future<PlexDvr?> get({required String dvrId}) => _http.requestJson(
+    '/livetv/dvrs/$dvrId',
+    (json) => PlexDvr.listOf(json).firstOrNull,
+  );
 
   /// `DELETE /livetv/dvrs/{dvrId}` — drop a DVR (its recordings
   /// stay on disk).
@@ -138,7 +139,3 @@ class PlexDvrsApi {
     );
   }
 }
-
-/// The 0.1 name of [PlexDvrsApi].
-@Deprecated('Use PlexDvrsApi. Removed in 0.3.')
-typedef PlexDVRsApi = PlexDvrsApi;

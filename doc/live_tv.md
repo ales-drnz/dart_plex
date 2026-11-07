@@ -1,18 +1,18 @@
 Follow live sessions, configure DVRs and tuners, manage recording rules and read the program guide.
 
 Live TV streams broadcast channels through a tuner; the DVR records
-programs to disk. Most of these calls return the server's maps
-(`Map<String, Object?>`): check the type of a nested value before you
-use it.
+programs to disk. The answers are typed (`PlexDvr`, `PlexTunerDevice`,
+`PlexMediaSubscription`, `PlexLineup`, …), each with its entry in `raw`.
+Their shapes follow the API document: the test server has no tuner, so
+beyond the grabber list and the guide languages they could not be checked
+against a live answer.
 
 ## Live sessions
 
 ```dart
-final liveSessions = await plex.liveTv.sessions();
-for (final entry in liveSessions) {
-  final player = entry['Player'];
-  final playerTitle = player is Map<String, Object?> ? player['title'] : null;
-  print('${entry['title']} on ${entry['channelCallSign']} ($playerTitle)');
+final liveSessions = await plex.liveTv.sessions(); // PlexMetadata
+for (final item in liveSessions) {
+  print('${item.title} (${item.raw['channelCallSign']})');
 }
 ```
 
@@ -25,14 +25,14 @@ Past Live TV plays are in the playback history (see
 
 ```dart
 final dvrs = await plex.liveTv.dvrs();
-final channels =
-    await plex.liveTv.dvrChannels(dvrKey: dvrs.first['key']! as String);
+final channels = await plex.liveTv.dvrChannels(dvrKey: dvrs.first.key);
 
 await plex.dvrs.reloadGuide(dvrId: dvrId);
 await plex.dvrs.tuneChannel(dvrId: dvrId, channel: '2.1');
 ```
 
-`dvrChannels()` takes the `key` of an entry from `liveTv.dvrs()`.
+A `PlexDvr` has its `key`, `uuid`, `lineup` and `devices`.
+`dvrChannels()` takes the `key`.
 `plex.dvrs` takes the DVR's id and configures one DVR: `get()`, `delete()` (recordings stay on
 disk), `setPreferences()`, `addLineup()` and `deleteLineup()`,
 `reloadGuide()` and `stopReloadGuide()`, `tuneChannel()`, `addDevice()`
@@ -41,22 +41,19 @@ and `removeDevice()`.
 ## Recording subscriptions
 
 ```dart
-final body = await plex.subscriptions.list();
-final container = body['MediaContainer'];
-final list =
-    container is Map<String, Object?> ? container['MediaSubscription'] : null;
-final subs = list is List
-    ? list.whereType<Map<String, Object?>>().toList()
-    : const <Map<String, Object?>>[];
+final subs = await plex.subscriptions.list(includeGrabs: true);
 for (final sub in subs) {
-  print('${sub['title']} - ${sub['type']}');
+  print('${sub.title} - ${sub.airingsType}, ${sub.grabs.length} recordings');
 }
 
-await plex.subscriptions.delete(subscriptionId: '${subs.first['id']}');
+await plex.subscriptions.delete(
+  subscriptionId: subs.first.key!.split('/').last,
+);
 ```
 
 A subscription is a recording rule. `create()` adds one for a library
-section, starting from the `template(guid:)` of a program. `get()`,
+section, starting from the `template(guid:)` of a program (the
+subscriptions the server proposes for it). `get()`,
 `editPreferences()`, `reorder()` (the order settles conflicts) and
 `delete()` manage one; recordings already on disk stay.
 `scheduledRecordings()` lists what the DVR will record, `processAll()`

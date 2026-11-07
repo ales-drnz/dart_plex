@@ -59,13 +59,9 @@ void main() {
     });
 
     test('classification helpers', () {
-      // ignore: deprecated_member_use_from_same_package
-      expect(PlexErrorType.connection.isRetriable, isTrue);
-      // ignore: deprecated_member_use_from_same_package
-      expect(PlexErrorType.timeout.isRetriable, isTrue);
       expect(PlexErrorType.auth.isAuthError, isTrue);
-      // ignore: deprecated_member_use_from_same_package
-      expect(PlexErrorType.notFound.isRetriable, isFalse);
+      expect(PlexErrorType.passRequired.isAuthError, isFalse);
+      expect(PlexErrorType.fromHttpStatus(498), PlexErrorType.auth);
     });
   });
 
@@ -122,11 +118,7 @@ void main() {
                 },
               ],
             },
-            {
-              'ratingKey': '12346',
-              'type': 'album',
-              'title': 'Other Album',
-            },
+            {'ratingKey': '12346', 'type': 'album', 'title': 'Other Album'},
           ],
         },
       };
@@ -217,10 +209,7 @@ void main() {
         ],
       });
       expect(r.isServer, isTrue);
-      expect(
-        r.bestConnection()!.uri,
-        'https://192-168-0-10.plex.direct:32400',
-      );
+      expect(r.bestConnection()!.uri, 'https://192-168-0-10.plex.direct:32400');
     });
   });
 

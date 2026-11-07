@@ -4,6 +4,8 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/livetv/epg/*` — Electronic Program Guide.
 ///
@@ -20,111 +22,97 @@ class PlexEpgApi {
   PlexEpgApi(this._http);
 
   /// `GET /livetv/epg/countries` — every country with EPG support.
-  Future<Map<String, Object?>> countries() async {
-    final res =
-        await _http.request<Map<String, Object?>>('/livetv/epg/countries');
-    return res.data ?? const {};
-  }
+  Future<List<PlexEpgCountry>> countries() => _http.requestJson(
+    '/livetv/epg/countries',
+    itemsOf('Country', PlexEpgCountry.fromJson),
+  );
 
-  /// `GET /livetv/epg/languages` — every language with EPG support.
-  Future<Map<String, Object?>> languages() async {
-    final res =
-        await _http.request<Map<String, Object?>>('/livetv/epg/languages');
-    return res.data ?? const {};
-  }
+  /// `GET /livetv/epg/languages` — every language with EPG support
+  /// (verified on PMS 1.43.2: 594 of them).
+  Future<List<PlexEpgLanguage>> languages() => _http.requestJson(
+    '/livetv/epg/languages',
+    itemsOf('Language', PlexEpgLanguage.fromJson),
+  );
 
   /// `GET /livetv/epg/countries/{country}/{epgId}/lineups?postalCode={zip}` —
   /// lineups (channel packages) for one country.
-  Future<Map<String, Object?>> countryLineups({
+  Future<List<PlexLineup>> countryLineups({
     required String country,
     required String epgId,
     String? postalCode,
-  }) async {
-    final qp = <String, Object?>{};
-    if (postalCode != null) qp['postalCode'] = postalCode;
-    final res = await _http.request<Map<String, Object?>>(
-      '/livetv/epg/countries/$country/$epgId/lineups',
-      queryParameters: qp.isEmpty ? null : qp,
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/livetv/epg/countries/$country/$epgId/lineups',
+    PlexLineup.listOf,
+    queryParameters: postalCode == null ? null : {'postalCode': postalCode},
+  );
 
   /// `GET /livetv/epg/countries/{country}/{epgId}/regions` — admin
-  /// regions inside a country (used to refine lineup lookup).
-  Future<Map<String, Object?>> countryRegions({
+  /// regions inside a country (used to refine lineup lookup). The API
+  /// document gives them the shape of a country.
+  Future<List<PlexEpgCountry>> countryRegions({
     required String country,
     required String epgId,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/livetv/epg/countries/$country/$epgId/regions',
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/livetv/epg/countries/$country/$epgId/regions',
+    itemsOf('Country', PlexEpgCountry.fromJson),
+  );
 
   /// `GET /livetv/epg/countries/{country}/{epgId}/regions/{region}/lineups`
   /// — lineups available inside one admin region.
-  Future<Map<String, Object?>> regionLineups({
+  Future<List<PlexLineup>> regionLineups({
     required String country,
     required String epgId,
     required String region,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/livetv/epg/countries/$country/$epgId/regions/$region/lineups',
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/livetv/epg/countries/$country/$epgId/regions/$region/lineups',
+    PlexLineup.listOf,
+  );
 
   /// `GET /livetv/epg/lineup?device={d}&lineupGroup={g}` — server's
   /// recommended lineup for a device (uses postal code + tuning).
   ///
   /// Both [device] and [lineupGroup] are required by the server; omitting
   /// either yields a 404.
-  Future<Map<String, Object?>> bestLineup({
+  Future<List<PlexLineup>> bestLineup({
     required String device,
     required String lineupGroup,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/livetv/epg/lineup',
-      queryParameters: {'device': device, 'lineupGroup': lineupGroup},
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/livetv/epg/lineup',
+    PlexLineup.listOf,
+    queryParameters: {'device': device, 'lineupGroup': lineupGroup},
+  );
 
   /// `GET /livetv/epg/channelmap?device={d}&lineup={l}` — best
   /// mapping between device channels and EPG lineup entries.
-  Future<Map<String, Object?>> channelMap({
+  Future<List<PlexChannelMapping>> channelMap({
     required String device,
     required String lineup,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/livetv/epg/channelmap',
-      queryParameters: {'device': device, 'lineup': lineup},
-    );
-    return res.data ?? const {};
-  }
+  }) => _http.requestJson(
+    '/livetv/epg/channelmap',
+    PlexChannelMapping.listOf,
+    queryParameters: {'device': device, 'lineup': lineup},
+  );
 
   /// `GET /livetv/epg/channels?lineup={l}` — channels in a lineup.
-  Future<Map<String, Object?>> channels({required String lineup}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/livetv/epg/channels',
-      queryParameters: {'lineup': lineup},
-    );
-    return res.data ?? const {};
-  }
+  Future<List<PlexEpgChannel>> channels({required String lineup}) =>
+      _http.requestJson(
+        '/livetv/epg/channels',
+        itemsOf('Channel', PlexEpgChannel.fromJson),
+        queryParameters: {'lineup': lineup},
+      );
 
   /// `GET /livetv/epg/lineupchannels?lineup={l1}&lineup={l2}&…` — channels
   /// across multiple lineups in one call.
   ///
   /// [lineup] is the list of lineup URIs to fetch; it is serialized as
-  /// repeated `lineup=` query parameters. Must not be empty.
-  Future<Map<String, Object?>> lineupChannels({
-    required List<String> lineup,
-  }) async {
+  /// repeated `lineup=` query parameters. Must not be empty. Each lineup
+  /// comes with its [PlexLineup.channels].
+  Future<List<PlexLineup>> lineupChannels({required List<String> lineup}) {
     assert(lineup.isNotEmpty, 'lineup must contain at least one URI');
-    final res = await _http.request<Map<String, Object?>>(
+    return _http.requestJson(
       '/livetv/epg/lineupchannels',
+      PlexLineup.listOf,
       queryParameters: {'lineup': lineup},
     );
-    return res.data ?? const {};
   }
 }

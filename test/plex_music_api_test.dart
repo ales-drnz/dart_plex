@@ -47,8 +47,12 @@ void main() {
     });
 
     test('a page sends Start and Size together, plus the sort', () async {
-      await plex.library
-          .children(ratingKey: '42', start: 50, size: 25, sort: 'year:desc');
+      await plex.library.children(
+        ratingKey: '42',
+        start: 50,
+        size: 25,
+        sort: PlexSort.year.desc,
+      );
       expect(query(), {
         'X-Plex-Container-Start': '50',
         'X-Plex-Container-Size': '25',
@@ -56,12 +60,14 @@ void main() {
       });
     });
 
-    test('size alone still sends Start (PMS ignores Size on its own)',
-        () async {
-      await plex.library.children(ratingKey: '42', size: 25);
-      expect(query()['X-Plex-Container-Start'], '0');
-      expect(query()['X-Plex-Container-Size'], '25');
-    });
+    test(
+      'size alone still sends Start (PMS ignores Size on its own)',
+      () async {
+        await plex.library.children(ratingKey: '42', size: 25);
+        expect(query()['X-Plex-Container-Start'], '0');
+        expect(query()['X-Plex-Container-Size'], '25');
+      },
+    );
 
     test('start without size is refused instead of being ignored upstream', () {
       expect(
@@ -145,35 +151,14 @@ void main() {
         'excludeGrandparentID': '1',
       });
     });
-
-    test('the deprecated int forms send the same parameters', () async {
-      await plex.library.nearestToTrack(
-        ratingKey: '5',
-        // ignore: deprecated_member_use_from_same_package
-        excludeParentID: 2,
-      );
-      expect(query()['excludeParentID'], '2');
-    });
-
-    test('both forms at once are refused', () {
-      expect(
-        () => plex.library.nearestToTrack(
-          ratingKey: '5',
-          excludeParentRatingKey: '2',
-          // ignore: deprecated_member_use_from_same_package
-          excludeParentID: 2,
-        ),
-        throwsArgumentError,
-      );
-    });
   });
 
   group('playlists', () {
     test('list narrows on the server with PlexFilter', () async {
       await plex.playlists.list(
-        type: 'audio',
+        type: PlexMediaType.audio,
         filters: [PlexFilter.titleContains('mix'), PlexFilter.rated()],
-        sort: 'titleSort',
+        sort: PlexSort.titleSort,
         size: 100,
       );
       expect(adapter.lastRequest!.uri.path, '/playlists');
@@ -189,7 +174,7 @@ void main() {
 
     test('count takes the same narrowing and asks for no rows', () async {
       final n = await plex.playlists.count(
-        type: 'audio',
+        type: PlexMediaType.audio,
         filters: [PlexFilter.rated()],
       );
       expect(n, 7);
@@ -268,27 +253,7 @@ void main() {
       expect(query().containsKey('playQueueItemID'), isFalse);
     });
 
-    test('the deprecated String state still works, but not with playState',
-        () async {
-      await plex.playback.timeline(
-        ratingKey: '1',
-        // ignore: deprecated_member_use_from_same_package
-        state: 'buffering',
-        timeMs: 0,
-        durationMs: 1000,
-      );
-      expect(query()['state'], 'buffering');
-      expect(
-        () => plex.playback.timeline(
-          ratingKey: '1',
-          playState: PlexPlayState.playing,
-          // ignore: deprecated_member_use_from_same_package
-          state: 'playing',
-          timeMs: 0,
-          durationMs: 1000,
-        ),
-        throwsArgumentError,
-      );
+    test('an unknown playState is refused', () async {
       expect(
         () => plex.playback.timeline(
           ratingKey: '1',
@@ -328,10 +293,10 @@ void main() {
       await plex.playback.scrobble(ratingKey: '9');
       expect(adapter.lastRequest!.method, 'PUT');
       expect(adapter.lastRequest!.uri.path, '/:/scrobble');
-      expect(
-        query(),
-        {'key': '9', 'identifier': 'com.plexapp.plugins.library'},
-      );
+      expect(query(), {
+        'key': '9',
+        'identifier': 'com.plexapp.plugins.library',
+      });
       await plex.playback.unscrobble(ratingKey: '9');
       expect(adapter.lastRequest!.method, 'PUT');
       await plex.playback.rate(ratingKey: '9', rating: 8);
@@ -441,22 +406,20 @@ void main() {
       expect(PlexArtwork.versionOf(null), isNull);
       expect(PlexArtwork.versionOf('/library/metadata/2/thumb'), isNull);
       expect(PlexArtwork.versionOf('https://img.example/x.jpg'), isNull);
-      expect(
-        PlexArtwork.versionOf('/library/metadata/2/thumb/abc'),
-        isNull,
-      );
-      expect(
-        PlexArtwork.versionOf('/library/metadata/2/art/17?x=1'),
-        '17',
-      );
+      expect(PlexArtwork.versionOf('/library/metadata/2/thumb/abc'), isNull);
+      expect(PlexArtwork.versionOf('/library/metadata/2/art/17?x=1'), '17');
     });
   });
 
   group('notification events (frames captured from PMS 1.43.2)', () {
     List<PlexEvent> decode(String name) {
-      final json = jsonDecode(
-        File('test/fixtures/notifications/$name.json').readAsStringSync(),
-      ) as Map<String, dynamic>;
+      final json =
+          jsonDecode(
+                File(
+                  'test/fixtures/notifications/$name.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, dynamic>;
       return PlexNotification.fromJson(json).events;
     }
 
@@ -528,8 +491,11 @@ void main() {
         for (final n in ['playing_playing', 'activity_ended', 'progress'])
           PlexNotification.fromJson(
             jsonDecode(
-              File('test/fixtures/notifications/$n.json').readAsStringSync(),
-            ) as Map<String, dynamic>,
+                  File(
+                    'test/fixtures/notifications/$n.json',
+                  ).readAsStringSync(),
+                )
+                as Map<String, dynamic>,
           ),
       ]);
       final events = await frames.events().toList();

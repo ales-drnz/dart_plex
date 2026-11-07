@@ -88,7 +88,7 @@ extension PlexDownload on PlexClient {
 Future<File> _createPart(String path) async {
   final target = File(path);
   await target.parent.create(recursive: true);
-  for (var i = 0;; i++) {
+  for (var i = 0; ; i++) {
     final stamp = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
     final part = File('$path.$stamp${i == 0 ? '' : '-$i'}.part');
     try {

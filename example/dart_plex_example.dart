@@ -19,20 +19,26 @@ Future<void> main() async {
   );
 
   try {
-    final user = await plex.account.signInWithPassword(
-      username: 'user',
-      password: 'password',
+    // Sign in with a device key; persist key and token with
+    // session.toJson() to skip this next time.
+    final key = await PlexDeviceKey.generate();
+    var pin = await plex.account.createJwtPin(key: key);
+    print('Sign in at ${plex.account.authAppUrl(pin)}');
+    while (!pin.isAuthenticated) {
+      if (pin.isExpired) return;
+      await Future<void>.delayed(const Duration(seconds: 1));
+      pin = await plex.account.pollJwtPin(id: pin.id, key: key);
+    }
+    await plex.useJwt(
+      PlexJwtSession(key: key, token: PlexJwt.parse(pin.authToken!)),
     );
-    plex.setToken(user.authToken);
 
     final resources = await plex.account.fetchResources();
     final server = resources.firstWhere((r) => r.owned && r.isServer);
-    final connection = server.bestConnection();
-    if (connection == null) {
-      print('No reachable connection for ${server.name}');
-      return;
-    }
-    plex.connect(connection.uri, accessToken: server.accessToken);
+    final connection = await plex.connectToResource(server);
+    print(
+      'Reached ${server.name} at ${connection.uri} (${connection.kind.name})',
+    );
 
     final identity = await plex.server.identity();
     print('Connected to ${server.name} (PMS ${identity.version})');
@@ -50,11 +56,10 @@ Future<void> main() async {
       (start, size) async => (await plex.library.allByType(
         sectionId: music.first.id,
         type: PlexMetadataType.album,
-        sort: 'titleSort',
+        sort: PlexSort.titleSort,
         start: start,
         size: size,
-      ))
-          .items,
+      )).items,
       pageSize: 50,
       limit: 200,
     );
@@ -69,8 +74,9 @@ Future<void> main() async {
       size: 1,
     );
     if (recent.isEmpty) return;
-    final tracks =
-        await plex.library.children(ratingKey: recent.first.ratingKey);
+    final tracks = await plex.library.children(
+      ratingKey: recent.first.ratingKey,
+    );
     if (tracks.isEmpty) return;
     final transcode = await plex.streaming.startAudioTranscode(
       ratingKey: tracks.first.ratingKey,

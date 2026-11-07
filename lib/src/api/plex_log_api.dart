@@ -28,11 +28,7 @@ class PlexLogApi {
     await _http.request<void>(
       '/log',
       method: 'PUT',
-      queryParameters: {
-        'level': level,
-        'message': message,
-        'source': source,
-      },
+      queryParameters: {'level': level, 'message': message, 'source': source},
     );
   }
 

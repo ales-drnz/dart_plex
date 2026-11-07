@@ -3,21 +3,21 @@ List, create and edit playlists, read smart playlists and import playlist files.
 ## Listing and counting
 
 ```dart
-final audio = await plex.playlists.list(type: 'audio', size: 100);
+final audio = await plex.playlists.list(type: PlexMediaType.audio, size: 100);
 
 // Narrowed by the server: title contains "mix", and rated.
 final mixes = await plex.playlists.list(
-  type: 'audio',
+  type: PlexMediaType.audio,
   filters: [PlexFilter.titleContains('mix'), PlexFilter.rated()],
-  sort: 'titleSort',
+  sort: PlexSort.titleSort,
 );
 final count = await plex.playlists.count(
-  type: 'audio',
+  type: PlexMediaType.audio,
   filters: [PlexFilter.titleContains('mix')],
 );
 ```
 
-`type` is `'audio'`, `'video'` or `'photo'`, and `smart` keeps only smart
+`type` is `PlexMediaType.audio`, `video` or `photo`, and `smart` keeps only smart
 (`true`) or regular (`false`) playlists. `filters` and `sort` work as on
 `allByType()` (see the filters in
 [Library](https://pub.dev/documentation/dart_plex/latest/topics/Library-topic.html));
@@ -32,7 +32,7 @@ final machineId = (await plex.server.identity()).machineIdentifier;
 
 final playlist = await plex.playlists.create(
   title: 'My Mix',
-  type: 'audio',
+  type: PlexMediaType.audio,
   machineIdentifier: machineId,
   itemRatingKeys: const ['12345', '12346', '12347'],
 );
@@ -83,7 +83,7 @@ await plex.playlists.delete(playlistId: playlist.ratingKey);
 
 ```dart
 final generators = await plex.playlists.generators(playlistId: smart.ratingKey);
-final generatorId = '${generators.first['id']}';
+final generatorId = '${generators.first.id}';
 final produced = await plex.playlists.generatorItems(
   playlistId: smart.ratingKey,
   generatorId: generatorId,
@@ -93,8 +93,8 @@ final produced = await plex.playlists.generatorItems(
 final imported = await plex.playlists.upload(path: '/srv/music/playlists');
 ```
 
-`generators()` returns the server's maps for the generators that feed a
-smart playlist. `reprocessGenerator()` runs one again with the action
+`generators()` returns the `PlexPlayQueueGenerator`s that feed a smart
+playlist: `id`, `uri` (the query), `createdAt`, `updatedAt`. `reprocessGenerator()` runs one again with the action
 `'reprocess'`, `'disable'` or `'enable'`. `upload()` turns each `.m3u`
 file at `path` into a playlist; with `force: false` an existing playlist
 from the same path is kept and the import gets a new, dated name.

@@ -25,30 +25,13 @@ class PlexPlaybackApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.playback].
   PlexPlaybackApi(this._http);
 
-  /// `'stopped'` — playback ended or was cancelled.
-  @Deprecated('Use PlexPlayState.stopped')
-  static const String stateStopped = 'stopped';
-
-  /// `'paused'` — playback is paused but the session is still alive.
-  @Deprecated('Use PlexPlayState.paused')
-  static const String statePaused = 'paused';
-
-  /// `'playing'` — playback is actively progressing.
-  @Deprecated('Use PlexPlayState.playing')
-  static const String statePlaying = 'playing';
-
-  /// `'buffering'` — playback is stalled while the player refills its buffer.
-  @Deprecated('Use PlexPlayState.buffering')
-  static const String stateBuffering = 'buffering';
-
   /// Report a playback heartbeat (`/:/timeline`). Send one on every state
   /// change plus a periodic progress tick — Plex recommends every 10 s on
   /// LAN, 20 s on cellular.
   ///
   /// [timeMs] is the playhead and [durationMs] the item's length, both in
-  /// milliseconds. [playState] is what the player is doing (the `String`
-  /// [state] is deprecated). [ratingKey] is the item's rating key; `key`
-  /// is sent as
+  /// milliseconds. [playState] is what the player is doing. [ratingKey]
+  /// is the item's rating key; `key` is sent as
   /// `/library/metadata/{ratingKey}`. [playQueueItemID] is the entry id of
   /// a server-side play queue ([PlexPlayQueuesApi]); leave it null when
   /// you are not playing one — never send a made-up value.
@@ -80,25 +63,19 @@ class PlexPlaybackApi {
   /// A [timeMs] past [durationMs] (a playhead that rounds past the end) is
   /// sent as [durationMs]: PMS answers 400 to `time > duration`.
   ///
-  /// Throws an [ArgumentError] when [durationMs] is not positive or
-  /// [timeMs] is negative.
+  /// Throws an [ArgumentError] when [durationMs] is not positive, [timeMs]
+  /// is negative or [playState] is [PlexPlayState.unknown].
   Future<void> timeline({
     required String ratingKey,
-    PlexPlayState? playState,
-    @Deprecated('Use playState (a PlexPlayState)') String? state,
+    required PlexPlayState playState,
     required int timeMs,
     required int durationMs,
     int? playQueueItemID,
-    @Deprecated('Use playQueueItemID (an int)') String? playQueueItemId,
     bool continuing = false,
   }) async {
-    if ((playState == null) == (state == null)) {
-      throw ArgumentError('Pass exactly one of playState and state.');
-    }
     if (playState == PlexPlayState.unknown) {
       throw ArgumentError.value(playState, 'playState', 'is not reportable');
     }
-    final wireState = playState?.wire ?? state!;
     if (durationMs <= 0) {
       throw ArgumentError.value(
         durationMs,
@@ -110,21 +87,15 @@ class PlexPlaybackApi {
     if (timeMs < 0) {
       throw ArgumentError.value(timeMs, 'timeMs', 'must not be negative');
     }
-    if (playQueueItemID != null && playQueueItemId != null) {
-      throw ArgumentError(
-        'Pass playQueueItemID or the deprecated playQueueItemId, not both.',
-      );
-    }
-    final queueItem = playQueueItemID?.toString() ?? playQueueItemId;
     final qp = <String, Object?>{
       'ratingKey': ratingKey,
       'key': '/library/metadata/$ratingKey',
-      'state': wireState,
+      'state': playState.wire,
       'time': timeMs > durationMs ? durationMs : timeMs,
       'duration': durationMs,
       'continuing': continuing ? 1 : 0,
     };
-    if (queueItem != null) qp['playQueueItemID'] = queueItem;
+    if (playQueueItemID != null) qp['playQueueItemID'] = playQueueItemID;
     await _http.request<void>('/:/timeline', queryParameters: qp);
   }
 
@@ -135,10 +106,7 @@ class PlexPlaybackApi {
     await _http.request<void>(
       '/:/scrobble',
       method: 'PUT',
-      queryParameters: {
-        'key': ratingKey,
-        'identifier': _libraryIdentifier,
-      },
+      queryParameters: {'key': ratingKey, 'identifier': _libraryIdentifier},
     );
   }
 
@@ -148,10 +116,7 @@ class PlexPlaybackApi {
     await _http.request<void>(
       '/:/unscrobble',
       method: 'PUT',
-      queryParameters: {
-        'key': ratingKey,
-        'identifier': _libraryIdentifier,
-      },
+      queryParameters: {'key': ratingKey, 'identifier': _libraryIdentifier},
     );
   }
 
@@ -173,6 +138,5 @@ class PlexPlaybackApi {
   Future<void> setFavorite({
     required String ratingKey,
     required bool isFavorite,
-  }) =>
-      rate(ratingKey: ratingKey, rating: isFavorite ? 10 : 0);
+  }) => rate(ratingKey: ratingKey, rating: isFavorite ? 10 : 0);
 }

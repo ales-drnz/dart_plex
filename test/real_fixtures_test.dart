@@ -18,9 +18,11 @@ Map<String, Object?> _map(String name) =>
     jsonDecode(File('test/fixtures/real/$name.json').readAsStringSync())
         as Map<String, Object?>;
 
-List<PlexMetadata> _items(String name) =>
-    PlexMediaContainer.fromJson(_map(name), 'Metadata', PlexMetadata.fromJson)
-        .items;
+List<PlexMetadata> _items(String name) => PlexMediaContainer.fromJson(
+  _map(name),
+  'Metadata',
+  PlexMetadata.fromJson,
+).items;
 
 void main() {
   test('album detail carries counts, dates and artwork version', () {
@@ -90,8 +92,9 @@ void main() {
     final butler =
         (_map('butler')['ButlerTasks']! as Map)['ButlerTask']! as List;
     expect(
-      butler
-          .map((t) => PlexButlerTask.fromJson(t as Map<String, Object?>).name),
+      butler.map(
+        (t) => PlexButlerTask.fromJson(t as Map<String, Object?>).name,
+      ),
       contains('BackupDatabase'),
     );
   });

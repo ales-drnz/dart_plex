@@ -185,6 +185,22 @@ final class PlexMetadata {
   /// a `String` like [ratingKey] and the ids those methods take.
   final String? playlistItemId;
 
+  /// The edition of a movie or show (`editionTitle`): "Director's Cut",
+  /// "Extended"…; `null` for the plain one.
+  final String? editionTitle;
+
+  /// Intro, credits and commercial markers (`Marker`). Only in item
+  /// details asked with `includeMarkers` ([PlexLibraryApi.item]).
+  final List<PlexMarker> markers;
+
+  /// Chapters (`Chapter`). Only in item details asked with
+  /// `includeChapters` ([PlexLibraryApi.item]).
+  final List<PlexChapter> chapters;
+
+  /// The artwork list (`Image`): poster, background, square background,
+  /// logo, … — see [squareArt] and [logo].
+  final List<PlexImage> images;
+
   /// The entry id inside a server play queue (`playQueueItemID`), present
   /// only on items read from [PlexPlayQueuesApi]: what
   /// `PlexPlaybackApi.timeline(playQueueItemID:)` and the play queue's
@@ -249,6 +265,10 @@ final class PlexMetadata {
     this.score,
     this.ultraBlurColors,
     this.roles = const [],
+    this.editionTitle,
+    this.markers = const [],
+    this.chapters = const [],
+    this.images = const [],
   });
 
   /// Parses one `<Video>` / `<Track>` / `<Directory>` metadata entry. The
@@ -314,9 +334,30 @@ final class PlexMetadata {
               json['UltraBlurColors'] as Map<String, Object?>,
             )
           : null,
+      editionTitle: asString(json['editionTitle']),
+      markers: _objects(json['Marker'], PlexMarker.fromJson),
+      chapters: _objects(json['Chapter'], PlexChapter.fromJson),
+      images: _objects(json['Image'], PlexImage.fromJson),
       raw: json,
     );
   }
+
+  /// The square background (`backgroundSquare` in [images]), a 1:1 art
+  /// for grids and widgets; `null` when the item has none.
+  String? get squareArt => _image('backgroundSquare');
+
+  /// The logo (`clearLogo` in [images]): the title as a transparent
+  /// image, for overlays.
+  String? get logo => _image('clearLogo');
+
+  String? _image(String type) =>
+      images.where((i) => i.type == type).firstOrNull?.url;
+
+  /// The [markers] of [type].
+  List<PlexMarker> markersOf(PlexMarkerType type) => [
+    for (final m in markers)
+      if (m.type == type) m,
+  ];
 
   /// Version of [thumb] — the timestamp PMS appends to it
   /// (`/library/metadata/123/thumb/1791659974`), or `null` when there is
@@ -357,6 +398,131 @@ final class PlexMetadata {
   /// True when [userRating] indicates a favourite (>= 10 on Plex's 0..10
   /// scale).
   bool get isFavorite => (userRating ?? 0) >= 10;
+}
+
+/// The maps of a JSON list, parsed.
+List<T> _objects<T>(Object? v, T Function(Map<String, Object?>) parse) => [
+  if (v is List)
+    for (final e in v)
+      if (e is Map<String, Object?>) parse(e),
+];
+
+/// A span of a video the server marked (`Marker`): an intro or credits to
+/// skip, a commercial break.
+///
+/// {@category Library}
+final class PlexMarker {
+  /// Marker id.
+  final int? id;
+
+  /// What it marks.
+  final PlexMarkerType type;
+
+  /// Where it starts (`startTimeOffset`).
+  final Duration start;
+
+  /// Where it ends (`endTimeOffset`).
+  final Duration end;
+
+  /// For credits: whether these are the final credits (`final`), after
+  /// which nothing of the item remains.
+  final bool isFinal;
+
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
+  /// Builds a marker.
+  const PlexMarker({
+    required this.type,
+    required this.start,
+    required this.end,
+    this.id,
+    this.isFinal = false,
+    this.raw = const {},
+  });
+
+  /// Parses one `Marker`.
+  factory PlexMarker.fromJson(Map<String, Object?> json) => PlexMarker(
+    id: asInt(json['id']),
+    type: PlexMarkerType(asString(json['type']) ?? ''),
+    start: Duration(milliseconds: asInt(json['startTimeOffset']) ?? 0),
+    end: Duration(milliseconds: asInt(json['endTimeOffset']) ?? 0),
+    isFinal: asBool(json['final']) || json['final'] == 'true',
+    raw: json,
+  );
+}
+
+/// A chapter of a video (`Chapter`).
+///
+/// {@category Library}
+final class PlexChapter {
+  /// Chapter id.
+  final int? id;
+
+  /// Position among the chapters (`index`).
+  final int? index;
+
+  /// Name (`tag`).
+  final String? title;
+
+  /// Where it starts (`startTimeOffset`).
+  final Duration start;
+
+  /// Where it ends (`endTimeOffset`).
+  final Duration end;
+
+  /// Thumbnail path.
+  final String? thumb;
+
+  /// The entry as received.
+  final Map<String, Object?> raw;
+
+  /// Builds a chapter.
+  const PlexChapter({
+    required this.start,
+    required this.end,
+    this.id,
+    this.index,
+    this.title,
+    this.thumb,
+    this.raw = const {},
+  });
+
+  /// Parses one `Chapter`.
+  factory PlexChapter.fromJson(Map<String, Object?> json) => PlexChapter(
+    id: asInt(json['id']),
+    index: asInt(json['index']),
+    title: asString(json['tag']) ?? asString(json['title']),
+    start: Duration(milliseconds: asInt(json['startTimeOffset']) ?? 0),
+    end: Duration(milliseconds: asInt(json['endTimeOffset']) ?? 0),
+    thumb: asString(json['thumb']),
+    raw: json,
+  );
+}
+
+/// One entry of [PlexMetadata.images].
+///
+/// {@category Images and hubs}
+final class PlexImage {
+  /// What the image is for: `coverPoster`, `background`,
+  /// `backgroundSquare`, `banner`, `clearLogo`, `snapshot`.
+  final String type;
+
+  /// Its path on the server, or an absolute URL.
+  final String url;
+
+  /// Text for accessibility (`alt`).
+  final String? alt;
+
+  /// Builds an image entry.
+  const PlexImage({required this.type, required this.url, this.alt});
+
+  /// Parses one `Image`.
+  factory PlexImage.fromJson(Map<String, Object?> json) => PlexImage(
+    type: asString(json['type']) ?? '',
+    url: asString(json['url']) ?? '',
+    alt: asString(json['alt']),
+  );
 }
 
 /// One `<Media>` node under a [PlexMetadata]. Tracks/movies usually have
@@ -420,24 +586,24 @@ final class PlexMedia {
 
   /// Parses one `<Media>` node from a [PlexMetadata] entry.
   factory PlexMedia.fromJson(Map<String, Object?> json) => PlexMedia(
-        id: asInt(json['id']),
-        durationMs: asInt(json['duration']),
-        bitrate: asInt(json['bitrate']),
-        audioChannels: asInt(json['audioChannels']),
-        audioCodec: asString(json['audioCodec']),
-        videoCodec: asString(json['videoCodec']),
-        container: asString(json['container']),
-        sampleRate: asInt(json['audioSampleRate']),
-        bitDepth: asInt(json['audioBitDepth']) ?? asInt(json['bitDepth']),
-        width: asInt(json['width']),
-        height: asInt(json['height']),
-        parts: [
-          if (json['Part'] is List)
-            for (final p in json['Part'] as List)
-              if (p is Map<String, Object?>) PlexPart.fromJson(p),
-        ],
-        raw: json,
-      );
+    id: asInt(json['id']),
+    durationMs: asInt(json['duration']),
+    bitrate: asInt(json['bitrate']),
+    audioChannels: asInt(json['audioChannels']),
+    audioCodec: asString(json['audioCodec']),
+    videoCodec: asString(json['videoCodec']),
+    container: asString(json['container']),
+    sampleRate: asInt(json['audioSampleRate']),
+    bitDepth: asInt(json['audioBitDepth']) ?? asInt(json['bitDepth']),
+    width: asInt(json['width']),
+    height: asInt(json['height']),
+    parts: [
+      if (json['Part'] is List)
+        for (final p in json['Part'] as List)
+          if (p is Map<String, Object?>) PlexPart.fromJson(p),
+    ],
+    raw: json,
+  );
 }
 
 /// One `<Part>` node — a single file backing a [PlexMedia].
@@ -480,19 +646,19 @@ final class PlexPart {
 
   /// Parses one `<Part>` node from a [PlexMedia].
   factory PlexPart.fromJson(Map<String, Object?> json) => PlexPart(
-        id: asInt(json['id']),
-        key: asString(json['key']),
-        durationMs: asInt(json['duration']),
-        file: asString(json['file']),
-        size: asInt(json['size']),
-        container: asString(json['container']),
-        streams: [
-          if (json['Stream'] is List)
-            for (final s in json['Stream'] as List)
-              if (s is Map<String, Object?>) PlexStream.fromJson(s),
-        ],
-        raw: json,
-      );
+    id: asInt(json['id']),
+    key: asString(json['key']),
+    durationMs: asInt(json['duration']),
+    file: asString(json['file']),
+    size: asInt(json['size']),
+    container: asString(json['container']),
+    streams: [
+      if (json['Stream'] is List)
+        for (final s in json['Stream'] as List)
+          if (s is Map<String, Object?>) PlexStream.fromJson(s),
+    ],
+    raw: json,
+  );
 }
 
 /// `streamType`: 1 video, 2 audio, 3 subtitle, 4 lyrics.
@@ -563,6 +729,31 @@ final class PlexStream {
   /// Loudness range in LU (`lra`).
   final double? lra;
 
+  /// Album loudness range (`albumRange`).
+  final double? albumRange;
+
+  /// Loudness of the track's start, for gapless crossfades (`startRamp`,
+  /// the server's encoded ramp).
+  final String? startRamp;
+
+  /// Loudness of the track's end (`endRamp`).
+  final String? endRamp;
+
+  /// Whether the server can normalise this stream's loudness
+  /// (`canNormalizeLoudness`).
+  final bool canNormalizeLoudness;
+
+  /// Channel layout of an audio stream (`audioChannelLayout`), e.g.
+  /// `5.1(side)`, `stereo` — what [PlexFilter.audioLayout] filters on.
+  final String? audioChannelLayout;
+
+  /// The server's label for the stream (`displayTitle`), e.g. `English
+  /// (AAC Stereo)`.
+  final String? displayTitle;
+
+  /// The longer label (`extendedDisplayTitle`).
+  final String? extendedDisplayTitle;
+
   /// Full raw JSON for fields not lifted above.
   final Map<String, Object?> raw;
 
@@ -588,31 +779,45 @@ final class PlexStream {
     this.albumPeak,
     this.loudness,
     this.lra,
+    this.albumRange,
+    this.startRamp,
+    this.endRamp,
+    this.canNormalizeLoudness = false,
+    this.audioChannelLayout,
+    this.displayTitle,
+    this.extendedDisplayTitle,
   });
 
   /// Parses one `<Stream>` node from a [PlexPart].
   factory PlexStream.fromJson(Map<String, Object?> json) => PlexStream(
-        id: asInt(json['id']),
-        streamType: asInt(json['streamType']),
-        codec: asString(json['codec']),
-        channels: asInt(json['channels']),
-        bitrate: asInt(json['bitrate']),
-        samplingRate: asInt(json['samplingRate']),
-        bitDepth: asInt(json['bitDepth']),
-        language: asString(json['language']),
-        languageCode: asString(json['languageCode']),
-        title: asString(json['title']),
-        key: asString(json['key']),
-        selected: json['selected'] == true,
-        isDefault: json['default'] == true,
-        gain: asDouble(json['gain']),
-        albumGain: asDouble(json['albumGain']),
-        peak: asDouble(json['peak']),
-        albumPeak: asDouble(json['albumPeak']),
-        loudness: asDouble(json['loudness']),
-        lra: asDouble(json['lra']),
-        raw: json,
-      );
+    id: asInt(json['id']),
+    streamType: asInt(json['streamType']),
+    codec: asString(json['codec']),
+    channels: asInt(json['channels']),
+    bitrate: asInt(json['bitrate']),
+    samplingRate: asInt(json['samplingRate']),
+    bitDepth: asInt(json['bitDepth']),
+    language: asString(json['language']),
+    languageCode: asString(json['languageCode']),
+    title: asString(json['title']),
+    key: asString(json['key']),
+    selected: json['selected'] == true,
+    isDefault: json['default'] == true,
+    gain: asDouble(json['gain']),
+    albumGain: asDouble(json['albumGain']),
+    peak: asDouble(json['peak']),
+    albumPeak: asDouble(json['albumPeak']),
+    loudness: asDouble(json['loudness']),
+    lra: asDouble(json['lra']),
+    albumRange: asDouble(json['albumRange']),
+    startRamp: asString(json['startRamp']),
+    endRamp: asString(json['endRamp']),
+    canNormalizeLoudness: asBool(json['canNormalizeLoudness']),
+    audioChannelLayout: asString(json['audioChannelLayout']),
+    displayTitle: asString(json['displayTitle']),
+    extendedDisplayTitle: asString(json['extendedDisplayTitle']),
+    raw: json,
+  );
 
   /// True when [gain] or [albumGain] is known — the stream has been
   /// through the server's loudness analysis.

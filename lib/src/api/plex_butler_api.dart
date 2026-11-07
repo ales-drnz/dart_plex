@@ -19,10 +19,8 @@ class PlexButlerApi {
   PlexButlerApi(this._http);
 
   /// `GET /butler` — list configured tasks and their state.
-  Future<List<PlexButlerTask>> tasks() => _http.requestJson(
-        '/butler',
-        _butlerTasks,
-      );
+  Future<List<PlexButlerTask>> tasks() =>
+      _http.requestJson('/butler', _butlerTasks);
 
   /// `POST /butler` — start every task now.
   Future<void> startAll() async {

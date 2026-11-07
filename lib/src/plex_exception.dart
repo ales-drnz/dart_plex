@@ -42,6 +42,11 @@ final class PlexException implements Exception {
   /// `429` or `503`), when it said.
   final Duration? retryAfter;
 
+  /// The body of the error answer as text, whole, when the server sent
+  /// one ([message] holds at most its first 512 bytes). Kept so a refusal
+  /// the package does not recognise can still be read, logged or shown.
+  final String? body;
+
   /// The originating stack trace, when captured. Preserves the async stack
   /// across catch-and-rethrow so crash reporters can pinpoint the failure.
   final StackTrace? stackTrace;
@@ -55,6 +60,7 @@ final class PlexException implements Exception {
     this.cause,
     this.stackTrace,
     this.retryAfter,
+    this.body,
   });
 
   /// No answer from the server at all: the connection failed or timed out.
@@ -83,12 +89,22 @@ final class PlexException implements Exception {
   /// Shorthand for [PlexErrorType.isAuthError] on [type] — token expired / invalid.
   bool get isAuthError => type.isAuthError;
 
-  /// Same as [isNetworkFailure].
-  @Deprecated(
-    'Use isNetworkFailure, or isTransient to include 5xx and 429. '
-    'Removed in 0.3.',
-  )
-  bool get isRetriable => isNetworkFailure;
+  /// The server refused playback or a transcode because the account needs
+  /// a Plex Pass or a Remote Watch Pass ([PlexErrorType.passRequired]).
+  /// The token is fine: do not sign the user out, tell them why.
+  bool get isPassRequired => type == PlexErrorType.passRequired;
+
+  /// A copy with [type] replaced, keeping everything else.
+  PlexException withType(PlexErrorType type) => PlexException(
+    message,
+    type: type,
+    statusCode: statusCode,
+    path: path,
+    cause: cause,
+    stackTrace: stackTrace,
+    retryAfter: retryAfter,
+    body: body,
+  );
 
   @override
   String toString() {

@@ -4,6 +4,8 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_models.dart';
+import '../plex_parsing.dart';
 import '../plex_server_models.dart';
 
 /// Top-level server endpoints — `/`, `/identity`, `/capabilities`.
@@ -20,16 +22,16 @@ class PlexServerApi {
   /// use it to verify the server URL is reachable before re-authenticating).
   ///
   Future<PlexServerIdentity> identity() => _http.requestJson(
-        '/identity',
-        (json) => PlexServerIdentity.fromJson(_container(json)),
-      );
+    '/identity',
+    (json) => PlexServerIdentity.fromJson(_container(json)),
+  );
 
   /// Full server root — same shape as [identity] but with more fields
   /// (`platform`, `platformVersion`, `myPlex`, `transcoderAudio`, etc.).
   Future<PlexServerInfo> info() => _http.requestJson(
-        '/',
-        (json) => PlexServerInfo.fromJson(_container(json)),
-      );
+    '/',
+    (json) => PlexServerInfo.fromJson(_container(json)),
+  );
 
   /// `true` when the server replies to `/identity`. Swallows transport
   /// failures and timeouts. Use [identity] directly to inspect errors.
@@ -48,18 +50,18 @@ class PlexServerApi {
   /// [source] is required by the server: omitting it (or passing an empty
   /// string) always yields a 400. [refresh] is sent as the BoolInt `1`/`0`
   /// the API expects.
-  Future<Map<String, Object?>> securityResources({
+  Future<PlexSecurityResource> securityResources({
     required String source,
     bool? refresh,
-  }) async {
+  }) {
     assert(source.isNotEmpty, 'source must not be empty');
     final qp = <String, Object?>{'source': source};
     if (refresh != null) qp['refresh'] = refresh ? 1 : 0;
-    final res = await _http.request<Map<String, Object?>>(
+    return _http.requestJson(
       '/security/resources',
       queryParameters: qp,
+      (json) => PlexSecurityResource.fromJson(_container(json)),
     );
-    return res.data ?? const {};
   }
 
   /// `POST /security/token?type=delegation&scope=all` — request a transient
@@ -78,20 +80,18 @@ class PlexServerApi {
     );
     final data = res.data ?? const <String, Object?>{};
     final container = data['MediaContainer'];
-    final token =
-        container is Map<String, Object?> ? container['token'] : data['token'];
+    final token = container is Map<String, Object?>
+        ? container['token']
+        : data['token'];
     return token is String ? token : null;
   }
 
-  /// `GET /status/sessions/background` — list background tasks
-  /// currently running on the server (library scans, intro
-  /// detection, etc.).
-  Future<Map<String, Object?>> backgroundTasks() async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/status/sessions/background',
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /status/sessions/background` — background transcode jobs
+  /// running on the server (optimizing, converting for download).
+  Future<List<PlexTranscodeJob>> backgroundTasks() => _http.requestJson(
+    '/status/sessions/background',
+    itemsOf('TranscodeJob', PlexTranscodeJob.fromJson),
+  );
 }
 
 /// The `MediaContainer` of [json], or [json] itself when it has none.

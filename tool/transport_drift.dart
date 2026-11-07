@@ -36,8 +36,14 @@ const _pairs = {
 /// How many differing lines each pair has today: the domain parts, no
 /// more. A change made to one library only moves the count and fails;
 /// update a number only for a difference that belongs to one server.
+///
+/// Counted on both copies formatted by the Dart 3.10 (tall) formatter.
+/// `plex_connection.dart` was 95 in 0.2 (120 once reformatted); dart_plex
+/// 0.3 adds the plex.tv JWT token renewer (`tokenRenewer`, `_renewToken`
+/// and the retry in `_retrying`). The whole error `body` on the exception
+/// and the removal of a header by an empty `extraHeaders` value are shared.
 const _allowed = {
-  'lib/src/plex_connection.dart': 95,
+  'lib/src/plex_connection.dart': 158,
   'lib/src/transport/plex_cancel_token.dart': 7,
 };
 
@@ -59,12 +65,16 @@ Future<void> main(List<String> args) async {
     final allowed = _allowed[p] ?? 0;
     final ok = diff <= allowed;
     if (!ok) failed = true;
-    stdout.writeln('${ok ? 'ok  ' : 'FAIL'} $p ↔ $j: '
-        '$diff differing lines (allowed $allowed)');
+    stdout.writeln(
+      '${ok ? 'ok  ' : 'FAIL'} $p ↔ $j: '
+      '$diff differing lines (allowed $allowed)',
+    );
   }
   if (failed) {
-    stderr.writeln('\nThe shared transport drifted: apply the change to both '
-        'libraries (diff the files above).');
+    stderr.writeln(
+      '\nThe shared transport drifted: apply the change to both '
+      'libraries (diff the files above).',
+    );
     exit(1);
   }
 }

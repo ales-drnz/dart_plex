@@ -4,6 +4,8 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/media/grabbers/*` — DVR/IPTV grabber device management.
 ///
@@ -19,54 +21,46 @@ class PlexDevicesApi {
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.devices].
   PlexDevicesApi(this._http);
 
-  /// `GET /media/grabbers?protocol={...}` — available grabber
-  /// protocols (HDHomeRun, M3U, etc.).
-  Future<Map<String, Object?>> grabbers({String? protocol}) async {
-    final qp = <String, Object?>{};
-    if (protocol != null) qp['protocol'] = protocol;
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/grabbers',
-      queryParameters: qp.isEmpty ? null : qp,
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /media/grabbers?protocol={...}` — the grabber types the server
+  /// supports (HDHomeRun, stream, download, …), narrowed to [protocol]
+  /// (`livetv`, `stream`, `download`) when given.
+  Future<List<PlexMediaGrabber>> grabbers({String? protocol}) =>
+      _http.requestJson(
+        '/media/grabbers',
+        queryParameters: protocol == null ? null : {'protocol': protocol},
+        itemsOf('MediaGrabber', PlexMediaGrabber.fromJson),
+      );
 
   /// `GET /media/grabbers/devices` — every registered device.
-  Future<Map<String, Object?>> list() async {
-    final res =
-        await _http.request<Map<String, Object?>>('/media/grabbers/devices');
-    return res.data ?? const {};
-  }
+  Future<List<PlexTunerDevice>> list() =>
+      _http.requestJson('/media/grabbers/devices', PlexTunerDevice.listOf);
 
   /// `POST /media/grabbers/devices?uri={uri}` — add a device by URI
-  /// (e.g. `hdhomerun://1A2B3C4D` or an M3U URL).
-  Future<Map<String, Object?>> add({required String uri}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/grabbers/devices',
-      method: 'POST',
-      queryParameters: {'uri': uri},
-    );
-    return res.data ?? const {};
-  }
+  /// (e.g. `hdhomerun://1A2B3C4D` or an M3U URL); returns the devices the
+  /// answer lists.
+  Future<List<PlexTunerDevice>> add({required String uri}) => _http.requestJson(
+    '/media/grabbers/devices',
+    PlexTunerDevice.listOf,
+    method: 'POST',
+    queryParameters: {'uri': uri},
+  );
 
-  /// `POST /media/grabbers/devices/discover` — tell every grabber
-  /// to probe the LAN for new devices.
-  Future<Map<String, Object?>> discover() async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/grabbers/devices/discover',
-      method: 'POST',
-    );
-    return res.data ?? const {};
-  }
+  /// `POST /media/grabbers/devices/discover` — tell every grabber to probe
+  /// the LAN for new devices; returns those found (none, on PMS 1.43.2
+  /// without tuners).
+  Future<List<PlexTunerDevice>> discover() => _http.requestJson(
+    '/media/grabbers/devices/discover',
+    PlexTunerDevice.listOf,
+    method: 'POST',
+  );
 
-  /// `GET /media/grabbers/devices/{deviceId}` — one device's
-  /// details.
-  Future<Map<String, Object?>> details({required String deviceId}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/grabbers/devices/$deviceId',
-    );
-    return res.data ?? const {};
-  }
+  /// `GET /media/grabbers/devices/{deviceId}` — one device's details, or
+  /// `null` when the answer holds none.
+  Future<PlexTunerDevice?> details({required String deviceId}) =>
+      _http.requestJson(
+        '/media/grabbers/devices/$deviceId',
+        (json) => PlexTunerDevice.listOf(json).firstOrNull,
+      );
 
   /// `DELETE /media/grabbers/devices/{deviceId}` — drop a device.
   Future<void> remove({required String deviceId}) async {
@@ -91,12 +85,11 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers/devices/{deviceId}/channels` — channels
   /// the device can see.
-  Future<Map<String, Object?>> channels({required String deviceId}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/media/grabbers/devices/$deviceId/channels',
-    );
-    return res.data ?? const {};
-  }
+  Future<List<PlexDeviceChannel>> channels({required String deviceId}) =>
+      _http.requestJson(
+        '/media/grabbers/devices/$deviceId/channels',
+        itemsOf('DeviceChannel', PlexDeviceChannel.fromJson),
+      );
 
   /// `PUT /media/grabbers/devices/{deviceId}/channelmap` — set the
   /// device's channel map (which channels are visible, optional

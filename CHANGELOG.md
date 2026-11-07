@@ -1,3 +1,50 @@
+## [0.3.0] - 7-11-2026
+
+Sign-in with plex.tv JWTs, video transcodes, typed answers in place of maps, and Dart 3.10. See [MIGRATION.md](MIGRATION.md) for the changes to make in an app.
+
+### Breaking
+- The SDK floor is Dart 3.10.
+- `downloadQueue`, `liveTv`, `dvrs`, `devices`, `subscriptions` and `epg` return typed models instead of maps: `PlexDownloadQueue`, `PlexDownloadQueueItem`, `PlexDvr`, `PlexTunerDevice`, `PlexMediaGrabber`, `PlexDeviceChannel`, `PlexMediaSubscription`, `PlexMediaGrabOperation`, `PlexEpgCountry`, `PlexEpgLanguage`, `PlexLineup`, `PlexEpgChannel` and `PlexChannelMapping`. `liveTv.sessions()` and `liveSession()` return `PlexMetadata`.
+- `downloadQueue.itemMedia()` is `itemMediaUrl()`: the route answers the file, not JSON.
+- `library.tags()`, `matches()`, `person()` and `sectionDetails()`, `playlists.generators()`, `updater.status()`, `server.securityResources()` and `backgroundTasks()`, and `providers.list()` and `add()` return typed models.
+- `library.tags()` and `sectionCommon()` require a `type`: the server answers 400 without one.
+- `account.tokenDetails()` returns the `PlexUser` the server token belongs to, from plex.tv. `connectedUsers()` returns `PlexAccountUser`s from `plex.tv/api/users/`. Both asked the server before, which answered an empty container.
+- `streaming.lyrics()` returns `PlexLyrics`, with the lines read as LRC and the text in `text`.
+- `sort` parameters take a `PlexSort`: `sort: PlexSort.addedAt.desc` for `sort: 'addedAt:desc'`.
+- Playlist and play queue types take a `PlexMediaType`, `addSection()` a `PlexLibraryType`, `firstCharacters()` and `collections.create()` a `PlexMetadataType`, and the marker calls a `PlexMarkerType`.
+- `startAudioTranscode()` and `universalVideoUrl()` take a `PlexStreamingProtocol` instead of a string. `universalVideoUrl()` takes the protocol's container when `container` is `null`.
+- `connect(accessToken:)` keeps the token it replaces as the account token, for plex.tv calls. `clearSession()` also drops the account token and the JWT session.
+- `PlexErrorType` has a new value, `passRequired`, and `498` is an `auth` error. A `switch` over the type must handle it.
+- Removed what 0.2 deprecated: `PlexDVRsApi`, `isRetriable`, `timeline(state:)` and `playQueueItemId:`, the `PlexPlaybackApi.state*` constants, `universalAudioUrl()` and `nearestToTrack(excludeParentID:, excludeGrandparentID:)`.
+
+### Added
+- plex.tv JWT sign-in: `PlexDeviceKey` (an Ed25519 key pair, pure Dart, on every platform), `account.createJwtPin()`, `pollJwtPin()`, `authAppUrl()`, `registerJwtKey()`, `authNonce()`, `exchangeDeviceJwt()` and `refreshJwt()`, and `PlexJwt` to read a token's expiry.
+- `PlexJwtSession` and `PlexClient.useJwt()`: the client refreshes the 7-day JWT before it expires and after a `401` or `498`, and hands each new token to `onChanged` to persist.
+- `PlexClient.tokenRenewer`, called with a token refused with `401` or `498`; the request is retried once with the new one.
+- `PlexClient.accountToken` and `setAccountToken()`, the plex.tv token apart from the server's.
+- `PlexClient.connectToResource()` and `account.findConnection()`: every connection is tried at once, and the best that answers wins. A `401` on the resource token falls back to the token `account.devices()` lists for the server.
+- `PlexResource.rankedConnections()`, `PlexServerConnection.kind`, `httpUri` and `raw`, `PlexClient.connectTo()`, `connection` and `connectionKind`.
+- `streaming.startVideoTranscode()`, `PlexVideoTranscode` and `PlexStreamingApi.videoProfileExtra()`.
+- `PlexErrorType.passRequired` and `PlexException.isPassRequired`, for playback refused for want of a Plex Pass or Remote Watch Pass. `PlexException.body` holds the whole error answer.
+- `PlexTranscodeDecision.text` and `isPassRequired`.
+- `account.homeUsers()`, `managedUsers()`, `switchHomeUser()`, `friends()`, `devices()`, `geoip()`, `watchlist()`, `addToWatchlist()` and `removeFromWatchlist()`.
+- `library.folder()`, for `/library/sections/{id}/folder`.
+- `library.item(includeMarkers:, includeChapters:)`, `PlexMetadata.markers`, `chapters`, `markersOf()`, `images`, `squareArt`, `logo` and `editionTitle`.
+- `PlexStream.canNormalizeLoudness`, `albumRange`, `startRamp`, `endRamp`, `audioChannelLayout`, `displayTitle` and `extendedDisplayTitle`.
+- `PlexFilter.atmos()`, `dolbyVision()`, `hdr()`, `videoCodec()`, `audioCodec()`, `subtitleCodec()`, `audioLayout()`, `audioLanguage()`, `subtitleLanguage()`, `inProgress()` and `duplicate()`.
+- `PlexUser.restricted`, `home`, `homeAdmin`, `protected`, `subscriptionFeatures`, `title` and `raw`, and `PlexResource.raw`.
+
+### Changed
+- `PlexResource.bestConnection()` follows `rankedConnections()`: local, remote, relay; HTTPS before HTTP; IPv4 before IPv6. It leaves out the local addresses of a server neither owned nor shared through Plex Home.
+- An empty value in `extraHeaders` removes that header: `{'X-Plex-Token': ''}` sends none.
+- The pinned API document is LukeHagar/plex-api-spec@23137a920c17. The drift test skips when the document cannot be fetched.
+- The package description lists the web.
+- A GitHub Actions workflow analyzes, formats, tests and dry-runs the publish at Dart 3.10 and stable, checks the transport against dart_jellyfin, and runs the integration suite on demand.
+
+### Fixed
+- `liveTv.dvrs()` reads the `DVR` spelling of the API document as well as the server's `Dvr`.
+- A `PlexTag` from `/library/tags` has its name and filter.
+
 ## [0.2.2] - 2-11-2026
 
 ### Docs

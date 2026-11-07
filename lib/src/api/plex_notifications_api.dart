@@ -195,42 +195,42 @@ class PlexNotificationsApi {
         _sseSub = res.stream
             .transform(const Utf8Decoder(allowMalformed: true))
             .listen(
-          (text) {
-            buffer.write(text);
-            // SSE frames are separated by a blank line.
-            while (true) {
-              final raw = buffer.toString();
-              final idx = raw.indexOf('\n\n');
-              if (idx < 0) break;
-              final frame = raw.substring(0, idx);
-              buffer
-                ..clear()
-                ..write(raw.substring(idx + 2));
-              final payload = _extractSseData(frame);
-              if (payload == null) continue;
-              final notif = _decode(payload);
-              if (notif != null) controller.add(notif);
-            }
-          },
-          onError: (Object error, StackTrace stackTrace) {
-            if (cancel.isCancelled) return;
-            controller.addError(
-              error is PlexException
-                  ? error
-                  : PlexException(
-                      'EventSource error: $error',
-                      type: PlexErrorType.connection,
-                      cause: error,
-                    ),
-              stackTrace,
+              (text) {
+                buffer.write(text);
+                // SSE frames are separated by a blank line.
+                while (true) {
+                  final raw = buffer.toString();
+                  final idx = raw.indexOf('\n\n');
+                  if (idx < 0) break;
+                  final frame = raw.substring(0, idx);
+                  buffer
+                    ..clear()
+                    ..write(raw.substring(idx + 2));
+                  final payload = _extractSseData(frame);
+                  if (payload == null) continue;
+                  final notif = _decode(payload);
+                  if (notif != null) controller.add(notif);
+                }
+              },
+              onError: (Object error, StackTrace stackTrace) {
+                if (cancel.isCancelled) return;
+                controller.addError(
+                  error is PlexException
+                      ? error
+                      : PlexException(
+                          'EventSource error: $error',
+                          type: PlexErrorType.connection,
+                          cause: error,
+                        ),
+                  stackTrace,
+                );
+              },
+              onDone: () {
+                unawaited(controller.close());
+                if (identical(_sseController, controller)) _cleanupSse();
+              },
+              cancelOnError: false,
             );
-          },
-          onDone: () {
-            unawaited(controller.close());
-            if (identical(_sseController, controller)) _cleanupSse();
-          },
-          cancelOnError: false,
-        );
       } catch (e, stackTrace) {
         // Closed before the headers arrived: nothing to report.
         if (cancel.isCancelled) return;

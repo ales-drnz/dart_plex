@@ -71,20 +71,14 @@ mixin _PlexItemEditing {
     await _http.request<void>(
       '/library/metadata/$ids/credits',
       method: 'PUT',
-      queryParameters: {
-        'force': force ? 1 : 0,
-        'manual': manual ? 1 : 0,
-      },
+      queryParameters: {'force': force ? 1 : 0, 'manual': manual ? 1 : 0},
     );
   }
 
   /// `PUT /library/metadata/{ids}/addetect` — ad detection (on
   /// recorded TV).
   Future<void> detectAds({required String ids}) async {
-    await _http.request<void>(
-      '/library/metadata/$ids/addetect',
-      method: 'PUT',
-    );
+    await _http.request<void>('/library/metadata/$ids/addetect', method: 'PUT');
   }
 
   /// `PUT /library/metadata/{ids}/voiceActivity?force={b}&manual={b}`
@@ -97,10 +91,7 @@ mixin _PlexItemEditing {
     await _http.request<void>(
       '/library/metadata/$ids/voiceActivity',
       method: 'PUT',
-      queryParameters: {
-        'force': force ? 1 : 0,
-        'manual': manual ? 1 : 0,
-      },
+      queryParameters: {'force': force ? 1 : 0, 'manual': manual ? 1 : 0},
     );
   }
 
@@ -178,10 +169,7 @@ mixin _PlexItemEditing {
   /// `PUT /library/metadata/{ids}/unmatch` — clear the upstream
   /// guid match.
   Future<void> unmatch({required String ids}) async {
-    await _http.request<void>(
-      '/library/metadata/$ids/unmatch',
-      method: 'PUT',
-    );
+    await _http.request<void>('/library/metadata/$ids/unmatch', method: 'PUT');
   }
 
   /// `PUT /library/metadata/{ids}/merge?ids={otherIds}` — merge
@@ -199,10 +187,7 @@ mixin _PlexItemEditing {
 
   /// `PUT /library/metadata/{ids}/split` — undo a merge.
   Future<void> splitItem({required String ids}) async {
-    await _http.request<void>(
-      '/library/metadata/$ids/split',
-      method: 'PUT',
-    );
+    await _http.request<void>('/library/metadata/$ids/split', method: 'PUT');
   }
 
   /// `PUT /library/metadata/{ids}/prefs` — set metadata-edit

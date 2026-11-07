@@ -30,8 +30,8 @@ class PlexCollectionsApi {
   /// collection in the library section [sectionId].
   ///
   /// Only [sectionId] is required by the server. Provide [title] to
-  /// name the collection, [type] (a [PlexMetadataType]-style numeric
-  /// code) to constrain its contents, and [smart] to create a smart
+  /// name the collection, [type] (sent as its numeric value) to
+  /// constrain its contents, and [smart] to create a smart
   /// collection driven by a filter.
   ///
   /// [seedUri] is the play-queue-style URI of the items to seed the
@@ -45,7 +45,7 @@ class PlexCollectionsApi {
   Future<PlexMetadata> create({
     required String sectionId,
     String? title,
-    String? type,
+    PlexMetadataType? type,
     bool? smart,
     String? seedUri,
   }) async {
@@ -55,7 +55,7 @@ class PlexCollectionsApi {
     );
     final qp = <String, Object?>{'sectionId': sectionId};
     if (title != null) qp['title'] = title;
-    if (type != null) qp['type'] = type;
+    if (type != null) qp['type'] = type.value;
     if (smart != null) qp['smart'] = smart ? '1' : '0';
     if (seedUri != null) qp['uri'] = seedUri;
     final res = await _http.request<Map<String, Object?>>(

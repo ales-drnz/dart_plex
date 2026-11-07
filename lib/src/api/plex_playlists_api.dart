@@ -10,6 +10,7 @@ import '../plex_filter.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
 import '../plex_query.dart';
+import '../plex_vocabulary.dart';
 import 'plex_library_api.dart';
 import 'plex_server_api.dart';
 
@@ -33,33 +34,33 @@ class PlexPlaylistsApi {
   /// matching is a case-insensitive "contains"). There is no need to scan
   /// pages and filter on the client.
   ///
-  /// [sort] takes the section sort syntax (`'titleSort'`,
-  /// `'addedAt:desc'`, `'lastViewedAt:desc'`).
+  /// [type] narrows to audio, video or photo playlists. [sort] takes the
+  /// section sort syntax (`PlexSort.titleSort`, `PlexSort.addedAt.desc`,
+  /// `PlexSort.lastViewedAt.desc`).
   Future<List<PlexMetadata>> list({
-    String? type,
+    PlexMediaType? type,
     bool? smart,
-    String? sort,
+    PlexSort? sort,
     List<PlexFilter> filters = const [],
     int start = 0,
     int size = 50,
-  }) =>
-      _http.requestJson(
-        '/playlists',
-        queryParameters: _query(
-          type: type,
-          smart: smart,
-          sort: sort,
-          filters: filters,
-          start: start,
-          size: size,
-        ),
-        itemsOf('Metadata', PlexMetadata.fromJson),
-      );
+  }) => _http.requestJson(
+    '/playlists',
+    queryParameters: _query(
+      type: type,
+      smart: smart,
+      sort: sort,
+      filters: filters,
+      start: start,
+      size: size,
+    ),
+    itemsOf('Metadata', PlexMetadata.fromJson),
+  );
 
   /// Count playlists matching the same narrowing as [list], without
   /// transferring them.
   Future<int> count({
-    String? type,
+    PlexMediaType? type,
     bool? smart,
     List<PlexFilter> filters = const [],
   }) async {
@@ -78,9 +79,9 @@ class PlexPlaylistsApi {
   }
 
   Map<String, Object?> _query({
-    required String? type,
+    required PlexMediaType? type,
     required bool? smart,
-    String? sort,
+    PlexSort? sort,
     required List<PlexFilter> filters,
     required int start,
     required int size,
@@ -113,26 +114,26 @@ class PlexPlaylistsApi {
 
   /// Create a new playlist.
   ///
-  /// [type] is `'audio' | 'video' | 'photo'`. [machineIdentifier] is the
+  /// [type] is [PlexMediaType.audio], `video` or `photo`. [machineIdentifier] is the
   /// server's identifier — you can get it from [PlexServerApi.identity].
   ///
   /// When [itemRatingKeys] is non-empty the playlist is seeded with
   /// those items at creation time.
   Future<PlexMetadata> create({
     required String title,
-    required String type,
+    required PlexMediaType type,
     required String machineIdentifier,
     List<String> itemRatingKeys = const [],
   }) async {
     final uri = itemRatingKeys.isEmpty
         ? null
         : 'server://$machineIdentifier/com.plexapp.plugins.library'
-            '/library/metadata/${itemRatingKeys.join(',')}';
+              '/library/metadata/${itemRatingKeys.join(',')}';
     final qp = <String, Object?>{
       'type': type,
       'title': title,
       'smart': 0,
-      if (uri != null) 'uri': uri,
+      'uri': ?uri,
     };
     final res = await _http.request<Map<String, Object?>>(
       '/playlists',
@@ -160,7 +161,8 @@ class PlexPlaylistsApi {
     required List<String> itemRatingKeys,
   }) async {
     if (itemRatingKeys.isEmpty) return;
-    final uri = 'server://$machineIdentifier/com.plexapp.plugins.library'
+    final uri =
+        'server://$machineIdentifier/com.plexapp.plugins.library'
         '/library/metadata/${itemRatingKeys.join(',')}';
     await _http.request<void>(
       '/playlists/$playlistId/items',
@@ -211,29 +213,21 @@ class PlexPlaylistsApi {
     await _http.request<void>(
       '/playlists/$playlistId/items/$playlistItemId/move',
       method: 'PUT',
-      queryParameters:
-          afterPlaylistItemId == null ? null : {'after': afterPlaylistItemId},
+      queryParameters: afterPlaylistItemId == null
+          ? null
+          : {'after': afterPlaylistItemId},
     );
   }
 
-  /// `GET /playlists/{playlistId}/generators` — list the smart
-  /// generators feeding a smart playlist. Returns raw maps; the
-  /// generator id is in each entry's `id` field.
-  Future<List<Map<String, Object?>>> generators({
+  /// `GET /playlists/{playlistId}/generators` — the generators feeding a
+  /// smart playlist; [PlexPlayQueueGenerator.id] is what [generatorItems]
+  /// takes.
+  Future<List<PlexPlayQueueGenerator>> generators({
     required String playlistId,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/playlists/$playlistId/generators',
-    );
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, Object?>) return const [];
-    final list = container['PlayQueueGenerator'];
-    if (list is! List) return const [];
-    return [
-      for (final e in list)
-        if (e is Map<String, Object?>) e,
-    ];
-  }
+  }) => _http.requestJson(
+    '/playlists/$playlistId/generators',
+    itemsOf('PlayQueueGenerator', PlexPlayQueueGenerator.fromJson),
+  );
 
   /// `GET /playlists/{playlistId}/items/{generatorId}/items` — items
   /// produced by one generator inside a smart playlist.
@@ -281,10 +275,7 @@ class PlexPlaylistsApi {
     return _http.requestJson(
       '/playlists/upload',
       method: 'POST',
-      queryParameters: {
-        'path': path,
-        'force': force ? 1 : 0,
-      },
+      queryParameters: {'path': path, 'force': force ? 1 : 0},
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
