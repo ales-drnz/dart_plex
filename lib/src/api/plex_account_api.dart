@@ -634,6 +634,10 @@ class PlexAccountApi {
   /// A plex.tv request with the account token, JSON or XML, refreshing a
   /// JWT session's token ahead of time and once more after a `401` or
   /// `498`. An explicit [token] is sent as it is (`''` sends none).
+  ///
+  /// The connection's own token is renewed by the connection
+  /// ([PlexClient.tokenRenewer]); this retries only an account token sent
+  /// as a header, which the connection leaves alone.
   Future<T> _plexTv<T>(
     String url,
     T Function(Object? json) parse, {
@@ -677,11 +681,15 @@ class PlexAccountApi {
     if (token != null) return send(token);
     final auth = await _accountToken();
     final session = _state.jwt;
-    final wasJwt = session != null && auth == session.token?.token;
+    if (session == null ||
+        auth == _http.token ||
+        auth != session.token?.token) {
+      return send(auth);
+    }
     try {
       return await send(auth);
     } on PlexException catch (e) {
-      if (!wasJwt || (e.statusCode != 401 && e.statusCode != 498)) rethrow;
+      if (e.statusCode != 401 && e.statusCode != 498) rethrow;
       // Renewed meanwhile (by the connection's renewer, or a concurrent
       // call): retry with that; otherwise refresh now.
       final current = session.token;

@@ -197,7 +197,7 @@ class PlexClient {
          retryPolicy: retryPolicy,
        ),
        _state = PlexSessionState() {
-    _http.tokenRenewer = tokenRenewer;
+    _http.renewal.renewer = tokenRenewer;
     _wire(PlexNotificationsApi(_http));
   }
 
@@ -296,13 +296,17 @@ class PlexClient {
   /// token it returns, or fails when it returns `null` or throws.
   /// Concurrent refusals share one call.
   ///
+  /// A request that sets `X-Plex-Token` in its `extraHeaders` (another
+  /// token, or `''` for none) is not renewed, and neither are the
+  /// requests the renewer makes.
+  ///
   /// [useJwt] installs one that refreshes the session's JWT. Set your own
   /// to renew tokens some other way — for example to ask the user to sign
   /// in again.
-  PlexTokenRenewer? get tokenRenewer => _http.tokenRenewer;
+  PlexTokenRenewer? get tokenRenewer => _http.renewal.renewer;
 
   /// Sets or clears [tokenRenewer].
-  set tokenRenewer(PlexTokenRenewer? value) => _http.tokenRenewer = value;
+  set tokenRenewer(PlexTokenRenewer? value) => _http.renewal.renewer = value;
 
   /// Sign in with a plex.tv JWT [session] and keep it fresh.
   ///
@@ -315,12 +319,14 @@ class PlexClient {
   ///
   /// A server token from [PlexAccountApi.fetchResources] that is not the
   /// session's JWT is not renewed this way: see [connectToResource].
+  ///
+  /// When the first refresh fails, the client is left as it was.
   Future<void> useJwt(PlexJwtSession session) async {
-    _state.jwt = session;
     final jwt = await session.freshToken(account);
+    _state.jwt = session;
     _state.accountToken = jwt.token;
     _http.token ??= jwt.token;
-    _http.tokenRenewer = _renewJwt;
+    _http.renewal.renewer = _renewJwt;
   }
 
   Future<String?> _renewJwt(String? rejected) async {
@@ -438,7 +444,7 @@ class PlexClient {
   void clearSession() {
     _http.token = null;
     _state.accountToken = null;
-    if (_state.jwt != null) _http.tokenRenewer = null;
+    if (_state.jwt != null) _http.renewal.renewer = null;
     _state.jwt = null;
   }
 

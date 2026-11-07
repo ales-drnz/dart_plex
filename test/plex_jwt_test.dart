@@ -418,6 +418,104 @@ void main() {
     });
   });
 
+  group('JWT renewal edge cases', () {
+    late CapturingAdapter adapter;
+    late PlexClient plex;
+    late PlexDeviceKey key;
+    final valid = _jwt({
+      'exp': _epoch(DateTime.now().toUtc().add(const Duration(days: 7))),
+    });
+
+    int count(String path) =>
+        adapter.requests.where((r) => r.uri.path == path).length;
+
+    setUp(() async {
+      key = await PlexDeviceKey.fromSeed(_hex(_seed1));
+      adapter = CapturingAdapter();
+      plex = PlexClient(credentials: testCredentials, httpClient: adapter);
+    });
+
+    test('a refusal while refreshing does not wait on itself', () async {
+      await plex.useJwt(PlexJwtSession(key: key, token: PlexJwt.parse(valid)));
+      plex.connect('http://10.0.0.2:32400');
+      // Everything is refused: the server, and plex.tv's nonce too.
+      adapter.respond = (_) => CannedResponse(401, const []);
+      await expectLater(
+        plex.library.sections().timeout(const Duration(seconds: 5)),
+        throwsA(isA<PlexException>().having((e) => e.statusCode, 'st', 401)),
+      );
+      expect(count('/api/v2/auth/nonce'), 1);
+      expect(count('/library/sections'), 1);
+    });
+
+    test('a persistent 401 from plex.tv: one retry, one refresh', () async {
+      await plex.useJwt(PlexJwtSession(key: key, token: PlexJwt.parse(valid)));
+      adapter.respond = (r) => switch (r.uri.path) {
+        '/api/v2/auth/nonce' => CannedResponse.json({'nonce': 'n'}),
+        '/api/v2/auth/token' => CannedResponse.json({
+          'auth_token': _jwt({
+            'exp': _epoch(DateTime.now().toUtc().add(const Duration(days: 7))),
+            'n': adapter.requests.length,
+          }),
+        }),
+        _ => CannedResponse(401, const []),
+      };
+      await expectLater(
+        plex.account.currentUser(),
+        throwsA(isA<PlexException>().having((e) => e.statusCode, 'st', 401)),
+      );
+      expect(count('/api/v2/user'), 2);
+      expect(count('/api/v2/auth/token'), 1);
+    });
+
+    test('the same with the account token sent apart from the server '
+        'token', () async {
+      await plex.useJwt(PlexJwtSession(key: key, token: PlexJwt.parse(valid)));
+      plex.connect('http://10.0.0.2:32400', accessToken: 'server-token');
+      adapter.respond = (r) => switch (r.uri.path) {
+        '/api/v2/auth/nonce' => CannedResponse.json({'nonce': 'n'}),
+        '/api/v2/auth/token' => CannedResponse.json({
+          'auth_token': _jwt({
+            'exp': _epoch(DateTime.now().toUtc().add(const Duration(days: 7))),
+            'n': adapter.requests.length,
+          }),
+        }),
+        _ => CannedResponse(401, const []),
+      };
+      await expectLater(
+        plex.account.currentUser(),
+        throwsA(isA<PlexException>().having((e) => e.statusCode, 'st', 401)),
+      );
+      expect(count('/api/v2/user'), 2);
+      expect(count('/api/v2/auth/token'), 1);
+    });
+
+    test('registerJwtKey with its own token never refreshes the JWT', () async {
+      await plex.useJwt(PlexJwtSession(key: key, token: PlexJwt.parse(valid)));
+      adapter.respond = (_) => CannedResponse(401, const []);
+      await expectLater(
+        plex.account.registerJwtKey(key: key, token: 'legacy'),
+        throwsA(isA<PlexException>()),
+      );
+      expect(count('/api/v2/auth/nonce'), 0);
+      expect(adapter.requests, hasLength(1));
+    });
+
+    test('a failed useJwt leaves the client as it was', () async {
+      plex.setToken('legacy');
+      adapter.respond = (_) => CannedResponse(500, const []);
+      await expectLater(
+        plex.useJwt(PlexJwtSession(key: key)),
+        throwsA(isA<PlexException>()),
+      );
+      expect(plex.accountToken, 'legacy');
+      expect(plex.tokenRenewer, isNull);
+      adapter.respond = (_) => CannedResponse.json({'id': 1});
+      await plex.account.currentUser();
+      expect(count('/api/v2/auth/nonce'), 1, reason: 'no refresh on the call');
+    });
+  });
+
   group('tokenRenewer', () {
     test('retries once with the renewed token, then gives up', () async {
       final adapter = CapturingAdapter();

@@ -39,11 +39,13 @@ const _pairs = {
 ///
 /// Counted on both copies formatted by the Dart 3.10 (tall) formatter.
 /// `plex_connection.dart` was 95 in 0.2 (120 once reformatted); dart_plex
-/// 0.3 adds the plex.tv JWT token renewer (`tokenRenewer`, `_renewToken`
-/// and the retry in `_retrying`). The whole error `body` on the exception
-/// and the removal of a header by an empty `extraHeaders` value are shared.
+/// 0.3 adds the hook of the plex.tv JWT token renewal (the `renewal`
+/// field and getter, and `extraHeaders` passed to `_retrying` for its
+/// guard); the renewal itself lives in `plex_token_renewal.dart`. The
+/// whole error `body` on the exception and the removal of a header by an
+/// empty `extraHeaders` value are shared.
 const _allowed = {
-  'lib/src/plex_connection.dart': 158,
+  'lib/src/plex_connection.dart': 132,
   'lib/src/transport/plex_cancel_token.dart': 7,
 };
 

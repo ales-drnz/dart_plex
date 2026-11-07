@@ -13,6 +13,7 @@ import 'plex_client.dart';
 import 'plex_credentials.dart';
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
+import 'plex_token_renewal.dart';
 import 'transport/platform_io.dart'
     if (dart.library.js_interop) 'transport/platform_web.dart'
     as platform;
@@ -37,8 +38,7 @@ final class _Shared {
   final bool inflates;
   String? baseUrl;
   String? token;
-  Future<String?> Function(String? rejected)? tokenRenewer;
-  Future<String?>? renewing;
+  final PlexTokenRenewal renewal = PlexTokenRenewal();
   bool closed = false;
 
   _Shared({
@@ -143,16 +143,8 @@ final class PlexConnection {
   /// Sets or clears the `X-Plex-Token` sent on every request.
   set token(String? value) => _shared.token = value;
 
-  /// Called when a request is refused with `401` or `498` (an expired
-  /// plex.tv JWT): it gets the token that was refused and returns the one
-  /// to retry with, or `null` to let the error through. Concurrent
-  /// refusals share one call. Each request is retried once.
-  Future<String?> Function(String? rejected)? get tokenRenewer =>
-      _shared.tokenRenewer;
-
-  /// Sets or clears [tokenRenewer].
-  set tokenRenewer(Future<String?> Function(String? rejected)? value) =>
-      _shared.tokenRenewer = value;
+  /// Renews the token after a `401` or `498` (plex.tv JWTs).
+  PlexTokenRenewal get renewal => _shared.renewal;
 
   /// Whether a PMS base URL and a token are both set.
   bool get isAuthenticated => baseUrl != null && token != null;
@@ -324,7 +316,7 @@ final class PlexConnection {
     PlexCancelToken? cancelToken,
   }) async {
     const method = 'GET';
-    final opened = await _retrying(method, cancelToken, () async {
+    final opened = await _retrying(method, cancelToken, extraHeaders, () async {
       final opened = await _open(
         url,
         method: 'GET',
@@ -382,6 +374,7 @@ final class PlexConnection {
   }) => _retrying(
     method,
     cancelToken,
+    extraHeaders,
     () => _exchangeOnce(
       path,
       method: method,
@@ -397,21 +390,15 @@ final class PlexConnection {
   Future<T> _retrying<T>(
     String method,
     PlexCancelToken? cancelToken,
+    Map<String, String>? extraHeaders,
     Future<T> Function() attempt,
   ) async {
     final token = cancelToken ?? scopeToken;
-    var renewed = false;
+    final guarded = _shared.renewal.guard(this, extraHeaders, attempt);
     for (var n = 1; ; n++) {
-      final sent = _shared.token;
       try {
-        return await attempt();
+        return await guarded();
       } on PlexException catch (e) {
-        if (!renewed &&
-            (e.statusCode == 401 || e.statusCode == 498) &&
-            await _renewToken(sent)) {
-          renewed = true;
-          continue;
-        }
         final wait = _shared.retryPolicy.delayAfter(
           e,
           attempt: n,
@@ -432,25 +419,6 @@ final class PlexConnection {
         }
       }
     }
-  }
-
-  /// Asks [tokenRenewer] for a token to replace [rejected]; true when there
-  /// is a different one to retry with.
-  Future<bool> _renewToken(String? rejected) async {
-    final renew = _shared.tokenRenewer;
-    if (renew == null) return false;
-    if (_shared.token != rejected) return true;
-    final String? fresh;
-    try {
-      fresh = await (_shared.renewing ??= renew(
-        rejected,
-      ).whenComplete(() => _shared.renewing = null));
-    } catch (_) {
-      return false;
-    }
-    if (fresh == null || fresh == rejected) return false;
-    if (_shared.token == rejected) _shared.token = fresh;
-    return true;
   }
 
   Future<_Exchange> _exchangeOnce(
