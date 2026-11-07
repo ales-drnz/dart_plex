@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       integration:
-        description: Run the integration suite against a Docker PMS
+        description: Run the integration suite against PMS in Docker
         type: boolean
         default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -24,8 +28,8 @@ jobs:
         # The pubspec floor and the current stable.
         sdk: ['3.10.0', stable]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
         with:
           sdk: ${{ matrix.sdk }}
       - run: dart pub get
@@ -35,10 +39,8 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
       - run: dart pub get
       - run: dart format --output=none --set-exit-if-changed .
 
@@ -50,23 +52,20 @@ jobs:
       matrix:
         sdk: ['3.10.0', stable]
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
         with:
           sdk: ${{ matrix.sdk }}
       - run: dart pub get
-      # The integration suites are tagged and skipped here
-      # (dart_test.yaml); the spec drift test skips when offline.
+      # The integration suites are tagged and skipped here (dart_test.yaml).
       - run: dart test
 
-  publish-dry-run:
+  publish:
     name: Publish dry run
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
       - run: dart pub get
       - run: dart pub publish --dry-run
 
@@ -74,7 +73,7 @@ jobs:
     name: Transport drift against dart_jellyfin
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: dart_plex
       # The sibling's branch: main from main; otherwise the branch of the
@@ -97,9 +96,7 @@ jobs:
           git clone --depth 1 --branch "$ref" "$url" dart_jellyfin
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
       - name: Compare the shared transport
         working-directory: dart_plex
         run: |
@@ -107,34 +104,36 @@ jobs:
           dart run tool/transport_drift.dart . ../dart_jellyfin
 
   integration:
-    name: Integration (Docker PMS)
+    name: Integration (PMS in Docker)
     if: github.event_name == 'workflow_dispatch' && inputs.integration
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-        with:
-          sdk: stable
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
       - run: dart pub get
+      - name: Install ffmpeg for the seed media
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Write test/integration/.env.test
         env:
           PLEX_TEST_USERNAME: ${{ secrets.PLEX_TEST_USERNAME }}
           PLEX_TEST_PASSWORD: ${{ secrets.PLEX_TEST_PASSWORD }}
           PLEX_TEST_TOKEN: ${{ secrets.PLEX_TEST_TOKEN }}
+        # The example's image tag and port; the plex.tv account from secrets.
         run: |
+          grep -v '^PLEX_TEST_' test/integration/.env.test.example > test/integration/.env.test
           {
             echo "PLEX_TEST_USERNAME=${PLEX_TEST_USERNAME}"
             echo "PLEX_TEST_PASSWORD=${PLEX_TEST_PASSWORD}"
             echo "PLEX_TEST_TOKEN=${PLEX_TEST_TOKEN}"
-            echo "PLEX_IMAGE_TAG=1.43.2.10687-563d026ea"
-            echo "PLEX_HOST_PORT=42400"
-          } > test/integration/.env.test
-      # Signs in to plex.tv, claims the server and brings up the stack with
-      # docker compose (test/integration/docker-compose.yml).
+          } >> test/integration/.env.test
+      # Brings up the stack with docker compose
+      # (test/integration/docker-compose.yml) and readies the server.
       - run: dart run test/integration/bootstrap.dart
-      - run: dart test -P integration
+      - run: dart test -P integration --tags integration
+      - name: Server log on failure
+        if: failure()
+        run: docker logs dart-plex-test 2>&1 | tail -200
       - name: Tear down
         if: always()
-        working-directory: test/integration
-        run: docker compose --env-file .env.test down -v
+        run: docker compose -f test/integration/docker-compose.yml --env-file test/integration/.env.test down -v
