@@ -640,6 +640,15 @@ void main() {
         'titleSort,year:desc',
       );
       expect(const PlexSort('mediaBitrate').desc.wire, 'mediaBitrate:desc');
+      expect(
+        PlexSort.titleSort.then(PlexSort.year.asc).desc,
+        'titleSort,year:desc',
+      );
+      expect(PlexSort.titleSort.then(PlexSort.year).asc, 'titleSort,year:asc');
+      expect(
+        PlexSort.addedAt.desc.then(PlexSort.year).asc,
+        'addedAt:desc,year:asc',
+      );
     });
 
     test('travels as sort=', () async {

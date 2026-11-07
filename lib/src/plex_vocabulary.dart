@@ -97,18 +97,21 @@ extension type const PlexSort(String wire) implements String {
   /// ([PlexAccountApi.watchlist] only).
   static const watchlistedAt = PlexSort('watchlistedAt');
 
-  /// The same field, ascending (`field:asc`).
+  /// The same order with its last field ascending (`field:asc`;
+  /// `a,b:asc` for `a.then(b)`).
   PlexSort get asc => PlexSort('${_field(wire)}:asc');
 
-  /// The same field, descending (`field:desc`).
+  /// The same order with its last field descending (`field:desc`).
   PlexSort get desc => PlexSort('${_field(wire)}:desc');
 
   /// This order, then [next] for ties (`a,b`).
   PlexSort then(PlexSort next) => PlexSort('$wire,${next.wire}');
 
+  /// [wire] without the direction of its last field.
   static String _field(String wire) {
+    final comma = wire.lastIndexOf(',');
     final colon = wire.lastIndexOf(':');
-    return colon < 0 || wire.contains(',') ? wire : wire.substring(0, colon);
+    return colon <= comma ? wire : wire.substring(0, colon);
   }
 }
 
