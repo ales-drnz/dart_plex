@@ -637,6 +637,8 @@ String _decodeUtf16(List<int> bytes, {required bool littleEndian}) {
 /// that is read from the sibling `directPlayDecisionCode` /
 /// `transcodeDecisionCode` fields (same 1xxx-means-success convention),
 /// which [PlexStreamingApi.decisionUniversal] preserves in [raw].
+///
+/// {@category Streaming}
 final class PlexTranscodeDecision {
   /// The numeric `generalDecisionCode` from the response. Null when
   /// the response shape was unexpected.
@@ -698,6 +700,8 @@ final class PlexTranscodeDecision {
 
 /// A started video transcode: the server's [decision] and the [url] to
 /// play (see [PlexStreamingApi.startVideoTranscode]).
+///
+/// {@category Streaming}
 final class PlexVideoTranscode {
   /// What the server decided for the session.
   final PlexTranscodeDecision decision;
@@ -722,6 +726,8 @@ final class PlexVideoTranscode {
 
 /// A started audio transcode: the server's [decision] and the [url] to
 /// play (see [PlexStreamingApi.startAudioTranscode]).
+///
+/// {@category Streaming}
 final class PlexAudioTranscode {
   /// What the server decided for the session.
   final PlexTranscodeDecision decision;

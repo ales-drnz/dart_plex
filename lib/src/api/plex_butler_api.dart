@@ -12,6 +12,8 @@ import '../plex_connection.dart';
 /// Tasks include thumbnail generation, library cleanup, intro
 /// detection, music analysis. They normally run on their schedule
 /// but can be triggered manually here.
+///
+/// {@category Server}
 class PlexButlerApi {
   final PlexConnection _http;
 

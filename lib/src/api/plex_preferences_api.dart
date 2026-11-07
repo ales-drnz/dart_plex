@@ -12,6 +12,8 @@ import '../plex_parsing.dart';
 /// Wraps the `Preferences` OpenAPI tag (3 operations). Admin only.
 /// Each preference is a `Setting` map with `id`, `value`,
 /// `default`, `summary`, `type` (`bool | int | text | enum`).
+///
+/// {@category Server}
 class PlexPreferencesApi {
   final PlexConnection _http;
 

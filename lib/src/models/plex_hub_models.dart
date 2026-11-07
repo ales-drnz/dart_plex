@@ -83,6 +83,8 @@ final class PlexHub {
 /// Four hex colours extracted from an image by the Plex server. Use
 /// the same four values to ask `/services/ultrablur/image` for a
 /// server-rendered gradient backdrop.
+///
+/// {@category Images and hubs}
 final class PlexUltraBlurColors {
   /// Top-left swatch as a hex string (e.g. `#1a2b3c`).
   final String? topLeft;

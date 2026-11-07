@@ -532,6 +532,8 @@ final class PlexImage {
 
 /// One `<Media>` node under a [PlexMetadata]. Tracks/movies usually have
 /// exactly one; some items have alternate versions and produce several.
+///
+/// {@category Library}
 final class PlexMedia {
   /// Per-server media id.
   final int? id;
@@ -612,6 +614,8 @@ final class PlexMedia {
 }
 
 /// One `<Part>` node — a single file backing a [PlexMedia].
+///
+/// {@category Library}
 final class PlexPart {
   /// Per-server part id.
   final int? id;
@@ -667,6 +671,8 @@ final class PlexPart {
 }
 
 /// `streamType`: 1 video, 2 audio, 3 subtitle, 4 lyrics.
+///
+/// {@category Library}
 final class PlexStream {
   /// Per-server stream id.
   final int? id;

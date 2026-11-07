@@ -20,7 +20,7 @@ part of '../plex_models.dart';
 /// other bracketed line, such as `[Chorus: Jay-Z]`, is text. Plain text
 /// gives lines without times.
 ///
-/// {@category Playback and play queues}
+/// {@category Streaming}
 final class PlexLyrics {
   /// The text as decoded, unchanged.
   final String text;
@@ -174,7 +174,7 @@ final class PlexLyrics {
 /// One line of [PlexLyrics], shaped like dart_jellyfin's
 /// `JellyfinLyricLine`.
 ///
-/// {@category Playback and play queues}
+/// {@category Streaming}
 final class PlexLyricLine {
   /// When the line starts; `null` for an unsynced line.
   final Duration? start;
@@ -226,7 +226,7 @@ final class PlexLyricLine {
 /// A word of an enhanced LRC [PlexLyricLine]: where it sits in the line's
 /// text and when it is sung.
 ///
-/// {@category Playback and play queues}
+/// {@category Streaming}
 final class PlexLyricCue {
   /// Index in [PlexLyricLine.text] where the word starts.
   final int position;

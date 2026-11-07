@@ -36,6 +36,8 @@ part 'models/plex_session_models.dart';
 
 /// Top-level library category (the `type` field on a `<Directory>` returned
 /// from `/library/sections`).
+///
+/// {@category Library}
 enum PlexLibraryType {
   /// Music library (Plex wire value `artist`).
   music('artist'),
@@ -79,6 +81,8 @@ enum PlexLibraryType {
 ///
 /// `type=1 movie, 2 show, 3 season, 4 episode, 5 trailer, 8 artist,
 ///  9 album, 10 track, 13 photoAlbum, 14 photo, 15 playlist, 18 collection`.
+///
+/// {@category Library}
 enum PlexMetadataType {
   /// Movie (`type=1`).
   movie(1, 'movie'),
@@ -159,6 +163,8 @@ enum PlexMetadataType {
 
 /// Every PMS endpoint returns a `MediaContainer` envelope wrapping the
 /// payload. This helper unwraps it and validates the basic shape.
+///
+/// {@category Library}
 final class PlexMediaContainer<T> {
   /// Total number of records, when paginated (`totalSize`).
   final int totalSize;

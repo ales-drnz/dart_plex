@@ -598,4 +598,6 @@ class PlexClient {
 }
 
 /// Renews a refused token; see [PlexClient.tokenRenewer].
+///
+/// {@category Client and sign-in}
 typedef PlexTokenRenewer = Future<String?> Function(String? rejected);

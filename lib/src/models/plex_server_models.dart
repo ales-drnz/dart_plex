@@ -12,6 +12,8 @@ library;
 import '../plex_json.dart';
 
 /// `GET /identity` — who the server is. Answers without a token.
+///
+/// {@category Server}
 final class PlexServerIdentity {
   /// The server's unique id — what playlist and play-queue URIs need
   /// (`server://{machineIdentifier}/…`).
@@ -139,6 +141,8 @@ final class PlexServerInfo {
 }
 
 /// One play in `/status/sessions/history/all`.
+///
+/// {@category Playback and play queues}
 final class PlexHistoryEntry {
   /// `/status/sessions/history/{id}` — delete it to forget the play.
   final String historyKey;
@@ -207,6 +211,8 @@ final class PlexHistoryEntry {
 
 /// A running background activity (`/activities` → `Activity`), e.g. a
 /// library scan. The same activities arrive live as `PlexActivityEvent`s.
+///
+/// {@category Server}
 final class PlexActivity {
   /// Id, for `activities.cancel`.
   final String uuid;
@@ -263,6 +269,8 @@ final class PlexActivity {
 }
 
 /// A scheduled maintenance task (`/butler` → `ButlerTask`).
+///
+/// {@category Server}
 final class PlexButlerTask {
   /// Task name, for `butler.start` / `stop` (e.g. `BackupDatabase`).
   final String name;
@@ -309,6 +317,8 @@ final class PlexButlerTask {
 }
 
 /// One server preference (`/:/prefs` → `Setting`).
+///
+/// {@category Server}
 final class PlexSetting {
   /// Preference id, e.g. `LoudnessAnalysisBehavior`.
   final String id;

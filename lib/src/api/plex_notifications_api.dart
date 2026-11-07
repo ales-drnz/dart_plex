@@ -364,6 +364,8 @@ final class PlexNotification {
 }
 
 /// Typed events from a notification stream.
+///
+/// {@category Events and downloads}
 extension PlexNotificationEvents on Stream<PlexNotification> {
   /// Every entry of every frame as a [PlexEvent]: play state changes
   /// ([PlexPlaySessionEvent]), library item changes

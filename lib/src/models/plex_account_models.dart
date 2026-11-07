@@ -405,6 +405,8 @@ final class PlexServerConnection {
 /// The 4-character [code] is what the user types at <https://plex.tv/link>.
 /// Poll `PlexAccountApi.pollPin` until [authToken] is non-null, or until
 /// [expiresAt] passes.
+///
+/// {@category Client and sign-in}
 final class PlexPin {
   /// Server-assigned pin id used to poll for completion.
   final int id;

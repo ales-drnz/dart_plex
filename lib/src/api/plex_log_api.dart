@@ -12,6 +12,8 @@ import '../plex_connection.dart';
 /// Wraps the `Log` OpenAPI tag (3 operations). Useful from native
 /// clients to fold their own crash reports / diagnostics into the
 /// server log stream.
+///
+/// {@category Server}
 class PlexLogApi {
   final PlexConnection _http;
 

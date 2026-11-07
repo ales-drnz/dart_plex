@@ -18,6 +18,8 @@ import 'plex_models.dart';
 /// [PlexFilterValueType]. The pinned spec gives the full set as
 /// `=, !=, ==, !==, <=, >=, >>=, <<=` and notes that it "varies by
 /// field type"; the variants below are the ones this package models.
+///
+/// {@category Library}
 enum PlexFilterOperator {
   /// `=` — is, on tag and numeric fields. On a free-text field such as
   /// `title` the server reads it as "contains".

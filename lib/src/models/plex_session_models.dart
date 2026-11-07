@@ -15,6 +15,8 @@ part of '../plex_models.dart';
 /// `playQueueVersion` — and the items in the `Metadata` array. This
 /// DTO surfaces both so callers can pass [id] straight back to
 /// `PlexPlayQueuesApi.items`, `PlexPlayQueuesApi.addItems`, …
+///
+/// {@category Playback and play queues}
 final class PlexPlayQueue {
   /// Server-assigned queue identifier. Use this with the rest of
   /// `PlexPlayQueuesApi`.
@@ -83,6 +85,8 @@ final class PlexPlayQueue {
 /// One entry from `/status/sessions` — a Plex metadata item enriched
 /// with `User`, `Player` and (when transcoding) `TranscodeSession`
 /// sub-nodes describing **who is playing** and **how**.
+///
+/// {@category Playback and play queues}
 final class PlexSession {
   /// The underlying metadata for the item being played.
   final PlexMetadata metadata;
@@ -147,6 +151,8 @@ final class PlexSession {
 
 /// `Player` sub-node of a [PlexSession] — identifies the device that's
 /// driving playback.
+///
+/// {@category Playback and play queues}
 final class PlexSessionPlayer {
   /// Friendly device name (`Living Room Apple TV`, …).
   final String? title;
@@ -200,6 +206,8 @@ final class PlexSessionPlayer {
 
 /// `User` sub-node of a [PlexSession] — identifies the account streaming
 /// the item.
+///
+/// {@category Playback and play queues}
 final class PlexSessionUser {
   /// Plex account id of the streaming user.
   final String id;

@@ -82,6 +82,8 @@ sealed class PlexEvent {
 /// A player's play state changed (frame type `playing`): playing, paused,
 /// stopped or buffering — the same reports a client sends with
 /// `PlexPlaybackApi.timeline`, as the server saw them.
+///
+/// {@category Events and downloads}
 final class PlexPlaySessionEvent extends PlexEvent {
   /// The server's session id (also on `/status/sessions`).
   final String? sessionKey;
@@ -120,6 +122,8 @@ final class PlexPlaySessionEvent extends PlexEvent {
 }
 
 /// Play state of a session.
+///
+/// {@category Playback and play queues}
 enum PlexPlayState {
   /// `playing`
   playing('playing'),
@@ -156,6 +160,8 @@ enum PlexPlayState {
 /// (5); a deleted one arrives once with state 9. New artwork arrives as a
 /// ready (5) event with a new [updatedAt] — compare it with the item's
 /// thumb version to know the cover changed.
+///
+/// {@category Events and downloads}
 final class PlexLibraryItemEvent extends PlexEvent {
   /// Rating key of the item.
   final String itemId;
@@ -213,6 +219,8 @@ final class PlexLibraryItemEvent extends PlexEvent {
 
 /// A background activity started, progressed or ended (frame type
 /// `activity`) — library scans above all.
+///
+/// {@category Events and downloads}
 final class PlexActivityEvent extends PlexEvent {
   /// `started`, `updated` or `ended`.
   final String event;
@@ -282,6 +290,8 @@ final class PlexActivityEvent extends PlexEvent {
 }
 
 /// A server status message (frame type `status`), e.g. a scan starting.
+///
+/// {@category Events and downloads}
 final class PlexStatusEvent extends PlexEvent {
   /// e.g. `Scanning the "Music" section`.
   final String title;
@@ -301,6 +311,8 @@ final class PlexStatusEvent extends PlexEvent {
 
 /// A frame type without a typed event (`progress`, `reachability`,
 /// `transcodeSession.update`, `preference`, …). [raw] is the whole frame.
+///
+/// {@category Events and downloads}
 final class PlexUnknownEvent extends PlexEvent {
   /// The frame's `type`.
   final String type;

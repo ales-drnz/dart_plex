@@ -9,6 +9,8 @@ part of '../plex_models.dart';
 // ---------------------------------------------------------------------------
 
 /// One library section from `/library/sections`.
+///
+/// {@category Library}
 final class PlexLibrarySection {
   /// `key` field — the numeric/string id used in `/library/sections/{id}/all`.
   final String id;
@@ -93,6 +95,8 @@ final class PlexLibrarySection {
 /// The pinned spec describes this as "either `string`, `integer`, or
 /// `boolean`". Anything else a server sends resolves to [unknown]; the
 /// wire string stays available in [PlexLibraryFilter.raw].
+///
+/// {@category Library}
 enum PlexFilterValueType {
   /// Free text (`string`). Note that tag facets such as genre report
   /// this type but are still filtered by numeric [PlexTag.id].
@@ -129,6 +133,8 @@ enum PlexFilterValueType {
 /// [PlexFilter.new] or one of its named constructors. [valuesKey] is
 /// the endpoint listing the values the facet can take, which
 /// `PlexLibraryApi.filterValues` fetches for you.
+///
+/// {@category Library}
 final class PlexLibraryFilter {
   /// Parameter name this facet filters on (`genre`, `year`,
   /// `unwatched`) — the `filter` attribute on the wire.
@@ -178,6 +184,8 @@ final class PlexLibraryFilter {
 /// filtering by this tag and [field] is the parameter it belongs to;
 /// hand the whole tag to [PlexFilter.of] rather than reassembling
 /// either by hand.
+///
+/// {@category Library}
 final class PlexTag {
   /// Numeric tag id — the value in `?genre=<id>`.
   ///

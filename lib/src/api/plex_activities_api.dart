@@ -13,6 +13,8 @@ import '../plex_parsing.dart';
 /// Wraps the `Activities` OpenAPI tag (2 operations). Activities
 /// are reported via the websocket notifications too; this REST
 /// endpoint is for one-shot reads.
+///
+/// {@category Server}
 class PlexActivitiesApi {
   final PlexConnection _http;
 
