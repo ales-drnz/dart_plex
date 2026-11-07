@@ -5,6 +5,7 @@
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/media/providers` — third-party media providers (TIDAL, internal
 /// channels, external streaming sources).
@@ -20,15 +21,21 @@ class PlexProvidersApi {
 
   /// `GET /media/providers` — every registered provider, with what it
   /// offers (verified on PMS 1.43.2: the library, with its features).
-  Future<List<PlexMediaProvider>> list() =>
-      _http.requestJson('/media/providers', PlexMediaProvider.listOf);
+  Future<List<PlexMediaProvider>> list() => _http.requestJson(
+    '/media/providers',
+    entriesOf('MediaProvider', PlexMediaProvider.fromJson, altKey: 'Provider'),
+  );
 
   /// `POST /media/providers?url={url}` — add a new provider; returns the
   /// providers the answer lists.
   Future<List<PlexMediaProvider>> add({required String url}) =>
       _http.requestJson(
         '/media/providers',
-        PlexMediaProvider.listOf,
+        entriesOf(
+          'MediaProvider',
+          PlexMediaProvider.fromJson,
+          altKey: 'Provider',
+        ),
         method: 'POST',
         queryParameters: {'url': url},
       );

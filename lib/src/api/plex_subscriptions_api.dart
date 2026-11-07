@@ -4,7 +4,9 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_json.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 
 /// `/media/subscriptions/*` — DVR recording subscriptions.
 ///
@@ -27,7 +29,7 @@ class PlexSubscriptionsApi {
     bool includeStorage = false,
   }) => _http.requestJson(
     '/media/subscriptions',
-    PlexMediaSubscription.listOf,
+    entriesOf('MediaSubscription', PlexMediaSubscription.fromJson),
     queryParameters: {
       'includeGrabs': includeGrabs ? 1 : 0,
       'includeStorage': includeStorage ? 1 : 0,
@@ -64,7 +66,7 @@ class PlexSubscriptionsApi {
     if (params != null) qp['params'] = params;
     return _http.requestJson(
       '/media/subscriptions',
-      (json) => PlexMediaSubscription.listOf(json).firstOrNull,
+      firstOf('MediaSubscription', PlexMediaSubscription.fromJson),
       method: 'POST',
       queryParameters: qp,
     );
@@ -82,7 +84,7 @@ class PlexSubscriptionsApi {
   Future<List<PlexMediaGrabOperation>> scheduledRecordings() =>
       _http.requestJson(
         '/media/subscriptions/scheduled',
-        PlexMediaGrabOperation.listOf,
+        entriesOf('MediaGrabOperation', PlexMediaGrabOperation.fromJson),
       );
 
   /// `GET /media/subscriptions/template?guid={guid}` — the subscriptions
@@ -97,14 +99,10 @@ class PlexSubscriptionsApi {
 
   /// `SubscriptionTemplate[].MediaSubscription[]`, flattened.
   static List<PlexMediaSubscription> _templates(Object? json) {
-    final c = json is Map<String, Object?> ? json['MediaContainer'] : null;
-    final templates = c is Map<String, Object?>
-        ? c['SubscriptionTemplate']
-        : null;
+    final templates = mediaContainer(json)['SubscriptionTemplate'];
     return [
-      if (templates is List)
-        for (final t in templates)
-          if (t is Map<String, Object?>) ...PlexMediaSubscription.listOf(t),
+      for (final t in asObjectList(templates, (t) => t))
+        ...asObjectList(t['MediaSubscription'], PlexMediaSubscription.fromJson),
     ];
   }
 
@@ -116,7 +114,7 @@ class PlexSubscriptionsApi {
     bool includeStorage = false,
   }) => _http.requestJson(
     '/media/subscriptions/$subscriptionId',
-    (json) => PlexMediaSubscription.listOf(json).firstOrNull,
+    firstOf('MediaSubscription', PlexMediaSubscription.fromJson),
     queryParameters: {
       'includeGrabs': includeGrabs ? 1 : 0,
       'includeStorage': includeStorage ? 1 : 0,

@@ -29,8 +29,10 @@ class PlexLiveTvApi {
   );
 
   /// `GET /livetv/dvrs` — configured DVR backends.
-  Future<List<PlexDvr>> dvrs() =>
-      _http.requestJson('/livetv/dvrs', PlexDvr.listOf);
+  Future<List<PlexDvr>> dvrs() => _http.requestJson(
+    '/livetv/dvrs',
+    entriesOf('Dvr', PlexDvr.fromJson, altKey: 'DVR'),
+  );
 
   /// Helper to drill into the EPG inside a Live TV DVR: [dvrKey] is
   /// [PlexDvr.key]. Returns the channel listing.

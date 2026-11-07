@@ -335,9 +335,9 @@ final class PlexMetadata {
             )
           : null,
       editionTitle: asString(json['editionTitle']),
-      markers: _objects(json['Marker'], PlexMarker.fromJson),
-      chapters: _objects(json['Chapter'], PlexChapter.fromJson),
-      images: _objects(json['Image'], PlexImage.fromJson),
+      markers: asObjectList(json['Marker'], PlexMarker.fromJson),
+      chapters: asObjectList(json['Chapter'], PlexChapter.fromJson),
+      images: asObjectList(json['Image'], PlexImage.fromJson),
       raw: json,
     );
   }
@@ -399,13 +399,6 @@ final class PlexMetadata {
   /// scale).
   bool get isFavorite => (userRating ?? 0) >= 10;
 }
-
-/// The maps of a JSON list, parsed.
-List<T> _objects<T>(Object? v, T Function(Map<String, Object?>) parse) => [
-  if (v is List)
-    for (final e in v)
-      if (e is Map<String, Object?>) parse(e),
-];
 
 /// A span of a video the server marked (`Marker`): an intro or credits to
 /// skip, a commercial break.

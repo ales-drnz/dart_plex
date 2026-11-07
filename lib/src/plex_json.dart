@@ -54,6 +54,23 @@ DateTime? asEpochSeconds(Object? v) {
       : DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true);
 }
 
+/// The `MediaContainer` of [json], or [json] itself when it has none (a
+/// plex.tv answer, an entry already unwrapped). Empty for anything that
+/// is not a JSON object.
+Map<String, Object?> mediaContainer(Object? json) {
+  if (json is! Map<String, Object?>) return const {};
+  final c = json['MediaContainer'];
+  return c is Map<String, Object?> ? c : json;
+}
+
+/// The objects of a JSON array, each read by [parser]; anything else in it
+/// is skipped.
+List<T> asObjectList<T>(Object? v, T Function(Map<String, Object?>) parser) => [
+  if (v is List)
+    for (final e in v)
+      if (e is Map<String, Object?>) parser(e),
+];
+
 /// The `tag` of each `{tag: …}` entry of a tag array (`Genre`, `Mood`,
 /// `Role`, …).
 List<String> tagNames(Object? v) => [

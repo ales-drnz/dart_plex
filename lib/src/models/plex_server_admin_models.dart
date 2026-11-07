@@ -48,8 +48,7 @@ final class PlexUpdaterStatus {
 
   /// Parses the `MediaContainer` of `/updater/status` (or the answer).
   factory PlexUpdaterStatus.fromJson(Map<String, Object?> json) {
-    final c = json['MediaContainer'];
-    final src = c is Map<String, Object?> ? c : json;
+    final src = mediaContainer(json);
     final checked = asInt(src['checkedAt']);
     return PlexUpdaterStatus(
       canInstall: asBool(src['canInstall']),
@@ -59,7 +58,7 @@ final class PlexUpdaterStatus {
       status: asInt(src['status']),
       downloadUrl: asString(src['downloadURL']),
       autoUpdateVersion: asInt(src['autoUpdateVersion']),
-      releases: _objects(src['Release'], PlexRelease.fromJson),
+      releases: asObjectList(src['Release'], PlexRelease.fromJson),
       raw: src,
     );
   }
@@ -144,8 +143,7 @@ final class PlexSecurityResource {
   /// Parses the `Device` of `/security/resources` (an object, or a list
   /// of one).
   factory PlexSecurityResource.fromJson(Map<String, Object?> json) {
-    final c = json['MediaContainer'];
-    final container = c is Map<String, Object?> ? c : json;
+    final container = mediaContainer(json);
     final device = container['Device'];
     final src = switch (device) {
       final Map<String, Object?> m => m,
@@ -156,7 +154,10 @@ final class PlexSecurityResource {
       name: asString(src['name']),
       clientIdentifier: asString(src['clientIdentifier']),
       accessToken: asString(src['accessToken']),
-      connections: _objects(src['Connection'], PlexServerConnection.fromJson),
+      connections: asObjectList(
+        src['Connection'],
+        PlexServerConnection.fromJson,
+      ),
       raw: src,
     );
   }
@@ -272,17 +273,9 @@ final class PlexMediaProvider {
         title: asString(json['title']) ?? '',
         types: _csv(json['types']),
         protocols: _csv(json['protocols'] ?? json['Protocol']),
-        features: _objects(json['Feature'], PlexProviderFeature.fromJson),
+        features: asObjectList(json['Feature'], PlexProviderFeature.fromJson),
         raw: json,
       );
-
-  /// The providers of an answer.
-  static List<PlexMediaProvider> listOf(Object? json) => _containerEntries(
-    json,
-    'MediaProvider',
-    PlexMediaProvider.fromJson,
-    altKey: 'Provider',
-  );
 
   static List<String> _csv(Object? v) => (asString(v) ?? '')
       .split(',')
@@ -372,8 +365,7 @@ final class PlexSectionDetails {
 
   /// Parses the answer.
   factory PlexSectionDetails.fromJson(Map<String, Object?> json) {
-    final c = json['MediaContainer'];
-    final src = c is Map<String, Object?> ? c : json;
+    final src = mediaContainer(json);
     return PlexSectionDetails(
       librarySectionId: asString(src['librarySectionID']),
       title: asString(src['title1']),
@@ -382,7 +374,7 @@ final class PlexSectionDetails {
       thumb: asString(src['thumb']),
       viewGroup: asString(src['viewGroup']),
       allowSync: asBool(src['allowSync']),
-      views: _objects(src['Directory'], PlexSectionView.fromJson),
+      views: asObjectList(src['Directory'], PlexSectionView.fromJson),
       raw: {
         for (final e in src.entries)
           if (e.key != 'Directory') e.key: e.value,

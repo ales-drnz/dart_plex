@@ -5,6 +5,7 @@
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 import 'plex_live_tv_api.dart';
 
 /// `/livetv/dvrs/*` — Plex DVR backend configuration.
@@ -25,7 +26,7 @@ class PlexDvrsApi {
   /// `null` when the answer holds none.
   Future<PlexDvr?> get({required String dvrId}) => _http.requestJson(
     '/livetv/dvrs/$dvrId',
-    (json) => PlexDvr.listOf(json).firstOrNull,
+    firstOf('Dvr', PlexDvr.fromJson, altKey: 'DVR'),
   );
 
   /// `DELETE /livetv/dvrs/{dvrId}` — drop a DVR (its recordings

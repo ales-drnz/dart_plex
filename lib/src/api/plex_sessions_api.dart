@@ -4,6 +4,7 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
 import '../plex_server_models.dart';
@@ -89,12 +90,10 @@ class PlexSessionsApi {
     final res = await _http.request<Map<String, Object?>>(
       '/status/sessions/history/$historyId',
     );
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, Object?>) return null;
-    final list = container['Metadata'];
-    if (list is! List || list.isEmpty) return null;
-    final first = list.first;
-    return first is Map<String, Object?> ? first : null;
+    return asObjectList(
+      mediaContainer(res.data)['Metadata'],
+      (m) => m,
+    ).firstOrNull;
   }
 
   /// Delete a single history entry by its history `key`.

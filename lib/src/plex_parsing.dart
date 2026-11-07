@@ -13,6 +13,7 @@ library;
 
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
+import 'plex_json.dart';
 import 'plex_models.dart';
 
 /// Parses a `MediaContainer` envelope whose entries sit under [arrayKey].
@@ -28,6 +29,26 @@ List<T> Function(Object? json) itemsOf<T>(
   T Function(Map<String, Object?>) parser,
 ) =>
     (json) => PlexMediaContainer.fromJson(_map(json), arrayKey, parser).items;
+
+/// The entries under [key] (or [altKey]) of the `MediaContainer`, or of
+/// the answer itself; empty when there are none. Unlike [itemsOf], an
+/// answer without a `MediaContainer` is not an error.
+List<T> Function(Object? json) entriesOf<T>(
+  String key,
+  T Function(Map<String, Object?>) parser, {
+  String? altKey,
+}) => (json) {
+  final c = mediaContainer(json);
+  return asObjectList(c[key] ?? (altKey == null ? null : c[altKey]), parser);
+};
+
+/// The first of [entriesOf], or `null`: for a lookup by id.
+T? Function(Object? json) firstOf<T>(
+  String key,
+  T Function(Map<String, Object?>) parser, {
+  String? altKey,
+}) =>
+    (json) => entriesOf(key, parser, altKey: altKey)(json).firstOrNull;
 
 Map<String, Object?> _map(Object? json) {
   if (json == null) return const <String, Object?>{};

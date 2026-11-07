@@ -4,6 +4,7 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
 import '../plex_server_models.dart';
@@ -23,14 +24,14 @@ class PlexServerApi {
   ///
   Future<PlexServerIdentity> identity() => _http.requestJson(
     '/identity',
-    (json) => PlexServerIdentity.fromJson(_container(json)),
+    (json) => PlexServerIdentity.fromJson(mediaContainer(json)),
   );
 
   /// Full server root — same shape as [identity] but with more fields
   /// (`platform`, `platformVersion`, `myPlex`, `transcoderAudio`, etc.).
   Future<PlexServerInfo> info() => _http.requestJson(
     '/',
-    (json) => PlexServerInfo.fromJson(_container(json)),
+    (json) => PlexServerInfo.fromJson(mediaContainer(json)),
   );
 
   /// `true` when the server replies to `/identity`. Swallows transport
@@ -60,7 +61,7 @@ class PlexServerApi {
     return _http.requestJson(
       '/security/resources',
       queryParameters: qp,
-      (json) => PlexSecurityResource.fromJson(_container(json)),
+      (json) => PlexSecurityResource.fromJson(mediaContainer(json)),
     );
   }
 
@@ -78,11 +79,7 @@ class PlexServerApi {
       method: 'POST',
       queryParameters: const {'type': 'delegation', 'scope': 'all'},
     );
-    final data = res.data ?? const <String, Object?>{};
-    final container = data['MediaContainer'];
-    final token = container is Map<String, Object?>
-        ? container['token']
-        : data['token'];
+    final token = mediaContainer(res.data)['token'];
     return token is String ? token : null;
   }
 
@@ -92,11 +89,4 @@ class PlexServerApi {
     '/status/sessions/background',
     itemsOf('TranscodeJob', PlexTranscodeJob.fromJson),
   );
-}
-
-/// The `MediaContainer` of [json], or [json] itself when it has none.
-Map<String, Object?> _container(Object? json) {
-  if (json is! Map<String, Object?>) return const <String, Object?>{};
-  final c = json['MediaContainer'];
-  return c is Map<String, Object?> ? c : json;
 }

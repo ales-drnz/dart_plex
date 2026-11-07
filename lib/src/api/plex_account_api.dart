@@ -11,6 +11,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../plex_json.dart';
 import '../plex_jwt.dart';
 import '../plex_models.dart';
 import '../plex_query.dart';
@@ -375,11 +376,7 @@ class PlexAccountApi {
   }) async {
     final all = await _plexTv(
       '$_v2/resources',
-      (json) => [
-        if (json is List)
-          for (final e in json)
-            if (e is Map<String, Object?>) PlexResource.fromJson(e),
-      ],
+      (json) => asObjectList(json, PlexResource.fromJson),
       query: {
         'includeHttps': includeHttps ? 1 : 0,
         'includeRelay': includeRelay ? 1 : 0,
@@ -478,8 +475,8 @@ class PlexAccountApi {
   }
 
   static String? _machineIdentifier(Object? json) {
-    final c = json is Map ? json['MediaContainer'] : null;
-    return c is Map ? c['machineIdentifier'] as String? : null;
+    final id = mediaContainer(json)['machineIdentifier'];
+    return id is String ? id : null;
   }
 
   /// The token [devices] lists for the server [machineIdentifier], or
@@ -549,10 +546,7 @@ class PlexAccountApi {
   Future<List<PlexFriend>> friends() => _plexTv(
     '$_v2/friends',
     (json) => switch (json) {
-      final List<Object?> list => [
-        for (final e in list)
-          if (e is Map<String, Object?>) PlexFriend.fromJson(e),
-      ],
+      final List<Object?> list => asObjectList(list, PlexFriend.fromJson),
       _ => _list(json, 'users', PlexFriend.fromJson),
     },
   );
@@ -729,27 +723,13 @@ class PlexAccountApi {
     );
   }
 
-  /// The [key] entries of a `MediaContainer` (JSON or XML), or of a bare
-  /// object holding them.
+  /// The [key] entries of a `MediaContainer` (JSON or XML), of a bare
+  /// object holding them, or of a bare list.
   static List<T> _list<T>(
     Object? json,
     String key,
     T Function(Map<String, Object?>) parser,
-  ) {
-    if (json is List) {
-      return [
-        for (final e in json)
-          if (e is Map<String, Object?>) parser(e),
-      ];
-    }
-    if (json is! Map<String, Object?>) return const [];
-    final container = json['MediaContainer'];
-    final src = container is Map<String, Object?> ? container : json;
-    final list = src[key];
-    return [
-      if (list is List)
-        for (final e in list)
-          if (e is Map<String, Object?>) parser(e),
-    ];
-  }
+  ) => json is List
+      ? asObjectList(json, parser)
+      : asObjectList(mediaContainer(json)[key], parser);
 }

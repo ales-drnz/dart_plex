@@ -397,10 +397,7 @@ class PlexStreamingApi {
     } on PlexException catch (e) {
       throw classifyPassRequired(e);
     }
-    final container = res.data?['MediaContainer'];
-    return PlexTranscodeDecision.fromJson(
-      container is Map<String, Object?> ? container : const {},
-    );
+    return PlexTranscodeDecision.fromJson(mediaContainer(res.data));
   }
 
   /// Tell the server a transcode session can be stopped

@@ -12,20 +12,6 @@ part of '../plex_models.dart';
 // against a live answer. Every model keeps its entry in `raw`.
 // ---------------------------------------------------------------------------
 
-/// The entries under [key] of the `MediaContainer` of [json] (or of
-/// [json] itself), parsed. [altKey] is a second spelling to accept.
-List<T> _containerEntries<T>(
-  Object? json,
-  String key,
-  T Function(Map<String, Object?>) parse, {
-  String? altKey,
-}) {
-  if (json is! Map<String, Object?>) return const [];
-  final c = json['MediaContainer'];
-  final src = c is Map<String, Object?> ? c : json;
-  return _objects(src[key] ?? (altKey == null ? null : src[altKey]), parse);
-}
-
 /// A DVR: a lineup with the tuners that record from it (`/livetv/dvrs`).
 ///
 /// {@category Live TV}
@@ -65,13 +51,9 @@ final class PlexDvr {
     uuid: asString(json['uuid']),
     language: asString(json['language']),
     lineup: asString(json['lineup']),
-    devices: _objects(json['Device'], PlexTunerDevice.fromJson),
+    devices: asObjectList(json['Device'], PlexTunerDevice.fromJson),
     raw: json,
   );
-
-  /// The `Dvr` entries of an answer (PMS writes `Dvr`, the document `DVR`).
-  static List<PlexDvr> listOf(Object? json) =>
-      _containerEntries(json, 'Dvr', PlexDvr.fromJson, altKey: 'DVR');
 }
 
 /// A tuner or other grabber device (`/media/grabbers/devices`).
@@ -193,16 +175,12 @@ final class PlexTunerDevice {
         uri: asString(json['uri']),
         thumb: asString(json['thumb']),
         lastSeenAt: asEpochSeconds(json['lastSeenAt']),
-        channelMappings: _objects(
+        channelMappings: asObjectList(
           json['ChannelMapping'],
           PlexChannelMapping.fromJson,
         ),
         raw: json,
       );
-
-  /// The `Device` entries of an answer.
-  static List<PlexTunerDevice> listOf(Object? json) =>
-      _containerEntries(json, 'Device', PlexTunerDevice.fromJson);
 }
 
 /// How a device channel maps to a lineup channel (`ChannelMapping`).
@@ -242,10 +220,6 @@ final class PlexChannelMapping {
         enabled: asBool(json['enabled']),
         raw: json,
       );
-
-  /// The `ChannelMapping` entries of an answer.
-  static List<PlexChannelMapping> listOf(Object? json) =>
-      _containerEntries(json, 'ChannelMapping', PlexChannelMapping.fromJson);
 }
 
 /// A grabber type the server supports (`/media/grabbers`).
@@ -478,13 +452,9 @@ final class PlexLineup {
     identifier: asString(json['identifier']),
     lineupType: asInt(json['lineupType']),
     location: asString(json['location']),
-    channels: _objects(json['Channel'], PlexEpgChannel.fromJson),
+    channels: asObjectList(json['Channel'], PlexEpgChannel.fromJson),
     raw: json,
   );
-
-  /// The `Lineup` entries of an answer.
-  static List<PlexLineup> listOf(Object? json) =>
-      _containerEntries(json, 'Lineup', PlexLineup.fromJson);
 }
 
 /// A channel of a lineup (`Channel`).
@@ -653,21 +623,14 @@ final class PlexMediaSubscription {
       item: item is Map<String, Object?> && item.isNotEmpty
           ? PlexMetadata.fromJson(item)
           : null,
-      grabs: _objects(
+      grabs: asObjectList(
         json['MediaGrabOperation'],
         PlexMediaGrabOperation.fromJson,
       ),
-      settings: _objects(json['Setting'], (m) => m),
+      settings: asObjectList(json['Setting'], (m) => m),
       raw: json,
     );
   }
-
-  /// The `MediaSubscription` entries of an answer.
-  static List<PlexMediaSubscription> listOf(Object? json) => _containerEntries(
-    json,
-    'MediaSubscription',
-    PlexMediaSubscription.fromJson,
-  );
 }
 
 /// A recording, in progress or planned (`MediaGrabOperation`).
@@ -739,13 +702,6 @@ final class PlexMediaGrabOperation {
       raw: json,
     );
   }
-
-  /// The `MediaGrabOperation` entries of an answer.
-  static List<PlexMediaGrabOperation> listOf(Object? json) => _containerEntries(
-    json,
-    'MediaGrabOperation',
-    PlexMediaGrabOperation.fromJson,
-  );
 }
 
 /// A download queue (`/downloadQueue`): one per client and user.
@@ -785,10 +741,6 @@ final class PlexDownloadQueue {
         clientIdentifier: asString(json['clientIdentifier']),
         raw: json,
       );
-
-  /// The `DownloadQueue` entries of an answer.
-  static List<PlexDownloadQueue> listOf(Object? json) =>
-      _containerEntries(json, 'DownloadQueue', PlexDownloadQueue.fromJson);
 }
 
 /// An item of a download queue (`DownloadQueueItem`).
@@ -849,11 +801,4 @@ final class PlexDownloadQueueItem {
       raw: json,
     );
   }
-
-  /// The `DownloadQueueItem` entries of an answer.
-  static List<PlexDownloadQueueItem> listOf(Object? json) => _containerEntries(
-    json,
-    'DownloadQueueItem',
-    PlexDownloadQueueItem.fromJson,
-  );
 }

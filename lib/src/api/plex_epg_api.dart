@@ -42,7 +42,7 @@ class PlexEpgApi {
     String? postalCode,
   }) => _http.requestJson(
     '/livetv/epg/countries/$country/$epgId/lineups',
-    PlexLineup.listOf,
+    entriesOf('Lineup', PlexLineup.fromJson),
     queryParameters: postalCode == null ? null : {'postalCode': postalCode},
   );
 
@@ -65,7 +65,7 @@ class PlexEpgApi {
     required String region,
   }) => _http.requestJson(
     '/livetv/epg/countries/$country/$epgId/regions/$region/lineups',
-    PlexLineup.listOf,
+    entriesOf('Lineup', PlexLineup.fromJson),
   );
 
   /// `GET /livetv/epg/lineup?device={d}&lineupGroup={g}` — server's
@@ -78,7 +78,7 @@ class PlexEpgApi {
     required String lineupGroup,
   }) => _http.requestJson(
     '/livetv/epg/lineup',
-    PlexLineup.listOf,
+    entriesOf('Lineup', PlexLineup.fromJson),
     queryParameters: {'device': device, 'lineupGroup': lineupGroup},
   );
 
@@ -89,7 +89,7 @@ class PlexEpgApi {
     required String lineup,
   }) => _http.requestJson(
     '/livetv/epg/channelmap',
-    PlexChannelMapping.listOf,
+    entriesOf('ChannelMapping', PlexChannelMapping.fromJson),
     queryParameters: {'device': device, 'lineup': lineup},
   );
 
@@ -111,7 +111,7 @@ class PlexEpgApi {
     assert(lineup.isNotEmpty, 'lineup must contain at least one URI');
     return _http.requestJson(
       '/livetv/epg/lineupchannels',
-      PlexLineup.listOf,
+      entriesOf('Lineup', PlexLineup.fromJson),
       queryParameters: {'lineup': lineup},
     );
   }

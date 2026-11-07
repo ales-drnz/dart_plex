@@ -32,15 +32,17 @@ class PlexDevicesApi {
       );
 
   /// `GET /media/grabbers/devices` — every registered device.
-  Future<List<PlexTunerDevice>> list() =>
-      _http.requestJson('/media/grabbers/devices', PlexTunerDevice.listOf);
+  Future<List<PlexTunerDevice>> list() => _http.requestJson(
+    '/media/grabbers/devices',
+    entriesOf('Device', PlexTunerDevice.fromJson),
+  );
 
   /// `POST /media/grabbers/devices?uri={uri}` — add a device by URI
   /// (e.g. `hdhomerun://1A2B3C4D` or an M3U URL); returns the devices the
   /// answer lists.
   Future<List<PlexTunerDevice>> add({required String uri}) => _http.requestJson(
     '/media/grabbers/devices',
-    PlexTunerDevice.listOf,
+    entriesOf('Device', PlexTunerDevice.fromJson),
     method: 'POST',
     queryParameters: {'uri': uri},
   );
@@ -50,7 +52,7 @@ class PlexDevicesApi {
   /// without tuners).
   Future<List<PlexTunerDevice>> discover() => _http.requestJson(
     '/media/grabbers/devices/discover',
-    PlexTunerDevice.listOf,
+    entriesOf('Device', PlexTunerDevice.fromJson),
     method: 'POST',
   );
 
@@ -59,7 +61,7 @@ class PlexDevicesApi {
   Future<PlexTunerDevice?> details({required String deviceId}) =>
       _http.requestJson(
         '/media/grabbers/devices/$deviceId',
-        (json) => PlexTunerDevice.listOf(json).firstOrNull,
+        firstOf('Device', PlexTunerDevice.fromJson),
       );
 
   /// `DELETE /media/grabbers/devices/{deviceId}` — drop a device.

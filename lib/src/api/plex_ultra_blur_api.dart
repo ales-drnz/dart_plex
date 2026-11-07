@@ -8,6 +8,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../plex_json.dart';
 import '../plex_models.dart';
 
 /// `/services/ultrablur/*` — server-side palette extraction and
@@ -37,14 +38,10 @@ class PlexUltraBlurApi {
       '/services/ultrablur/colors',
       queryParameters: {'url': sourceUrl},
     );
-    final container = res.data?['MediaContainer'];
-    if (container is! Map<String, Object?>) return const [];
-    final raw = container['UltraBlurColors'];
-    if (raw is! List) return const [];
-    return [
-      for (final e in raw)
-        if (e is Map<String, Object?>) PlexUltraBlurColors.fromJson(e),
-    ];
+    return asObjectList(
+      mediaContainer(res.data)['UltraBlurColors'],
+      PlexUltraBlurColors.fromJson,
+    );
   }
 
   /// Build a `/services/ultrablur/image` URL — a server-rendered

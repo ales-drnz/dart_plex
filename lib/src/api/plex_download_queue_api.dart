@@ -6,7 +6,9 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../plex_json.dart';
 import '../plex_models.dart';
+import '../plex_parsing.dart';
 import 'plex_play_queues_api.dart';
 import 'plex_streaming_api.dart';
 
@@ -34,7 +36,7 @@ class PlexDownloadQueueApi {
       _http.requestJson('/downloadQueue', _created, method: 'POST');
 
   static PlexDownloadQueue _created(Object? json) {
-    final queue = PlexDownloadQueue.listOf(json).firstOrNull;
+    final queue = firstOf('DownloadQueue', PlexDownloadQueue.fromJson)(json);
     if (queue != null) return queue;
     throw const PlexException(
       'The answer holds no DownloadQueue',
@@ -46,7 +48,7 @@ class PlexDownloadQueueApi {
   /// answer holds none.
   Future<PlexDownloadQueue?> get({required int queueId}) => _http.requestJson(
     '/downloadQueue/$queueId',
-    (json) => PlexDownloadQueue.listOf(json).firstOrNull,
+    firstOf('DownloadQueue', PlexDownloadQueue.fromJson),
   );
 
   /// `POST /downloadQueue/{queueId}/add?keys={ratingKeysJoinedByComma}` —
@@ -64,7 +66,7 @@ class PlexDownloadQueueApi {
   Future<List<PlexDownloadQueueItem>> items({required int queueId}) =>
       _http.requestJson(
         '/downloadQueue/$queueId/items',
-        PlexDownloadQueueItem.listOf,
+        entriesOf('DownloadQueueItem', PlexDownloadQueueItem.fromJson),
       );
 
   /// `GET /downloadQueue/{queueId}/items/{itemId}` — one queued item, or
@@ -74,7 +76,7 @@ class PlexDownloadQueueApi {
     required int itemId,
   }) => _http.requestJson(
     '/downloadQueue/$queueId/items/$itemId',
-    (json) => PlexDownloadQueueItem.listOf(json).firstOrNull,
+    firstOf('DownloadQueueItem', PlexDownloadQueueItem.fromJson),
   );
 
   /// `DELETE /downloadQueue/{queueId}/items/{itemId}` — remove an
@@ -107,12 +109,8 @@ class PlexDownloadQueueApi {
     _decision,
   );
 
-  static PlexTranscodeDecision _decision(Object? json) {
-    final c = json is Map<String, Object?> ? json['MediaContainer'] : null;
-    return PlexTranscodeDecision.fromJson(
-      c is Map<String, Object?> ? c : const {},
-    );
-  }
+  static PlexTranscodeDecision _decision(Object? json) =>
+      PlexTranscodeDecision.fromJson(mediaContainer(json));
 
   /// `GET /downloadQueue/{queueId}/item/{itemId}/media` — the URL of the
   /// item's file, once it is `available`: the media itself, not JSON, so
