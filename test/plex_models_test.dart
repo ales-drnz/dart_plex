@@ -3,6 +3,7 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import 'package:dart_plex/dart_plex.dart';
+import 'package:dart_plex/src/plex_json.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -304,5 +305,14 @@ void main() {
       expect(s.audioChannelLayout, '5.1(side)');
       expect(s.displayTitle, 'English (EAC3 5.1)');
     });
+  });
+
+  test('asBool reads true, 1, "1" and "true", nothing else', () {
+    for (final v in [true, 1, '1', 'true']) {
+      expect(asBool(v), isTrue, reason: '$v');
+    }
+    for (final v in [false, 0, '0', 'false', 'yes', null, 2]) {
+      expect(asBool(v), isFalse, reason: '$v');
+    }
   });
 }

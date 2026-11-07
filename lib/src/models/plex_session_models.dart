@@ -64,9 +64,7 @@ final class PlexPlayQueue {
     return PlexPlayQueue(
       id: asInt(container['playQueueID']) ?? 0,
       selectedItemId: asInt(container['playQueueSelectedItemID']),
-      shuffled:
-          container['playQueueShuffled'] == true ||
-          container['playQueueShuffled'] == 1,
+      shuffled: asBool(container['playQueueShuffled']),
       version: asInt(container['playQueueVersion']),
       items: [
         if (metadata is List)
@@ -194,7 +192,7 @@ final class PlexSessionPlayer {
         platform: asString(json['platform']),
         device: asString(json['device']),
         state: asString(json['state']),
-        local: json['local'] == true || json['local'] == '1',
+        local: asBool(json['local']),
         address: asString(json['address']),
         raw: json,
       );

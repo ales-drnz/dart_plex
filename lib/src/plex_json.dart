@@ -29,8 +29,9 @@ double? asDouble(Object? v) => switch (v) {
   _ => null,
 };
 
-/// `true` for `true`, `1` and `"1"`.
-bool asBool(Object? v) => v == true || v == 1 || v == '1';
+/// `true` for `true`, `1`, `"1"` and `"true"` (plex.tv's XML routes
+/// write flags as words); `false` for anything else.
+bool asBool(Object? v) => v == true || v == 1 || v == '1' || v == 'true';
 
 /// An ISO-8601 timestamp, in UTC.
 DateTime? asUtcDateTime(Object? v) =>

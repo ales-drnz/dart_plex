@@ -376,7 +376,7 @@ final class PlexSectionDetails {
       art: asString(src['art']),
       thumb: asString(src['thumb']),
       viewGroup: asString(src['viewGroup']),
-      allowSync: asBool(src['allowSync']) || src['allowSync'] == 'true',
+      allowSync: asBool(src['allowSync']),
       views: _objects(src['Directory'], PlexSectionView.fromJson),
       raw: {
         for (final e in src.entries)
@@ -420,8 +420,8 @@ final class PlexSectionView {
       PlexSectionView(
         key: asString(json['key']) ?? '',
         title: asString(json['title']) ?? '',
-        secondary: asBool(json['secondary']) || json['secondary'] == true,
-        search: asBool(json['search']) || json['search'] == true,
+        secondary: asBool(json['secondary']),
+        search: asBool(json['search']),
         prompt: asString(json['prompt']),
       );
 }

@@ -255,7 +255,7 @@ final class PlexActivityEvent extends PlexEvent {
       title: asString(activity['title']) ?? '',
       subtitle: asString(activity['subtitle']),
       progress: asInt(activity['progress']),
-      cancellable: activity['cancellable'] == true,
+      cancellable: asBool(activity['cancellable']),
       librarySectionId: asString(context['librarySectionID']),
     );
   }

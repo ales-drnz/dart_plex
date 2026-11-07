@@ -182,7 +182,7 @@ final class PlexTunerDevice {
         sources: asString(json['sources']),
         state: asString(json['state']),
         status: asString(json['status']),
-        enabled: asBool(json['enabled']) || json['enabled'] == 'true',
+        enabled: asBool(json['enabled']),
         lineup: asString(json['lineup']),
         tuners: asInt(json['tuners']),
         uri: asString(json['uri']),
@@ -230,7 +230,7 @@ final class PlexChannelMapping {
         deviceIdentifier: asString(json['deviceIdentifier']),
         channelKey: asString(json['channelKey']),
         lineupIdentifier: asString(json['lineupIdentifier']),
-        enabled: asBool(json['enabled']) || json['enabled'] == 'true',
+        enabled: asBool(json['enabled']),
       );
 
   /// The `ChannelMapping` entries of an answer.

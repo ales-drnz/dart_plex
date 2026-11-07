@@ -99,14 +99,12 @@ final class PlexUser {
           '',
       hasPlexPass:
           subs != null &&
-          (asBool(subs['active']) ||
-              subs['active'] == 'true' ||
-              asString(subs['status']) == 'Active'),
+          (asBool(subs['active']) || asString(subs['status']) == 'Active'),
       title: asString(src['title']),
-      restricted: _flag(src['restricted']),
-      home: _flag(src['home']),
-      homeAdmin: _flag(src['homeAdmin']),
-      protected: _flag(src['protected']),
+      restricted: asBool(src['restricted']),
+      home: asBool(src['home']),
+      homeAdmin: asBool(src['homeAdmin']),
+      protected: asBool(src['protected']),
       subscriptionFeatures: [
         if (features is List)
           for (final f in features)
@@ -116,10 +114,6 @@ final class PlexUser {
     );
   }
 }
-
-/// A plex.tv flag: `true`, `1`, `"1"` or `"true"` (the XML endpoints
-/// write booleans as words).
-bool _flag(Object? v) => asBool(v) || v == 'true';
 
 /// [v] itself when it is a map, its first element when it is a list of
 /// maps (the XML shape of a single child).
@@ -222,12 +216,12 @@ final class PlexResource {
       productVersion: asString(json['productVersion']) ?? '',
       platform: asString(json['platform']) ?? '',
       device: asString(json['device']),
-      owned: json['owned'] == true,
-      home: json['home'] == true,
-      synced: json['synced'] == true,
-      relay: json['relay'] == true,
-      presence: json['presence'] == true,
-      httpsRequired: json['httpsRequired'] == true,
+      owned: asBool(json['owned']),
+      home: asBool(json['home']),
+      synced: asBool(json['synced']),
+      relay: asBool(json['relay']),
+      presence: asBool(json['presence']),
+      httpsRequired: asBool(json['httpsRequired']),
       accessToken: asString(json['accessToken']) ?? '',
       publicAddress: asString(json['publicAddress']),
       provides: (asString(json['provides']) ?? '')
@@ -346,16 +340,16 @@ final class PlexServerConnection {
   factory PlexServerConnection.fromJson(Map<String, Object?> json) {
     final address = asString(json['address']) ?? '';
     final ipv6 =
-        _flag(json['IPv6']) ||
-        _flag(json['ipv6']) ||
+        asBool(json['IPv6']) ||
+        asBool(json['ipv6']) ||
         (address.contains(':') && !address.contains('.plex.direct'));
     return PlexServerConnection(
       protocol: asString(json['protocol']) ?? '',
       address: address,
       port: asInt(json['port']) ?? 0,
       uri: bracketIpv6(asString(json['uri']) ?? ''),
-      local: _flag(json['local']),
-      relay: _flag(json['relay']),
+      local: asBool(json['local']),
+      relay: asBool(json['relay']),
       ipv6: ipv6,
       raw: json,
     );
@@ -532,11 +526,11 @@ final class PlexHomeUser {
     username: asString(json['username']) ?? '',
     email: asString(json['email']) ?? '',
     thumb: asString(json['thumb']),
-    admin: _flag(json['admin']),
-    guest: _flag(json['guest']),
-    restricted: _flag(json['restricted']),
+    admin: asBool(json['admin']),
+    guest: asBool(json['guest']),
+    restricted: asBool(json['restricted']),
     restrictionProfile: asString(json['restrictionProfile']),
-    protected: _flag(json['protected']) || _flag(json['hasPassword']),
+    protected: asBool(json['protected']) || asBool(json['hasPassword']),
     raw: json,
   );
 }
@@ -611,12 +605,12 @@ final class PlexAccountUser {
       username: asString(json['username']) ?? '',
       email: asString(json['email']) ?? '',
       thumb: asString(json['thumb']),
-      home: _flag(json['home']),
-      restricted: _flag(json['restricted']),
-      protected: _flag(json['protected']),
-      allowSync: _flag(json['allowSync']),
-      allowCameraUpload: _flag(json['allowCameraUpload']),
-      allowTuners: _flag(json['allowTuners']),
+      home: asBool(json['home']),
+      restricted: asBool(json['restricted']),
+      protected: asBool(json['protected']),
+      allowSync: asBool(json['allowSync']),
+      allowCameraUpload: asBool(json['allowCameraUpload']),
+      allowTuners: asBool(json['allowTuners']),
       servers: [
         if (servers is List)
           for (final s in servers)
@@ -685,9 +679,9 @@ final class PlexServerShare {
         name: asString(json['name']) ?? '',
         lastSeenAt: asEpochSeconds(json['lastSeenAt']),
         numLibraries: asInt(json['numLibraries']),
-        allLibraries: _flag(json['allLibraries']),
-        owned: _flag(json['owned']),
-        pending: _flag(json['pending']),
+        allLibraries: asBool(json['allLibraries']),
+        owned: asBool(json['owned']),
+        pending: asBool(json['pending']),
         raw: json,
       );
 }
@@ -883,11 +877,11 @@ final class PlexGeoLocation {
       latitude: coords.length == 2 ? double.tryParse(coords[0].trim()) : null,
       longitude: coords.length == 2 ? double.tryParse(coords[1].trim()) : null,
       europeanUnionMember:
-          _flag(src['european_union_member']) ||
-          _flag(src['europeanUnionMember']),
+          asBool(src['european_union_member']) ||
+          asBool(src['europeanUnionMember']),
       inPrivacyRestrictedCountry:
-          _flag(src['in_privacy_restricted_country']) ||
-          _flag(src['inPrivacyRestrictedCountry']),
+          asBool(src['in_privacy_restricted_country']) ||
+          asBool(src['inPrivacyRestrictedCountry']),
       raw: src,
     );
   }

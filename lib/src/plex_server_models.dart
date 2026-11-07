@@ -44,7 +44,7 @@ final class PlexServerIdentity {
         machineIdentifier: asString(json['machineIdentifier']) ?? '',
         version: asString(json['version']),
         apiVersion: asString(json['apiVersion']),
-        claimed: json['claimed'] == true || json['claimed'] == 1,
+        claimed: asBool(json['claimed']),
         raw: json,
       );
 }
@@ -253,7 +253,7 @@ final class PlexActivity {
       title: asString(json['title']) ?? '',
       subtitle: asString(json['subtitle']),
       progress: asInt(json['progress']),
-      cancellable: json['cancellable'] == true,
+      cancellable: asBool(json['cancellable']),
       librarySectionId: context is Map<String, Object?>
           ? asString(context['librarySectionID'])
           : null,
@@ -302,8 +302,8 @@ final class PlexButlerTask {
     title: asString(json['title']),
     description: asString(json['description']),
     intervalDays: asInt(json['interval']),
-    enabled: json['enabled'] == true,
-    scheduleRandomized: json['scheduleRandomized'] == true,
+    enabled: asBool(json['enabled']),
+    scheduleRandomized: asBool(json['scheduleRandomized']),
     raw: json,
   );
 }
@@ -380,8 +380,8 @@ final class PlexSetting {
       type: asString(json['type']) ?? '',
       value: json['value'],
       defaultValue: json['default'],
-      hidden: json['hidden'] == true,
-      advanced: json['advanced'] == true,
+      hidden: asBool(json['hidden']),
+      advanced: asBool(json['advanced']),
       group: asString(json['group']),
       enumValues: enums,
       raw: json,

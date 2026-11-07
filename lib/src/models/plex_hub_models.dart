@@ -66,7 +66,7 @@ final class PlexHub {
     title: asString(json['title']) ?? '',
     type: asString(json['type']),
     size: asInt(json['size']) ?? 0,
-    more: json['more'] == true,
+    more: asBool(json['more']),
     items: [
       if (json['Metadata'] is List)
         for (final m in json['Metadata'] as List)

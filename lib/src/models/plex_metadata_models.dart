@@ -450,7 +450,7 @@ final class PlexMarker {
     },
     start: Duration(milliseconds: asInt(json['startTimeOffset']) ?? 0),
     end: Duration(milliseconds: asInt(json['endTimeOffset']) ?? 0),
-    isFinal: asBool(json['final']) || json['final'] == 'true',
+    isFinal: asBool(json['final']),
     raw: json,
   );
 }
@@ -804,8 +804,8 @@ final class PlexStream {
     languageCode: asString(json['languageCode']),
     title: asString(json['title']),
     key: asString(json['key']),
-    selected: json['selected'] == true,
-    isDefault: json['default'] == true,
+    selected: asBool(json['selected']),
+    isDefault: asBool(json['default']),
     gain: asDouble(json['gain']),
     albumGain: asDouble(json['albumGain']),
     peak: asDouble(json['peak']),
