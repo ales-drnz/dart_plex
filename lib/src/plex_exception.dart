@@ -22,8 +22,12 @@ import 'plex_error_type.dart';
 ///
 /// {@category Errors and paging}
 final class PlexException implements Exception {
-  /// Human-readable description.
-  final String message;
+  final String _message;
+  final String? _path;
+
+  /// Human-readable description. A secret in a URL it quotes
+  /// (`X-Plex-Token`, `deviceJWT`, `pin`) reads `REDACTED`.
+  String get message => _redact(_message);
 
   /// Semantic category for programmatic handling.
   final PlexErrorType type;
@@ -31,8 +35,10 @@ final class PlexException implements Exception {
   /// HTTP status code, if the failure came from a server response.
   final int? statusCode;
 
-  /// Path of the request that triggered the failure, if known.
-  final String? path;
+  /// URL of the request that triggered the failure, if known, with the
+  /// value of `X-Plex-Token`, `deviceJWT` and `pin` replaced by
+  /// `REDACTED`.
+  String? get path => _path == null ? null : _redact(_path);
 
   /// The underlying error, if any (the transport's `ClientException`, a
   /// `FormatException`, …).
@@ -53,15 +59,28 @@ final class PlexException implements Exception {
 
   /// Construct an exception with a [message] and optional classification fields.
   const PlexException(
-    this.message, {
+    String message, {
     this.type = PlexErrorType.unknown,
     this.statusCode,
-    this.path,
+    String? path,
     this.cause,
     this.stackTrace,
     this.retryAfter,
     this.body,
-  });
+  }) : _message = message,
+       _path = path;
+
+  /// [text] with the value of every `X-Plex-Token`, `deviceJWT` and `pin`
+  /// query parameter replaced by `REDACTED`.
+  static String _redact(String text) => text.replaceAllMapped(
+    _secret,
+    (m) => '${m[1]}REDACTED',
+  );
+
+  static final RegExp _secret = RegExp(
+    r'([?&;](?:x-plex-token|devicejwt|pin)=)[^&#\s]*',
+    caseSensitive: false,
+  );
 
   /// No answer from the server at all: the connection failed or timed out.
   /// The server may be down or unreachable — not the same as an answer that
@@ -96,10 +115,10 @@ final class PlexException implements Exception {
 
   /// A copy with [type] replaced, keeping everything else.
   PlexException withType(PlexErrorType type) => PlexException(
-    message,
+    _message,
     type: type,
     statusCode: statusCode,
-    path: path,
+    path: _path,
     cause: cause,
     stackTrace: stackTrace,
     retryAfter: retryAfter,

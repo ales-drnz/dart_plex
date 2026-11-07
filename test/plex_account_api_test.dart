@@ -63,4 +63,25 @@ void main() {
       ),
     );
   });
+
+  test('secrets in a URL are redacted from the exception', () async {
+    adapter.respond = (_) => CannedResponse(500, const []);
+    final pin = await plex
+        .request<Object>(
+          'https://clients.plex.tv/api/v2/pins/42?deviceJWT=secret.jwt.sig'
+          '&X-Plex-Token=tok&pin=1234&other=kept',
+          absoluteUrl: true,
+        )
+        .then<PlexException?>(
+          (_) => null,
+          onError: (Object e) => e as PlexException,
+        );
+    expect(pin!.path, isNot(contains('secret')));
+    expect(pin.path, contains('deviceJWT=REDACTED'));
+    expect(pin.path, contains('X-Plex-Token=REDACTED'));
+    expect(pin.path, contains('pin=REDACTED'));
+    expect(pin.path, contains('other=kept'));
+    expect('$pin', isNot(contains('tok&')));
+    expect('$pin', isNot(contains('1234')));
+  });
 }
