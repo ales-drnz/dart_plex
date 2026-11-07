@@ -238,7 +238,7 @@ class PlexClient {
     playlists = PlexPlaylistsApi(_http);
     search = PlexSearchApi(_http);
     playback = PlexPlaybackApi(_http);
-    streaming = PlexStreamingApi(_http, state: _state);
+    streaming = PlexStreamingApi(_http);
     images = PlexImagesApi(_http);
     sessions = PlexSessionsApi(_http);
     hubs = PlexHubsApi(_http);

@@ -118,12 +118,10 @@ void main() {
     });
 
     test('an error body that names it is retyped, raw body kept', () async {
-      const body =
-          '<html><body>Plex Pass required for remote streaming'
-          '</body></html>';
+      const body = 'Plex Pass required for remote streaming';
       final adapter = CapturingAdapter()
         ..respond = (_) =>
-            CannedResponse(403, utf8.encode(body), contentType: 'text/html');
+            CannedResponse(403, utf8.encode(body), contentType: 'text/plain');
       final plex = testClient(adapter);
       await expectLater(
         plex.streaming.startVideoTranscode(ratingKey: '1', session: 's'),
@@ -136,13 +134,31 @@ void main() {
       );
     });
 
-    test(
-      'a bare 403 is the pass only on a remote or relay connection',
-      () async {
-        final adapter = CapturingAdapter()
-          ..respond = (_) => CannedResponse(403, utf8.encode('Forbidden'));
-        final plex = testClient(adapter)
-          ..connectTo(_kind(PlexConnectionKind.local), accessToken: 'tok');
+    test('an HTML page that names the pass is not retyped', () async {
+      const body =
+          '<!DOCTYPE html><html><body>Get Plex Pass! Forbidden</body></html>';
+      final adapter = CapturingAdapter()
+        ..respond = (_) =>
+            CannedResponse(403, utf8.encode(body), contentType: 'text/html');
+      final plex = testClient(adapter);
+      await expectLater(
+        plex.streaming.decisionUniversal(params: const {'path': '/x'}),
+        throwsA(
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.auth,
+          ),
+        ),
+      );
+    });
+
+    test('a bare 403 stays an auth error on any connection', () async {
+      final adapter = CapturingAdapter()
+        ..respond = (_) => CannedResponse(403, utf8.encode('Forbidden'));
+      final plex = testClient(adapter);
+      for (final kind in PlexConnectionKind.values) {
+        plex.connectTo(_kind(kind), accessToken: 'tok');
         await expectLater(
           plex.streaming.decisionUniversal(params: const {'path': '/x'}),
           throwsA(
@@ -152,26 +168,25 @@ void main() {
               PlexErrorType.auth,
             ),
           ),
+          reason: '$kind',
         );
-        for (final kind in [
-          PlexConnectionKind.remote,
-          PlexConnectionKind.relay,
-        ]) {
-          plex.connectTo(_kind(kind), accessToken: 'tok');
-          expect(plex.connectionKind, kind);
-          await expectLater(
-            plex.streaming.decisionUniversal(params: const {'path': '/x'}),
-            throwsA(
-              isA<PlexException>().having(
-                (e) => e.type,
-                'type',
-                PlexErrorType.passRequired,
-              ),
-            ),
-          );
-        }
-      },
-    );
+      }
+    });
+
+    test('a 401 or 498 is never retyped, whatever it says', () {
+      for (final status in [401, 498]) {
+        final e = PlexException(
+          'HTTP $status',
+          type: PlexErrorType.auth,
+          statusCode: status,
+          body: 'Plex Pass required',
+        );
+        expect(
+          PlexStreamingApi.classifyPassRequired(e).type,
+          PlexErrorType.auth,
+        );
+      }
+    });
 
     test('the heuristics on their own', () {
       for (final text in [
@@ -196,10 +211,7 @@ void main() {
         statusCode: 401,
       );
       expect(
-        PlexStreamingApi.classifyPassRequired(
-          unrelated,
-          PlexConnectionKind.remote,
-        ).type,
+        PlexStreamingApi.classifyPassRequired(unrelated).type,
         PlexErrorType.auth,
       );
     });

@@ -12,7 +12,6 @@ import '../plex_credentials.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
 import '../plex_models.dart';
-import '../plex_session_state.dart';
 import '../plex_vocabulary.dart';
 import '../transport/plex_response.dart';
 
@@ -33,14 +32,14 @@ import '../transport/plex_response.dart';
 /// whole answer in [PlexException.body]. PMS documents no code for it, so
 /// the decision calls recognise it heuristically, from:
 ///
-/// * the answer's text — an error body, or a decision's
+/// * the text of a 4xx error answer other than `401`, `404` and `498`
+///   (an HTML page does not count), or of a decision's
 ///   `generalDecisionText` / `transcodeDecisionText` /
-///   `directPlayDecisionText` — naming "Plex Pass", "Remote Watch", or
-///   remote playback as requiring a subscription or not allowed;
-/// * a `403` on a decision or start while the client reached the server
-///   through a remote or relay connection ([PlexClient.connectionKind]):
-///   local playback never needs the pass, and a `403` with a valid token
-///   is what remote clients reported.
+///   `directPlayDecisionText`, naming "Plex Pass", "Remote Watch", or
+///   remote playback as requiring a subscription or not allowed.
+///
+/// A bare `403` stays an auth error, whatever the connection: it is also
+/// what a server answers to a token it does not accept.
 ///
 /// A false negative stays the error it was (an auth or bad-request error,
 /// or an unplayable [PlexTranscodeDecision]); check
@@ -50,11 +49,9 @@ import '../transport/plex_response.dart';
 /// {@category Streaming}
 class PlexStreamingApi {
   final PlexConnection _http;
-  final PlexSessionState? _state;
 
   /// Construct from a [PlexConnection]. Typically obtained via [PlexClient.streaming].
-  PlexStreamingApi(this._http, {@internal PlexSessionState? state})
-    : _state = state;
+  PlexStreamingApi(this._http);
 
   /// Starts a server-side audio transcode the way PMS accepts it, and
   /// returns the URL to play.
@@ -392,7 +389,7 @@ class PlexStreamingApi {
         extraHeaders: extraHeaders,
       );
     } on PlexException catch (e) {
-      throw classifyPassRequired(e, _state?.connection?.kind);
+      throw classifyPassRequired(e);
     }
     final container = res.data?['MediaContainer'];
     if (container is! Map<String, Object?>) {
@@ -499,24 +496,32 @@ class PlexStreamingApi {
   }
 
   /// [e] retyped as [PlexErrorType.passRequired] when it looks like the
-  /// remote-streaming pass refusal: a text that says so, or a `403` on a
-  /// remote or relay connection ([kind]). Otherwise [e] unchanged. See
-  /// the class documentation for the heuristics.
-  static PlexException classifyPassRequired(
-    PlexException e,
-    PlexConnectionKind? kind,
-  ) {
-    if (e.type == PlexErrorType.cancelled || e.isNetworkFailure) return e;
-    final text = '${e.body ?? ''} ${e.message}';
-    final remote =
-        kind == PlexConnectionKind.remote || kind == PlexConnectionKind.relay;
-    if (mentionsPass(text) || (e.statusCode == 403 && remote)) {
-      return e.withType(PlexErrorType.passRequired);
+  /// remote-streaming pass refusal: a 4xx other than `401`, `404` and
+  /// `498` whose text says so. An HTML page does not count: a site's
+  /// pages can name the Plex Pass anywhere. Otherwise [e] unchanged.
+  @internal
+  static PlexException classifyPassRequired(PlexException e) {
+    final status = e.statusCode;
+    if (status == null ||
+        status < 400 ||
+        status >= 500 ||
+        status == 401 ||
+        status == 404 ||
+        status == 498) {
+      return e;
     }
-    return e;
+    final text = e.body ?? e.message;
+    if (_looksLikeHtml(text) || !mentionsPass(text)) return e;
+    return e.withType(PlexErrorType.passRequired);
+  }
+
+  static bool _looksLikeHtml(String text) {
+    final head = text.trimLeft().toLowerCase();
+    return head.startsWith('<!doctype html') || head.startsWith('<html');
   }
 
   /// Whether [text] says playback needs a Plex Pass or Remote Watch Pass.
+  @internal
   static bool mentionsPass(String text) => _passPattern.hasMatch(text);
 
   static final RegExp _passPattern = RegExp(

@@ -152,16 +152,15 @@ the user out. PMS documents no code for it, so the decision calls
 (`decisionUniversal`, `startVideoTranscode`, `startAudioTranscode`)
 recognise it from:
 
-- the answer's text — an error body, or a decision's
-  `generalDecisionText`, `transcodeDecisionText` or
-  `directPlayDecisionText` — naming "Plex Pass" or "Remote Watch", or
-  remote playback as requiring a subscription or not allowed
-  (`PlexStreamingApi.mentionsPass`);
-- a `403` on a decision while the client reaches the server through a
-  remote or relay connection: local playback never needs the pass, and a
-  `403` with a valid token is what remote clients reported.
+- the text of a 4xx error answer other than `401`, `404` and `498`, or
+  of a decision's `generalDecisionText`, `transcodeDecisionText` or
+  `directPlayDecisionText`, naming "Plex Pass" or "Remote Watch", or
+  remote playback as requiring a subscription or not allowed. An HTML
+  page does not count: a site's pages can name the Plex Pass anywhere.
 
-Neither rule could be checked against a real refusal for this release.
+A bare `403` stays an auth error on any connection: it is also how a
+server refuses a token. The rule could not be checked against a real
+refusal for this release.
 A refusal they miss stays the error it was (an auth or bad-request
 error, or an unplayable decision): when in doubt, read `connectionKind`
 and `body`. Music is not covered by the requirement.
