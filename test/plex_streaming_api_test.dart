@@ -250,4 +250,48 @@ void _stopUniversalTests() {
       }
     });
   });
+
+  group('PlexLyrics', () {
+    test('LRC with tags, offset, repeated stamps and a plain line', () {
+      final l = PlexLyrics.parse(
+        '[ar:Artist]\n[ti:Title]\n[offset:+500]\n'
+        '[00:12.00][01:00.50]Chorus\n'
+        '[00:05.1]Intro\n'
+        'not timed\n',
+      );
+      expect(l.metadata, {'ar': 'Artist', 'ti': 'Title', 'offset': '+500'});
+      expect(l.isSynced, isTrue);
+      expect(l.lines.map((x) => (x.start, x.text)), [
+        (const Duration(milliseconds: 4600), 'Intro'),
+        (const Duration(milliseconds: 11500), 'Chorus'),
+        (const Duration(minutes: 1), 'Chorus'),
+      ]);
+      expect(l.toLrc(), '[00:04.60]Intro\n[00:11.50]Chorus\n[01:00.00]Chorus');
+      expect(l.toPlainText(), 'Intro\nChorus\nChorus');
+    });
+
+    test('enhanced LRC word times', () {
+      final l = PlexLyrics.parse(
+        '[00:12.00]<00:12.00>Hello <00:12.40>world<00:13.10>',
+      );
+      final line = l.lines.single;
+      expect(line.text, 'Hello world');
+      expect(line.cues.map((c) => (c.position, c.endPosition, c.start)), [
+        (0, 6, const Duration(seconds: 12)),
+        (6, 11, const Duration(milliseconds: 12400)),
+      ]);
+      expect(l.hasCues, isTrue);
+      expect(
+        line.toLrcLine(enhanced: true),
+        '[00:12.00]<00:12.00>Hello <00:12.40>world',
+      );
+    });
+
+    test('plain text gives unsynced lines', () {
+      final l = PlexLyrics.parse('one\n\ntwo');
+      expect(l.isSynced, isFalse);
+      expect(l.lines.map((x) => x.text), ['one', 'two']);
+      expect(l.toLrc(), 'one\ntwo');
+    });
+  });
 }

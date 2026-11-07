@@ -237,4 +237,67 @@ void main() {
       expect(verified.authToken, 'tok-xyz');
     });
   });
+
+  group('metadata', () {
+    test('markers, chapters, images, edition', () {
+      final m = PlexMetadata.fromJson({
+        'ratingKey': '1',
+        'type': 'episode',
+        'editionTitle': "Director's Cut",
+        'Marker': [
+          {
+            'id': 1,
+            'type': 'intro',
+            'startTimeOffset': 1000,
+            'endTimeOffset': 31000,
+          },
+          {
+            'id': 2,
+            'type': 'credits',
+            'startTimeOffset': 1200000,
+            'endTimeOffset': 1260000,
+            'final': true,
+          },
+        ],
+        'Chapter': [
+          {
+            'id': 5,
+            'index': 1,
+            'tag': 'Opening',
+            'startTimeOffset': 0,
+            'endTimeOffset': 60000,
+          },
+        ],
+        'Image': [
+          {'type': 'coverPoster', 'url': '/p'},
+          {'type': 'backgroundSquare', 'url': '/sq'},
+          {'type': 'clearLogo', 'url': '/logo'},
+        ],
+      });
+      expect(m.editionTitle, "Director's Cut");
+      expect(m.markers.first.type, PlexMarkerType.intro);
+      expect(m.markers.first.end, const Duration(seconds: 31));
+      expect(m.markersOf(PlexMarkerType.credits).single.isFinal, isTrue);
+      expect(m.chapters.single.title, 'Opening');
+      expect(m.squareArt, '/sq');
+      expect(m.logo, '/logo');
+    });
+
+    test('loudness and layout fields of a stream', () {
+      final s = PlexStream.fromJson({
+        'streamType': 2,
+        'canNormalizeLoudness': true,
+        'albumRange': 4.5,
+        'startRamp': 'db=-20;',
+        'endRamp': 'db=-30;',
+        'audioChannelLayout': '5.1(side)',
+        'displayTitle': 'English (EAC3 5.1)',
+      });
+      expect(s.canNormalizeLoudness, isTrue);
+      expect(s.albumRange, 4.5);
+      expect(s.startRamp, 'db=-20;');
+      expect(s.audioChannelLayout, '5.1(side)');
+      expect(s.displayTitle, 'English (EAC3 5.1)');
+    });
+  });
 }

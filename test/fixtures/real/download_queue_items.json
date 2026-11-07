@@ -1,0 +1,18 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "DownloadQueueItem": [
+      {
+        "id": 1,
+        "queueId": 1,
+        "key": "888",
+        "status": "error",
+        "error": "decisionError",
+        "DecisionResult": {
+          "generalDecisionCode": 2004,
+          "generalDecisionText": "Could not construct decision request"
+        }
+      }
+    ]
+  }
+}

@@ -2,9 +2,11 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-/// Subscriptions on the wire: their map parameters nest as `key[sub]`.
+/// Subscriptions on the wire: their map parameters nest as `key[sub]`,
+/// and their typed answers.
 library;
 
+import 'package:dart_plex/dart_plex.dart';
 import 'package:test/test.dart';
 
 import '_helpers/capturing_client.dart';
@@ -36,5 +38,45 @@ void main() {
     );
     expect(adapter.last!.method, 'PUT');
     expect(adapter.last!.queryParameters, {'prefs[lineupChannel]': '4.1'});
+  });
+
+  group('typed answers', () {
+    late CapturingAdapter adapter;
+    late PlexClient plex;
+
+    setUp(() {
+      adapter = CapturingAdapter();
+      plex = testClient(adapter);
+    });
+
+    void answer(Object? json) => adapter.responseBody = json;
+
+    test('subscriptions and their template', () async {
+      answer({
+        'MediaContainer': {
+          'SubscriptionTemplate': [
+            {
+              'MediaSubscription': [
+                {
+                  'title': 'Show',
+                  'type': 2,
+                  'airingsType': 'New Airings Only',
+                  'Setting': [
+                    {'id': 'minVideoQuality', 'value': 0},
+                  ],
+                  'MediaGrabOperation': [
+                    {'id': 'g1', 'status': 'scheduled', 'percent': 0},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      });
+      final subs = await plex.subscriptions.template(guid: 'plex://show/1');
+      expect(subs.single.airingsType, 'New Airings Only');
+      expect(subs.single.grabs.single.id, 'g1');
+      expect(subs.single.settings.single['id'], 'minVideoQuality');
+    });
   });
 }

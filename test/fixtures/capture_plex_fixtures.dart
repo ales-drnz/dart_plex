@@ -90,6 +90,11 @@ Future<void> main() async {
   await get('updater_status.json', '/updater/status');
   await get('activities.json', '/activities');
   await get('providers.json', '/media/providers');
+  // Trimmed by hand into test/fixtures/real/ (media_grabbers,
+  // library_tags, section_details, updater_status, providers).
+  await get('media_grabbers.json', '/media/grabbers');
+  await get('library_tags.json', '/library/tags', {'type': 9});
+  await get('section_details.json', '/library/sections/1');
 
   // Create a tiny playqueue via the dart_plex client (which gets the
   // URI encoding right) and capture the raw envelope by also fetching

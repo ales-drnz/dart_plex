@@ -599,4 +599,62 @@ void main() {
       );
     });
   });
+
+  group('PlexFilter media fields (verified on PMS 1.43.2)', () {
+    test('wire forms', () {
+      expect(PlexFilter.atmos().toString(), 'atmos=1');
+      expect(PlexFilter.dolbyVision(value: false).toString(), 'dovi=0');
+      expect(PlexFilter.hdr().toString(), 'hdr=1');
+      expect(
+        PlexFilter.videoCodec(['hevc', 'av1']).toString(),
+        'videoCodec=hevc,av1',
+      );
+      expect(
+        PlexFilter.videoCodec(['h264'], exclude: true).toString(),
+        'videoCodec!=h264',
+      );
+      expect(PlexFilter.audioCodec(['truehd']).toString(), 'audioCodec=truehd');
+      expect(PlexFilter.subtitleCodec(['pgs']).toString(), 'subtitleCodec=pgs');
+      expect(PlexFilter.audioLayout(['5.1']).toString(), 'audioLayout=5.1');
+      expect(PlexFilter.audioLanguage(['ita']).toString(), 'audioLanguage=ita');
+      expect(PlexFilter.inProgress().toString(), 'inProgress=1');
+    });
+  });
+
+  group('PlexSort', () {
+    late CapturingAdapter adapter;
+    late PlexClient plex;
+
+    setUp(() {
+      adapter = CapturingAdapter();
+      plex = testClient(adapter);
+    });
+
+    void answer(Object? json) => adapter.responseBody = json;
+
+    test('directions and ties', () {
+      expect(PlexSort.addedAt.desc, 'addedAt:desc');
+      expect(PlexSort.addedAt.desc.asc, 'addedAt:asc');
+      expect(
+        PlexSort.titleSort.then(PlexSort.year.desc),
+        'titleSort,year:desc',
+      );
+      expect(const PlexSort('mediaBitrate').desc.wire, 'mediaBitrate:desc');
+    });
+
+    test('travels as sort=', () async {
+      answer({
+        'MediaContainer': {'Metadata': <Object?>[]},
+      });
+      await plex.library.allByType(
+        sectionId: '1',
+        type: PlexMetadataType.album,
+        sort: PlexSort.originallyAvailableAt.desc,
+      );
+      expect(
+        adapter.last!.queryParameters['sort'],
+        'originallyAvailableAt:desc',
+      );
+    });
+  });
 }

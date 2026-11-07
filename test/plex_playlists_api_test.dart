@@ -42,4 +42,28 @@ void main() {
       expect(q['X-Plex-Container-Size'], '20');
     });
   });
+
+  group('playlists.generators', () {
+    late CapturingAdapter adapter;
+    late PlexClient plex;
+
+    setUp(() {
+      adapter = CapturingAdapter();
+      plex = testClient(adapter);
+    });
+
+    void answer(Object? json) => adapter.responseBody = json;
+
+    test('generators', () async {
+      answer({
+        'MediaContainer': {
+          'PlayQueueGenerator': [
+            {'id': 4, 'playlistID': 2, 'uri': 'library://x'},
+          ],
+        },
+      });
+      final g = await plex.playlists.generators(playlistId: '2');
+      expect((g.single.id, g.single.playlistId), (4, 2));
+    });
+  });
 }

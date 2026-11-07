@@ -1,0 +1,12 @@
+{
+  "MediaContainer": {
+    "Directory": [
+      {
+        "id": 5,
+        "filter": "genre=5",
+        "tag": "Rock",
+        "tagType": 1
+      }
+    ]
+  }
+}

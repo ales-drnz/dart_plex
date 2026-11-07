@@ -1,0 +1,24 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "MediaProvider": [
+      {
+        "identifier": "com.plexapp.plugins.library",
+        "title": "Library",
+        "types": "video,audio,photo",
+        "protocols": "stream,download",
+        "Feature": [
+          {
+            "key": "/library/sections",
+            "type": "content"
+          },
+          {
+            "flavor": "universal",
+            "key": "/playlists",
+            "type": "playlist"
+          }
+        ]
+      }
+    ]
+  }
+}

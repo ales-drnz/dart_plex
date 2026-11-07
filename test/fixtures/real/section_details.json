@@ -1,0 +1,24 @@
+{
+  "MediaContainer": {
+    "librarySectionID": 1,
+    "title1": "Music",
+    "allowSync": false,
+    "Directory": [
+      {
+        "key": "all",
+        "title": "All Artists"
+      },
+      {
+        "secondary": true,
+        "key": "genre",
+        "title": "By Genre"
+      },
+      {
+        "prompt": "Search for Artists",
+        "search": true,
+        "key": "search?type=8",
+        "title": "Search Artists..."
+      }
+    ]
+  }
+}

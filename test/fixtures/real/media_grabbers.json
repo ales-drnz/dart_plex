@@ -1,0 +1,12 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "MediaGrabber": [
+      {
+        "title": "HDHomerun",
+        "identifier": "tv.plex.grabbers.hdhomerun",
+        "protocol": "livetv"
+      }
+    ]
+  }
+}
