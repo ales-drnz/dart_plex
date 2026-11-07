@@ -42,7 +42,8 @@ enum PlexErrorType {
   /// playlist, section) does not exist on this server.
   notFound,
 
-  /// The server replied with a 4xx other than 401/403/404.
+  /// The server replied with a 4xx other than `401`, `403`, `404` and
+  /// `498`.
   badRequest,
 
   /// The server replied with 5xx.

@@ -367,7 +367,7 @@ class PlexStreamingApi {
   /// whether to direct-play (no transcoding), direct-stream (re-mux
   /// only), or full transcode (re-encode). The same endpoint serves
   /// audio, video, and photo — set [transcodeType] (`'video'` by
-  /// default, or `'audio'` / `'photo'`) and pass the relevant
+  /// default, or `'music'` / `'photo'`) and pass the relevant
   /// `audioCodec`/`videoCodec` hints in [params].
   ///
   /// Returns a [PlexTranscodeDecision]:
@@ -378,6 +378,11 @@ class PlexStreamingApi {
   /// Whether the playable decision is direct or a transcode is read from
   /// the sibling `directPlayDecisionCode` / `transcodeDecisionCode`
   /// fields, not from `generalDecisionCode`.
+  ///
+  /// A 4xx answer that names the remote-streaming pass throws a
+  /// [PlexException] of type [PlexErrorType.passRequired]; a decision that
+  /// names it is returned as it is: check
+  /// [PlexTranscodeDecision.isPassRequired].
   ///
   /// [extraHeaders] is how you pass `X-Plex-Client-Profile-Extra`
   /// (a per-call override of the global profile declared in
