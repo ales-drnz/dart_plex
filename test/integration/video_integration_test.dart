@@ -115,14 +115,11 @@ void main() {
 
     test('download queue: create, add, items', () async {
       final queue = await plex.downloadQueue.create();
-      await plex.downloadQueue.add(queueId: '${queue.id}', keys: [movieKey]);
-      final items = await plex.downloadQueue.items(queueId: '${queue.id}');
+      await plex.downloadQueue.add(queueId: queue.id, keys: [movieKey]);
+      final items = await plex.downloadQueue.items(queueId: queue.id);
       expect(items.map((i) => i.key), contains(movieKey));
       for (final i in items) {
-        await plex.downloadQueue.remove(
-          queueId: '${queue.id}',
-          itemId: '${i.id}',
-        );
+        await plex.downloadQueue.remove(queueId: queue.id, itemId: i.id);
       }
     });
 

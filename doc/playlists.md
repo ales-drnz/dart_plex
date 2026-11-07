@@ -83,10 +83,9 @@ await plex.playlists.delete(playlistId: playlist.ratingKey);
 
 ```dart
 final generators = await plex.playlists.generators(playlistId: smart.ratingKey);
-final generatorId = '${generators.first.id}';
 final produced = await plex.playlists.generatorItems(
   playlistId: smart.ratingKey,
-  generatorId: generatorId,
+  generatorId: generators.first.id,
 );
 
 // Import .m3u files from a path on the server.

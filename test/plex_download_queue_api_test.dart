@@ -29,20 +29,21 @@ void main() {
       expect(adapter.last!.method, 'POST');
       expect((q.id, q.itemCount, q.status), (1, 0, 'done'));
       answer(realFixture('download_queue_items'));
-      final items = await plex.downloadQueue.items(queueId: '1');
+      final items = await plex.downloadQueue.items(queueId: 1);
       expect(items.single.error, 'decisionError');
       expect(items.single.decision!.code, 2004);
       expect(items.single.decision!.isPlayable, isFalse);
       expect(
-        plex.downloadQueue.itemMediaUrl(queueId: '1', itemId: '2'),
+        plex.downloadQueue.itemMediaUrl(queueId: 1, itemId: 2),
         'http://192.168.1.10:32400/downloadQueue/1/item/2/media?X-Plex-Token=tok',
       );
     });
 
-    test('an answer without a queue is a parse error', () async {
+    test('an answer without a queue: get is null, create throws', () async {
       answer({'MediaContainer': <String, Object?>{}});
+      expect(await plex.downloadQueue.get(queueId: 1), isNull);
       await expectLater(
-        plex.downloadQueue.get(queueId: '1'),
+        plex.downloadQueue.create(),
         throwsA(
           isA<PlexException>().having(
             (e) => e.type,
@@ -50,6 +51,28 @@ void main() {
             PlexErrorType.parse,
           ),
         ),
+      );
+    });
+
+    test('itemMediaUrl needs a server, and sends no empty token', () {
+      final offline = PlexClient(
+        credentials: testCredentials,
+        httpClient: adapter,
+      );
+      expect(
+        () => offline.downloadQueue.itemMediaUrl(queueId: 1, itemId: 2),
+        throwsA(
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.state,
+          ),
+        ),
+      );
+      offline.connect('http://192.168.1.10:32400');
+      expect(
+        offline.downloadQueue.itemMediaUrl(queueId: 1, itemId: 2),
+        'http://192.168.1.10:32400/downloadQueue/1/item/2/media',
       );
     });
   });

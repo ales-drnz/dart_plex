@@ -42,7 +42,8 @@ class PlexSubscriptionsApi {
   /// on), the form PMS reads.
   ///
   /// Returns the subscription created, or `null` when the answer holds
-  /// none.
+  /// none. Unlike the other creates it does not throw then: what PMS
+  /// answers here is not verified.
   Future<PlexMediaSubscription?> create({
     required int targetLibrarySectionID,
     int? targetSectionLocationID,

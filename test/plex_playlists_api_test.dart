@@ -64,6 +64,12 @@ void main() {
       });
       final g = await plex.playlists.generators(playlistId: '2');
       expect((g.single.id, g.single.playlistId), (4, 2));
+      answer({'MediaContainer': <String, Object?>{}});
+      await plex.playlists.generatorItems(
+        playlistId: '2',
+        generatorId: g.single.id,
+      );
+      expect(adapter.last!.uri.path, '/playlists/2/items/4/items');
     });
   });
 }

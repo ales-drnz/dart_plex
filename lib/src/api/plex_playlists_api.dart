@@ -233,7 +233,7 @@ class PlexPlaylistsApi {
   /// produced by one generator inside a smart playlist.
   Future<List<PlexMetadata>> generatorItems({
     required String playlistId,
-    required String generatorId,
+    required int generatorId,
   }) async {
     return _http.requestJson(
       '/playlists/$playlistId/items/$generatorId/items',
@@ -246,7 +246,7 @@ class PlexPlaylistsApi {
   /// `enable`).
   Future<void> reprocessGenerator({
     required String playlistId,
-    required String generatorId,
+    required int generatorId,
     required String metadataId,
     required String action,
   }) async {

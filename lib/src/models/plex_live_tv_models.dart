@@ -743,22 +743,9 @@ final class PlexDownloadQueue {
         raw: json,
       );
 
-  /// The first `DownloadQueue` of an answer. Throws a [PlexException] of
-  /// type [PlexErrorType.parse] when there is none.
-  static PlexDownloadQueue of(Object? json) {
-    final all = _containerEntries(
-      json,
-      'DownloadQueue',
-      PlexDownloadQueue.fromJson,
-    );
-    if (all.isEmpty) {
-      throw const PlexException(
-        'The answer holds no DownloadQueue',
-        type: PlexErrorType.parse,
-      );
-    }
-    return all.first;
-  }
+  /// The `DownloadQueue` entries of an answer.
+  static List<PlexDownloadQueue> listOf(Object? json) =>
+      _containerEntries(json, 'DownloadQueue', PlexDownloadQueue.fromJson);
 }
 
 /// An item of a download queue (`DownloadQueueItem`).

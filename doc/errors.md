@@ -19,7 +19,18 @@ try {
 `cancelled` and `unknown`. The exception also carries the request `path`,
 the underlying `cause`, the original `stackTrace`, the whole error `body`
 the server sent (`message` holds at most its first 512 bytes) and, when
-the server sent `Retry-After` (on a `429` or `503`), `retryAfter`.
+the server sent `Retry-After` (on a `429` or `503`), `retryAfter`. The
+value of an `X-Plex-Token`, `deviceJWT` or `pin` in the `path` or the
+`message` reads `REDACTED`, so an exception can be logged as it is.
+
+### An empty answer
+
+A call that looks one thing up (`get`, `item`, `details`, `byId`,
+`person`, `liveSession`) returns `null` when the answer holds nothing. A
+call that creates something (`playlists.create`, `collections.create`,
+`playQueues.create`, `downloadQueue.create`) throws a `parse` error when
+the answer does not hold it. `subscriptions.create` returns `null`
+instead: what PMS answers to it is not verified.
 
 ### Classifying a failure
 
