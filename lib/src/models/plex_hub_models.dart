@@ -58,11 +58,13 @@ final class PlexHub {
     this.type,
   });
 
-  /// Parses one `<Hub>` entry from `/hubs` or `/hubs/search`.
+  /// Parses one `<Hub>` entry from `/hubs` or `/hubs/search`, or from
+  /// `/hubs/sections/{id}/manage`, which names the id `identifier`.
   factory PlexHub.fromJson(Map<String, Object?> json) => PlexHub(
     key: asString(json['key']) ?? '',
     hubKey: asString(json['hubKey']) ?? '',
-    hubIdentifier: asString(json['hubIdentifier']) ?? '',
+    hubIdentifier:
+        asString(json['hubIdentifier']) ?? asString(json['identifier']) ?? '',
     title: asString(json['title']) ?? '',
     type: asString(json['type']),
     size: asInt(json['size']) ?? 0,

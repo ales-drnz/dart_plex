@@ -6,6 +6,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 import 'plex_search_api.dart';
 
 /// `/hubs/*` — global and per-section discovery rails.
@@ -53,7 +54,7 @@ class PlexHubsApi {
     bool includeMeta = true,
   }) async {
     return _http.requestJson(
-      '/hubs/sections/$sectionId',
+      '/hubs/sections/${seg(sectionId)}',
       queryParameters: {
         'count': count,
         'onlyTransient': onlyTransient ? 1 : 0,
@@ -75,11 +76,15 @@ class PlexHubsApi {
 
   /// `/hubs/continueWatching` — Plex's "On Deck" / "Continue Listening"
   /// rail merged across libraries.
+  ///
+  /// PMS 1.43.2 answers one `Hub` (`continueWatching`) holding the items;
+  /// items at the container level, should a server send them, are read
+  /// too.
   Future<List<PlexMetadata>> continueWatching({int count = 16}) async {
     return _http.requestJson(
       '/hubs/continueWatching',
       queryParameters: {'count': count},
-      itemsOf('Metadata', PlexMetadata.fromJson),
+      _railItems,
     );
   }
 
@@ -89,7 +94,7 @@ class PlexHubsApi {
     int count = 16,
   }) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/onDeck',
+      '/library/sections/${seg(sectionId)}/onDeck',
       queryParameters: {
         'X-Plex-Container-Start': 0,
         'X-Plex-Container-Size': count,
@@ -122,11 +127,11 @@ class PlexHubsApi {
     required String metadataId,
     bool? onlyTransient,
   }) async {
-    final qp = <String, Object?>{};
-    if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
     return _http.requestJson(
-      '/hubs/metadata/$metadataId/postplay',
-      queryParameters: qp.isEmpty ? null : qp,
+      '/hubs/metadata/${seg(metadataId)}/postplay',
+      queryParameters: {
+        if (onlyTransient != null) 'onlyTransient': onlyTransient ? 1 : 0,
+      },
       itemsOf('Hub', PlexHub.fromJson),
     );
   }
@@ -137,11 +142,11 @@ class PlexHubsApi {
     required String metadataId,
     bool? onlyTransient,
   }) async {
-    final qp = <String, Object?>{};
-    if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
     return _http.requestJson(
-      '/hubs/metadata/$metadataId/related',
-      queryParameters: qp.isEmpty ? null : qp,
+      '/hubs/metadata/${seg(metadataId)}/related',
+      queryParameters: {
+        if (onlyTransient != null) 'onlyTransient': onlyTransient ? 1 : 0,
+      },
       itemsOf('Hub', PlexHub.fromJson),
     );
   }
@@ -158,12 +163,12 @@ class PlexHubsApi {
     bool? onlyTransient,
     int? count,
   }) async {
-    final qp = <String, Object?>{};
-    if (onlyTransient != null) qp['onlyTransient'] = onlyTransient ? 1 : 0;
-    if (count != null) qp['count'] = count;
     return _http.requestJson(
-      '/hubs/metadata/$metadataId',
-      queryParameters: qp.isEmpty ? null : qp,
+      '/hubs/metadata/${seg(metadataId)}',
+      queryParameters: {
+        if (onlyTransient != null) 'onlyTransient': onlyTransient ? 1 : 0,
+        'count': ?count,
+      },
       itemsOf('Hub', PlexHub.fromJson),
     );
   }
@@ -179,11 +184,9 @@ class PlexHubsApi {
     required String sectionId,
     String? metadataItemId,
   }) async {
-    final qp = <String, Object?>{};
-    if (metadataItemId != null) qp['metadataItemId'] = metadataItemId;
     return _http.requestJson(
-      '/hubs/sections/$sectionId/manage',
-      queryParameters: qp.isEmpty ? null : qp,
+      '/hubs/sections/${seg(sectionId)}/manage',
+      queryParameters: {'metadataItemId': ?metadataItemId},
       itemsOf('Hub', PlexHub.fromJson),
     );
   }
@@ -199,7 +202,7 @@ class PlexHubsApi {
     bool promotedToSharedHome = false,
   }) async {
     await _http.request<void>(
-      '/hubs/sections/$sectionId/manage',
+      '/hubs/sections/${seg(sectionId)}/manage',
       method: 'POST',
       queryParameters: {
         'metadataItemId': metadataItemId,
@@ -219,20 +222,17 @@ class PlexHubsApi {
     bool? promotedToOwnHome,
     bool? promotedToSharedHome,
   }) async {
-    final qp = <String, Object?>{};
-    if (promotedToRecommended != null) {
-      qp['promotedToRecommended'] = promotedToRecommended ? 1 : 0;
-    }
-    if (promotedToOwnHome != null) {
-      qp['promotedToOwnHome'] = promotedToOwnHome ? 1 : 0;
-    }
-    if (promotedToSharedHome != null) {
-      qp['promotedToSharedHome'] = promotedToSharedHome ? 1 : 0;
-    }
     await _http.request<void>(
-      '/hubs/sections/$sectionId/manage/$identifier',
+      '/hubs/sections/${seg(sectionId)}/manage/${seg(identifier)}',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {
+        if (promotedToRecommended != null)
+          'promotedToRecommended': promotedToRecommended ? 1 : 0,
+        if (promotedToOwnHome != null)
+          'promotedToOwnHome': promotedToOwnHome ? 1 : 0,
+        if (promotedToSharedHome != null)
+          'promotedToSharedHome': promotedToSharedHome ? 1 : 0,
+      },
     );
   }
 
@@ -243,7 +243,7 @@ class PlexHubsApi {
     required String identifier,
   }) async {
     await _http.request<void>(
-      '/hubs/sections/$sectionId/manage/$identifier',
+      '/hubs/sections/${seg(sectionId)}/manage/${seg(identifier)}',
       method: 'DELETE',
     );
   }
@@ -257,7 +257,7 @@ class PlexHubsApi {
     String afterIdentifier = '',
   }) async {
     await _http.request<void>(
-      '/hubs/sections/$sectionId/manage/move',
+      '/hubs/sections/${seg(sectionId)}/manage/move',
       method: 'PUT',
       queryParameters: {'identifier': identifier, 'after': afterIdentifier},
     );
@@ -268,7 +268,7 @@ class PlexHubsApi {
   /// hub and restores built-in ordering).
   Future<void> resetSection({required String sectionId}) async {
     await _http.request<void>(
-      '/hubs/sections/$sectionId/manage',
+      '/hubs/sections/${seg(sectionId)}/manage',
       method: 'DELETE',
     );
   }
@@ -287,7 +287,7 @@ class PlexHubsApi {
     // hubKey is already a path; identifier needs the /hubs/{}/items wrap.
     final path = hubKeyOrIdentifier.startsWith('/')
         ? hubKeyOrIdentifier
-        : '/hubs/$hubKeyOrIdentifier/items';
+        : '/hubs/${seg(hubKeyOrIdentifier)}/items';
     return _http.requestJson(
       path,
       queryParameters: {
@@ -298,3 +298,9 @@ class PlexHubsApi {
     );
   }
 }
+
+/// The `Metadata` of the container, then of each of its `Hub`s.
+List<PlexMetadata> _railItems(Object? json) => [
+  ...itemsOf('Metadata', PlexMetadata.fromJson)(json),
+  for (final hub in itemsOf('Hub', PlexHub.fromJson)(json)) ...hub.items,
+];

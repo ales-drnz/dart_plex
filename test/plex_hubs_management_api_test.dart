@@ -414,10 +414,44 @@ void main() {
         final items = await plex.hubs.continueWatching();
         expect(items.map((i) => i.ratingKey), ['3', '4']);
       },
-      skip:
-          'BUG: hubs.continueWatching reads a top-level Metadata, but PMS '
-          '1.43.2 answers a Hub that holds the items: always empty',
     );
+
+    test('continueWatching reads items at the container level too, before '
+        'those of the hubs', () async {
+      answer({
+        'MediaContainer': {
+          'size': 2,
+          'Metadata': [
+            {'ratingKey': '1', 'type': 'track', 'title': 'Loose'},
+          ],
+          'Hub': [
+            {
+              'hubIdentifier': 'continueWatching',
+              'Metadata': (_items['MediaContainer']! as Map)['Metadata'],
+            },
+            {
+              'hubIdentifier': 'other',
+              'Metadata': [
+                {'ratingKey': '5', 'type': 'track', 'title': 'Track 3'},
+              ],
+            },
+          ],
+        },
+      });
+      final items = await plex.hubs.continueWatching();
+      expect(items.map((i) => i.ratingKey), ['1', '3', '4', '5']);
+      answer(const <String, Object?>{});
+      await expectLater(plex.hubs.continueWatching(), throwsParseError);
+    });
+
+    test('a hub that has both names keeps hubIdentifier', () {
+      final hub = PlexHub.fromJson(const {
+        'hubIdentifier': 'home.continue',
+        'identifier': 'com.plexapp.plugins.library',
+      });
+      expect(hub.hubIdentifier, 'home.continue');
+      expect(PlexHub.fromJson(const {}).hubIdentifier, '');
+    });
 
     test('manage lists the hubs of a section (PMS 1.43.2): titles and '
         'promotion flags', () async {
@@ -433,20 +467,14 @@ void main() {
       expect(hubs.first.items, isEmpty);
     });
 
-    test(
-      'manage gives each hub the identifier the other calls take',
-      () async {
-        answer(realFixture('hubs_manage'));
-        final hubs = await plex.hubs.manage(sectionId: '1');
-        expect(hubs.map((h) => h.hubIdentifier), [
-          'music.mixes',
-          'music.recent.played',
-        ]);
-      },
-      skip:
-          'BUG: PMS 1.43.2 names it `identifier` in /hubs/sections/{id}/manage; '
-          'PlexHub.fromJson reads only `hubIdentifier`, so it is empty',
-    );
+    test('manage gives each hub the identifier the other calls take', () async {
+      answer(realFixture('hubs_manage'));
+      final hubs = await plex.hubs.manage(sectionId: '1');
+      expect(hubs.map((h) => h.hubIdentifier), [
+        'music.mixes',
+        'music.recent.played',
+      ]);
+    });
 
     test('a body that is not a container is a parse error', () async {
       answer([1, 2]);
