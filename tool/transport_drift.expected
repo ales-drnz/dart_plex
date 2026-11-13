@@ -1,0 +1,210 @@
+# The differences between the shared transport of dart_plex and
+# dart_jellyfin, names normalised: "-" in dart_plex only, "+" in
+# dart_jellyfin only. Written by tool/transport_drift.dart --update.
+== lib/src/plex_connection.dart ↔ lib/src/jellyfin_connection.dart
+- import 'x_client.dart';
++ import 'x_auth_header.dart';
+- import 'x_token_renewal.dart';
+- import 'transport/platform_io.dart'
+-     if (dart.library.js_interop) 'transport/platform_web.dart'
+-     as platform;
++ import 'transport/platform_io.dart'
++     if (dart.library.js_interop) 'transport/platform_web.dart'
++     as platform;
+-   final XTokenRenewal renewal = XTokenRenewal();
++   String? userId;
+- /// Internal HTTP transport shared by every sub-API. Not exported; the
+- /// public API is [XClient].
++ /// Internal HTTP transport shared by every sub-API. Not exported.
+-   /// A playlist's full item list is hundreds of KB of JSON; decoding one
+-   /// measured a ~130–150 ms stall of the UI thread in Flumael. Below the
+-   /// threshold the isolate hop costs more than the decode it saves, which
+-   /// is why this is a threshold and not "always". Override per client with
+-   /// the `jsonIsolateThreshold` argument.
++   /// Below the threshold the isolate hop costs more than the decode it
++   /// saves. In a Flutter app the caller's isolate is the UI thread, so
++   /// above it this is the difference between a smooth list and a dropped
++   /// frame. Override per client with the `jsonIsolateThreshold` argument.
+-   /// Creates a connection bound to [credentials].
++   /// Creates a connection bound to [credentials] and an optional [baseUrl].
++     String? baseUrl,
+-        scopeToken = null;
++        scopeToken = null {
++     if (baseUrl != null) this.baseUrl = baseUrl;
++   }
+-   /// The view shares [parent]'s client, credentials, base URL and token:
+-   /// a later `setToken` or `connect` on either is seen by both. A token
++   /// The view shares [parent]'s client, credentials, base URL and session:
++   /// a later `setSession` or `connect` on either is seen by both. A token
+-   XConnection.scoped(XConnection parent, XCancelToken cancelToken)
+-     : _shared = parent._shared,
++   XConnection.scoped(
++     XConnection parent,
++     XCancelToken cancelToken,
++   ) : _shared = parent._shared,
+-   /// X base URL without a trailing slash, or `null` if not connected.
++   /// Server root URL without a trailing slash, or `null` if not connected.
+-   /// Current `X-X-Token`, or `null` if not authenticated.
++   /// Current access token, or `null` if no session is active.
+-   /// Sets or clears the `X-X-Token` sent on every request.
++   /// Sets the access token sent in the auth header.
+-   /// Renews the token after a `401` or `498` (x.tv JWTs).
+-   XTokenRenewal get renewal => _shared.renewal;
++   /// Authenticated user id, or `null` if no session is active.
++   String? get userId => _shared.userId;
+-   /// Whether a X base URL and a token are both set.
+-   bool get isAuthenticated => baseUrl != null && token != null;
++   /// Sets the authenticated user id.
++   set userId(String? value) => _shared.userId = value;
+-   /// Throw a [XErrorType.state] [XException] if no X base URL has
+-   /// been configured yet.
+-   void requireConnected() {
+-     if (baseUrl == null) {
++   /// `true` when [baseUrl], [token], and [userId] are all set.
++   bool get isAuthenticated =>
++       baseUrl != null && token != null && userId != null;
++ 
++   /// Returns the authenticated [userId], or throws a [XException] of
++   /// type [XErrorType.state] when no session user is set.
++   ///
++   /// Centralizes the "no user" guard shared by every user-scoped endpoint —
++   /// sub-APIs call this instead of re-checking [userId] themselves.
++   String requireUserId() {
++     final id = userId;
++     if (id == null) {
+-         'No X connection — call XClient.connect() first.',
++         'No user — call XClient.setSession() with a userId first.',
++     return id;
+-   static const List<String> _tokenHosts = ['x.tv'];
++   static const List<String> _tokenHosts = [];
+-   /// Headers sent to [uri]: the `X-X-*` identity, `Accept:
+-   /// application/json` (X answers XML otherwise) and, when
+-   /// [sendsTokenTo] says so, the token.
++   /// Headers sent to [uri].
++   ///
++   /// Only the `Authorization: MediaBrowser` header carries the session. It
++   /// embeds `Token="…"`, the sole auth path X 12 honours by default
++   /// (`EnableLegacyAuthorization` is off, and the `X-Emby-Authorization` /
++   /// `X-MediaBrowser-Token` headers are rejected). The token is left out
++   /// unless [sendsTokenTo] says [uri] gets it.
+-     ...credentials.toHeaders(),
+-     if (sendsTokenTo(uri)) 'X-X-Token': ?token,
++     'Accept': 'application/json',
++     'Authorization': XAuthHeader.build(
++       credentials,
++       token: sendsTokenTo(uri) ? token : null,
++     ),
+-   /// Pass [absoluteUrl] = true and a full URL in [path] to target a host
+-   /// other than the connected server — used by the x.tv account API.
+-   /// The token goes only to the connected server and to x.tv (see
+-   /// [sendsTokenTo]).
+-   ///
+-   /// A `List` value in [queryParameters] repeats its key once per element.
++   /// A `List` value in [queryParameters] is emitted as one repeated query
++   /// parameter per element (`ids=a&ids=b`), never as a delimited string.
++   /// X binds array parameters with either a comma- or a
++   /// pipe-delimited model binder depending on the endpoint, and both take
++   /// repeated values verbatim without splitting — so repeating the
++   /// parameter is the one encoding that is correct everywhere, and it also
++   /// survives values that contain the delimiter.
+-       decoded = await _decode(exchange, responseType ?? XResponseType.json);
++       decoded = await _decode(
++         exchange,
++         responseType ?? XResponseType.json,
++       );
+-     final opened = await _retrying(
+-       method,
+-       uri,
+-       cancelToken,
+-       extraHeaders,
+-       () async {
+-         final opened = await _open(
+-           uri,
+-           method: method,
+-           data: null,
+-           extraHeaders: extraHeaders,
+-           cancelToken: cancelToken,
++     final opened = await _retrying(method, uri, cancelToken, () async {
++       final opened = await _open(
++         uri,
++         method: method,
++         data: null,
++         extraHeaders: extraHeaders,
++         cancelToken: cancelToken,
++       );
++       if (!stallTimeout) opened.receiveTimeout = null;
++       final res = opened.response;
++       final gzipped = _isGzipped(res.headers);
++       if (res.statusCode < 200 || res.statusCode >= 300) {
++         final body = await _readAll(opened);
++         throw _statusError(
++           res.statusCode,
++           res.reasonPhrase,
++           opened.uri,
++           gzipped ? _tryGunzip(body) : body,
++           res.headers,
+-         if (!stallTimeout) opened.receiveTimeout = null;
+-         final res = opened.response;
+-         final gzipped = _isGzipped(res.headers);
+-         if (res.statusCode < 200 || res.statusCode >= 300) {
+-           final body = await _readAll(opened);
+-           throw _statusError(
+-             res.statusCode,
+-             res.reasonPhrase,
+-             opened.uri,
+-             gzipped ? _tryGunzip(body) : body,
+-             res.headers,
+-           );
+-         }
+-         return opened;
+-       },
+-     );
++       }
++       return opened;
++     });
+-       extraHeaders,
+-     Map<String, String>? extraHeaders,
+-     // A host that was not sent the token cannot have refused it.
+-     final guarded = sendsTokenTo(uri)
+-         ? _shared.renewal.guard(this, extraHeaders, attempt)
+-         : attempt;
+-         return await guarded();
++         return await attempt();
+-     // An empty extra header removes the header (`X-X-Token: ''`), whatever
++     // An empty extra header removes the header (`Authorization: ''`), whatever
+-         'XClient.connect() has not been called — no X base URL is set.',
++         'XClient.connect() has not been called — no base URL is set.',
+-   /// Appends [queryParameters] to [url] the way the 0.1 transport (Dio)
++   /// Appends [queryParameters] to [url] the way the 0.2 transport (Dio)
+-   /// value sends the bare key, and a map nests as `key[sub]=value` —
+-   /// X's own form for `prefs`, `hints` and `params`.
++   /// value sends the bare key, and a map nests as `key[sub]=value`.
+-   XException _parseError(Object e, StackTrace st, Uri uri) => XException(
+-     'Could not decode the response: $e',
+-     type: XErrorType.parse,
+-     path: uri.toString(),
+-     cause: e,
+-     stackTrace: st,
+-   );
++   XException _parseError(Object e, StackTrace st, Uri uri) =>
++       XException(
++         'Could not decode the response: $e',
++         type: XErrorType.parse,
++         path: uri.toString(),
++         cause: e,
++         stackTrace: st,
++       );
+== lib/src/plex_download.dart ↔ lib/src/jellyfin_download.dart
+== lib/src/transport/plex_cancel_token.dart ↔ lib/src/transport/jellyfin_cancel_token.dart
+- /// final scoped = x.withCancelToken(token);
+- /// final page = scoped.library.allByType(
+- ///   sectionId: sectionId,
+- ///   type: XMetadataType.album,
+- /// );
++ /// final scoped = jf.withCancelToken(token);
++ /// final albums = scoped.items.list(includeItemTypes: const [XItemKind.musicAlbum]);
+== lib/src/transport/plex_response.dart ↔ lib/src/transport/jellyfin_response.dart
+== lib/src/transport/plex_retry_policy.dart ↔ lib/src/transport/jellyfin_retry_policy.dart
+== lib/src/transport/platform_io.dart ↔ lib/src/transport/platform_io.dart
+== lib/src/transport/platform_web.dart ↔ lib/src/transport/platform_web.dart
+== lib/io.dart ↔ lib/io.dart
