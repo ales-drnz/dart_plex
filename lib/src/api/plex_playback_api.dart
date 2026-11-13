@@ -87,16 +87,18 @@ class PlexPlaybackApi {
     if (timeMs < 0) {
       throw ArgumentError.value(timeMs, 'timeMs', 'must not be negative');
     }
-    final qp = <String, Object?>{
-      'ratingKey': ratingKey,
-      'key': '/library/metadata/$ratingKey',
-      'state': playState.wire,
-      'time': timeMs > durationMs ? durationMs : timeMs,
-      'duration': durationMs,
-      'continuing': continuing ? 1 : 0,
-    };
-    if (playQueueItemID != null) qp['playQueueItemID'] = playQueueItemID;
-    await _http.request<void>('/:/timeline', queryParameters: qp);
+    await _http.request<void>(
+      '/:/timeline',
+      queryParameters: {
+        'ratingKey': ratingKey,
+        'key': '/library/metadata/$ratingKey',
+        'state': playState.wire,
+        'time': timeMs > durationMs ? durationMs : timeMs,
+        'duration': durationMs,
+        'continuing': continuing ? 1 : 0,
+        'playQueueItemID': ?playQueueItemID,
+      },
+    );
   }
 
   /// Mark an item as played (`PUT /:/scrobble`): raises `viewCount` by

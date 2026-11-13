@@ -4,8 +4,10 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_exception.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 
 /// `/livetv/*` — Plex Live TV and DVR.
 ///
@@ -36,12 +38,11 @@ class PlexLiveTvApi {
 
   /// Helper to drill into the EPG inside a Live TV DVR: [dvrKey] is
   /// [PlexDvr.key]. Returns the channel listing.
-  Future<List<PlexMetadata>> dvrChannels({required String dvrKey}) async {
-    return _http.requestJson(
-      '$dvrKey/channels',
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
+  Future<List<PlexMetadata>> dvrChannels({required String dvrKey}) =>
+      _http.requestJson(
+        '$dvrKey/channels',
+        itemsOf('Metadata', PlexMetadata.fromJson),
+      );
 
   // ---------------------------------------------------------------------------
   // Live session reads / segments
@@ -52,7 +53,7 @@ class PlexLiveTvApi {
   /// when the answer holds none.
   Future<PlexMetadata?> liveSession({required String sessionId}) =>
       _http.requestJson(
-        '/livetv/sessions/$sessionId',
+        '/livetv/sessions/${seg(sessionId)}',
         (json) => PlexMediaContainer.fromJson(
           json is Map<String, Object?> ? json : const {},
           'Metadata',
@@ -63,24 +64,26 @@ class PlexLiveTvApi {
   /// `GET /livetv/sessions/{sessionId}/{consumerId}/index.m3u8` —
   /// URL for the HLS playlist of one consumer attached to a live
   /// session.
+  ///
+  /// The URL carries the token, when there is one: do not log it. Throws
+  /// a `state` [PlexException] before [PlexClient.connect].
   String sessionPlaylistUrl({
     required String sessionId,
     required String consumerId,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/livetv/sessions/$sessionId/$consumerId/index.m3u8?X-Plex-Token=$token';
-  }
+  }) => _http.signedUrl(
+    '/livetv/sessions/${seg(sessionId)}/${seg(consumerId)}/index.m3u8',
+  );
 
   /// `GET /livetv/sessions/{sessionId}/{consumerId}/{segmentId}` —
   /// URL for one HLS segment of the live session.
+  ///
+  /// The URL carries the token, when there is one: do not log it. Throws
+  /// a `state` [PlexException] before [PlexClient.connect].
   String sessionSegmentUrl({
     required String sessionId,
     required String consumerId,
     required String segmentId,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/livetv/sessions/$sessionId/$consumerId/$segmentId?X-Plex-Token=$token';
-  }
+  }) => _http.signedUrl(
+    '/livetv/sessions/${seg(sessionId)}/${seg(consumerId)}/${seg(segmentId)}',
+  );
 }

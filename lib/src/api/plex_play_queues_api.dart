@@ -62,23 +62,22 @@ class PlexPlayQueuesApi {
     bool includeChapters = false,
     int? playQueueItemId,
   }) async {
-    final qp = <String, Object?>{
-      'type': type,
-      'uri': uri,
-      'shuffle': shuffle ? 1 : 0,
-      'repeat': repeat ? 1 : 0,
-      'continuous': continuous ? 1 : 0,
-      // Not in the community document; sent as 0.1 did. Not verified on a
-      // server: a music queue has no chapters.
-      'includeChapters': includeChapters ? 1 : 0,
-    };
-    if (key != null) qp['key'] = key;
-    // Not in the community document; sent as 0.1 did (not verified).
-    if (playQueueItemId != null) qp['playQueueItemID'] = playQueueItemId;
     final res = await _http.request<Map<String, Object?>>(
       '/playQueues',
       method: 'POST',
-      queryParameters: qp,
+      queryParameters: {
+        'type': type,
+        'uri': uri,
+        'shuffle': shuffle ? 1 : 0,
+        'repeat': repeat ? 1 : 0,
+        'continuous': continuous ? 1 : 0,
+        // Not in the community document; sent as 0.1 did. Not verified on a
+        // server: a music queue has no chapters.
+        'includeChapters': includeChapters ? 1 : 0,
+        'key': ?key,
+        // Not in the community document; sent as 0.1 did (not verified).
+        'playQueueItemID': ?playQueueItemId,
+      },
     );
     return PlexPlayQueue.fromJson(res.data ?? const {});
   }
@@ -89,42 +88,40 @@ class PlexPlayQueuesApi {
     bool includeChapters = false,
     int? center,
     int? window,
-  }) async {
-    final qp = <String, Object?>{'includeChapters': includeChapters ? 1 : 0};
-    if (center != null) qp['center'] = center;
-    if (window != null) qp['window'] = window;
-    return _http.requestJson(
-      '/playQueues/$playQueueId',
-      queryParameters: qp,
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
+  }) => _http.requestJson(
+    '/playQueues/$playQueueId',
+    queryParameters: {
+      'includeChapters': includeChapters ? 1 : 0,
+      'center': ?center,
+      'window': ?window,
+    },
+    itemsOf('Metadata', PlexMetadata.fromJson),
+  );
 
   /// `PUT /playQueues/{id}?uri=...` (or `?playlistID=...`) — append
   /// items to the queue. Pass [playNext] = true to splice the items
   /// right after the currently-playing entry instead of at the end.
   ///
   /// Provide exactly one of [uri] or [playlistId]. They are mutually
-  /// exclusive per the upstream spec.
+  /// exclusive per the upstream spec: anything else throws an
+  /// [ArgumentError].
   Future<void> addItems({
     required int playQueueId,
     String? uri,
     String? playlistId,
     bool playNext = false,
   }) async {
-    assert(
-      (uri == null) != (playlistId == null),
-      'Pass exactly one of uri or playlistId.',
-    );
-    final qp = <String, Object?>{
-      'uri': ?uri,
-      'playlistID': ?playlistId,
-      if (playNext) 'next': 1,
-    };
+    if ((uri == null) == (playlistId == null)) {
+      throw ArgumentError('Pass exactly one of uri or playlistId.');
+    }
     await _http.request<void>(
       '/playQueues/$playQueueId',
       method: 'PUT',
-      queryParameters: qp,
+      queryParameters: {
+        'uri': ?uri,
+        'playlistID': ?playlistId,
+        if (playNext) 'next': 1,
+      },
     );
   }
 

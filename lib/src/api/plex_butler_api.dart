@@ -5,6 +5,7 @@
 import '../models/plex_server_models.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_urls.dart';
 
 /// `/butler` — Plex's nightly maintenance task runner.
 ///
@@ -36,12 +37,12 @@ class PlexButlerApi {
 
   /// `POST /butler/{butlerTask}` — start a single task now.
   Future<void> start({required String butlerTask}) async {
-    await _http.request<void>('/butler/$butlerTask', method: 'POST');
+    await _http.request<void>('/butler/${seg(butlerTask)}', method: 'POST');
   }
 
   /// `DELETE /butler/{butlerTask}` — stop a single running task.
   Future<void> stop({required String butlerTask}) async {
-    await _http.request<void>('/butler/$butlerTask', method: 'DELETE');
+    await _http.request<void>('/butler/${seg(butlerTask)}', method: 'DELETE');
   }
 }
 

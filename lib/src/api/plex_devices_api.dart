@@ -4,8 +4,10 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_exception.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 
 /// `/media/grabbers/*` — DVR/IPTV grabber device management.
 ///
@@ -27,7 +29,7 @@ class PlexDevicesApi {
   Future<List<PlexMediaGrabber>> grabbers({String? protocol}) =>
       _http.requestJson(
         '/media/grabbers',
-        queryParameters: protocol == null ? null : {'protocol': protocol},
+        queryParameters: {'protocol': ?protocol},
         itemsOf('MediaGrabber', PlexMediaGrabber.fromJson),
       );
 
@@ -60,14 +62,14 @@ class PlexDevicesApi {
   /// `null` when the answer holds none.
   Future<PlexTunerDevice?> details({required String deviceId}) =>
       _http.requestJson(
-        '/media/grabbers/devices/$deviceId',
+        '/media/grabbers/devices/${seg(deviceId)}',
         firstOf('Device', PlexTunerDevice.fromJson),
       );
 
   /// `DELETE /media/grabbers/devices/{deviceId}` — drop a device.
   Future<void> remove({required String deviceId}) async {
     await _http.request<void>(
-      '/media/grabbers/devices/$deviceId',
+      '/media/grabbers/devices/${seg(deviceId)}',
       method: 'DELETE',
     );
   }
@@ -79,7 +81,7 @@ class PlexDevicesApi {
     required bool enabled,
   }) async {
     await _http.request<void>(
-      '/media/grabbers/devices/$deviceId',
+      '/media/grabbers/devices/${seg(deviceId)}',
       method: 'PUT',
       queryParameters: {'enabled': enabled ? 1 : 0},
     );
@@ -89,7 +91,7 @@ class PlexDevicesApi {
   /// the device can see.
   Future<List<PlexDeviceChannel>> channels({required String deviceId}) =>
       _http.requestJson(
-        '/media/grabbers/devices/$deviceId/channels',
+        '/media/grabbers/devices/${seg(deviceId)}/channels',
         itemsOf('DeviceChannel', PlexDeviceChannel.fromJson),
       );
 
@@ -110,16 +112,18 @@ class PlexDevicesApi {
     Map<String, Object>? channelMappingByKey,
     List<String>? channelsEnabled,
   }) async {
-    final qp = <String, Object?>{};
-    channelMapping?.forEach((k, v) => qp['channelMapping[$k]'] = v);
-    channelMappingByKey?.forEach((k, v) => qp['channelMappingByKey[$k]'] = v);
-    if (channelsEnabled != null) {
-      qp['channelsEnabled'] = channelsEnabled.join(',');
-    }
     await _http.request<void>(
-      '/media/grabbers/devices/$deviceId/channelmap',
+      '/media/grabbers/devices/${seg(deviceId)}/channelmap',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {
+        if (channelMapping != null)
+          for (final e in channelMapping.entries)
+            'channelMapping[${e.key}]': e.value,
+        if (channelMappingByKey != null)
+          for (final e in channelMappingByKey.entries)
+            'channelMappingByKey[${e.key}]': e.value,
+        'channelsEnabled': ?channelsEnabled?.join(','),
+      },
     );
   }
 
@@ -131,13 +135,10 @@ class PlexDevicesApi {
     Map<String, Object?>? prefs,
     String? name,
   }) async {
-    final qp = <String, Object?>{};
-    if (name != null) qp['name'] = name;
-    if (prefs != null) qp.addAll(prefs);
     await _http.request<void>(
-      '/media/grabbers/devices/$deviceId/prefs',
+      '/media/grabbers/devices/${seg(deviceId)}/prefs',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'name': ?name, ...?prefs},
     );
   }
 
@@ -145,12 +146,10 @@ class PlexDevicesApi {
   /// channel scan on the device. [source] is grabber-specific
   /// (e.g. `'antenna'`, `'cable'`).
   Future<void> startScan({required String deviceId, String? source}) async {
-    final qp = <String, Object?>{};
-    if (source != null) qp['source'] = source;
     await _http.request<void>(
-      '/media/grabbers/devices/$deviceId/scan',
+      '/media/grabbers/devices/${seg(deviceId)}/scan',
       method: 'POST',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'source': ?source},
     );
   }
 
@@ -158,7 +157,7 @@ class PlexDevicesApi {
   /// running channel scan.
   Future<void> stopScan({required String deviceId}) async {
     await _http.request<void>(
-      '/media/grabbers/devices/$deviceId/scan',
+      '/media/grabbers/devices/${seg(deviceId)}/scan',
       method: 'DELETE',
     );
   }
@@ -166,9 +165,11 @@ class PlexDevicesApi {
   /// `GET /media/grabbers/devices/{deviceId}/thumb/{version}` —
   /// URL for the device's thumbnail icon (each grabber type may
   /// ship its own icon).
-  String thumbUrl({required String deviceId, required String version}) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/media/grabbers/devices/$deviceId/thumb/$version?X-Plex-Token=$token';
-  }
+  ///
+  /// The URL carries the token, when there is one: do not log it. Throws
+  /// a `state` [PlexException] before [PlexClient.connect].
+  String thumbUrl({required String deviceId, required String version}) =>
+      _http.signedUrl(
+        '/media/grabbers/devices/${seg(deviceId)}/thumb/${seg(version)}',
+      );
 }

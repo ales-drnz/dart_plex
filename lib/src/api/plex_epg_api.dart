@@ -6,6 +6,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 
 /// `/livetv/epg/*` — Electronic Program Guide.
 ///
@@ -41,9 +42,9 @@ class PlexEpgApi {
     required String epgId,
     String? postalCode,
   }) => _http.requestJson(
-    '/livetv/epg/countries/$country/$epgId/lineups',
+    '/livetv/epg/countries/${seg(country)}/${seg(epgId)}/lineups',
     entriesOf('Lineup', PlexLineup.fromJson),
-    queryParameters: postalCode == null ? null : {'postalCode': postalCode},
+    queryParameters: {'postalCode': ?postalCode},
   );
 
   /// `GET /livetv/epg/countries/{country}/{epgId}/regions` — admin
@@ -53,7 +54,7 @@ class PlexEpgApi {
     required String country,
     required String epgId,
   }) => _http.requestJson(
-    '/livetv/epg/countries/$country/$epgId/regions',
+    '/livetv/epg/countries/${seg(country)}/${seg(epgId)}/regions',
     itemsOf('Country', PlexEpgCountry.fromJson),
   );
 
@@ -64,7 +65,7 @@ class PlexEpgApi {
     required String epgId,
     required String region,
   }) => _http.requestJson(
-    '/livetv/epg/countries/$country/$epgId/regions/$region/lineups',
+    '/livetv/epg/countries/${seg(country)}/${seg(epgId)}/regions/${seg(region)}/lineups',
     entriesOf('Lineup', PlexLineup.fromJson),
   );
 
@@ -105,10 +106,20 @@ class PlexEpgApi {
   /// across multiple lineups in one call.
   ///
   /// [lineup] is the list of lineup URIs to fetch; it is serialized as
-  /// repeated `lineup=` query parameters. Must not be empty. Each lineup
-  /// comes with its [PlexLineup.channels].
-  Future<List<PlexLineup>> lineupChannels({required List<String> lineup}) {
-    assert(lineup.isNotEmpty, 'lineup must contain at least one URI');
+  /// repeated `lineup=` query parameters. Each lineup comes with its
+  /// [PlexLineup.channels].
+  ///
+  /// Throws an [ArgumentError] when [lineup] is empty.
+  Future<List<PlexLineup>> lineupChannels({
+    required List<String> lineup,
+  }) async {
+    if (lineup.isEmpty) {
+      throw ArgumentError.value(
+        lineup,
+        'lineup',
+        'lineup must contain at least one URI',
+      );
+    }
     return _http.requestJson(
       '/livetv/epg/lineupchannels',
       entriesOf('Lineup', PlexLineup.fromJson),

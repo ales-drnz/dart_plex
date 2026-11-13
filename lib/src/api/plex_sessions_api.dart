@@ -8,6 +8,7 @@ import '../plex_connection.dart';
 import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 import '../plex_vocabulary.dart';
 
 /// `/status/sessions` and `/status/sessions/history/*` — "what's
@@ -28,12 +29,10 @@ class PlexSessionsApi {
   PlexSessionsApi(this._http);
 
   /// All active playback sessions on the server.
-  Future<List<PlexSession>> active() async {
-    return _http.requestJson(
-      '/status/sessions',
-      itemsOf('Metadata', PlexSession.fromJson),
-    );
-  }
+  Future<List<PlexSession>> active() => _http.requestJson(
+    '/status/sessions',
+    itemsOf('Metadata', PlexSession.fromJson),
+  );
 
   /// Past sessions (scrobble history).
   ///
@@ -48,24 +47,19 @@ class PlexSessionsApi {
     int start = 0,
     int size = 50,
     PlexSort? sort,
-  }) {
-    final qp = <String, Object?>{
+  }) => _http.requestJson(
+    '/status/sessions/history/all',
+    queryParameters: {
       'X-Plex-Container-Start': start,
       'X-Plex-Container-Size': size,
-    };
-    if (accountId != null) qp['accountID'] = accountId;
-    if (mindate != null) qp['viewedAt>='] = mindate;
-    if (maxdate != null) qp['viewedAt<='] = maxdate;
-    if (librarySectionId != null) {
-      qp['librarySectionID'] = librarySectionId;
-    }
-    if (sort != null) qp['sort'] = sort;
-    return _http.requestJson(
-      '/status/sessions/history/all',
-      queryParameters: qp,
-      containerOf('Metadata', PlexHistoryEntry.fromJson),
-    );
-  }
+      'accountID': ?accountId,
+      'viewedAt>=': ?mindate,
+      'viewedAt<=': ?maxdate,
+      'librarySectionID': ?librarySectionId,
+      'sort': ?sort,
+    },
+    containerOf('Metadata', PlexHistoryEntry.fromJson),
+  );
 
   /// Forcibly stop a session. [sessionId] is the `Session.id` field
   /// (NOT the playback `session=` UUID).
@@ -88,7 +82,7 @@ class PlexSessionsApi {
   /// the first `Metadata` entry, or `null` when no matching entry exists.
   Future<Map<String, Object?>?> historyItem({required Object historyId}) async {
     final res = await _http.request<Map<String, Object?>>(
-      '/status/sessions/history/$historyId',
+      '/status/sessions/history/${seg(historyId)}',
     );
     return asObjectList(
       mediaContainer(res.data)['Metadata'],

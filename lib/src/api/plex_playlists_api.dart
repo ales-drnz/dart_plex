@@ -10,6 +10,7 @@ import '../plex_filter.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
 import '../plex_query.dart';
+import '../plex_urls.dart';
 import '../plex_vocabulary.dart';
 import 'plex_library_api.dart';
 import 'plex_server_api.dart';
@@ -86,10 +87,12 @@ class PlexPlaylistsApi {
     required int start,
     required int size,
   }) {
-    final qp = containerPage(start: start, size: size);
-    if (type != null) qp['playlistType'] = type;
-    if (smart != null) qp['smart'] = smart ? 1 : 0;
-    if (sort != null) qp['sort'] = sort;
+    final qp = <String, Object?>{
+      ...containerPage(start: start, size: size),
+      'playlistType': ?type,
+      if (smart != null) 'smart': smart ? 1 : 0,
+      'sort': ?sort,
+    };
     applyFilters(qp, filters);
     return qp;
   }
@@ -104,13 +107,11 @@ class PlexPlaylistsApi {
     required String playlistId,
     int? start,
     int? size,
-  }) async {
-    return _http.requestJson(
-      '/playlists/$playlistId/items',
-      queryParameters: containerPage(start: start, size: size),
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
+  }) => _http.requestJson(
+    '/playlists/${seg(playlistId)}/items',
+    queryParameters: containerPage(start: start, size: size),
+    itemsOf('Metadata', PlexMetadata.fromJson),
+  );
 
   /// Create a new playlist.
   ///
@@ -129,29 +130,19 @@ class PlexPlaylistsApi {
         ? null
         : 'server://$machineIdentifier/com.plexapp.plugins.library'
               '/library/metadata/${itemRatingKeys.join(',')}';
-    final qp = <String, Object?>{
-      'type': type,
-      'title': title,
-      'smart': 0,
-      'uri': ?uri,
-    };
-    final res = await _http.request<Map<String, Object?>>(
+    final created = await _http.requestJson(
       '/playlists',
       method: 'POST',
-      queryParameters: qp,
+      queryParameters: {'type': type, 'title': title, 'smart': 0, 'uri': ?uri},
+      itemsOf('Metadata', PlexMetadata.fromJson),
     );
-    final c = PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    );
-    if (c.items.isEmpty) {
+    if (created.isEmpty) {
       throw const PlexException(
         'Plex returned no playlist after create',
         type: PlexErrorType.parse,
       );
     }
-    return c.items.first;
+    return created.first;
   }
 
   /// Append items to an existing playlist.
@@ -165,7 +156,7 @@ class PlexPlaylistsApi {
         'server://$machineIdentifier/com.plexapp.plugins.library'
         '/library/metadata/${itemRatingKeys.join(',')}';
     await _http.request<void>(
-      '/playlists/$playlistId/items',
+      '/playlists/${seg(playlistId)}/items',
       method: 'PUT',
       queryParameters: {'uri': uri},
     );
@@ -179,14 +170,17 @@ class PlexPlaylistsApi {
     required String playlistItemId,
   }) async {
     await _http.request<void>(
-      '/playlists/$playlistId/items/$playlistItemId',
+      '/playlists/${seg(playlistId)}/items/${seg(playlistItemId)}',
       method: 'DELETE',
     );
   }
 
   /// Delete a playlist.
   Future<void> delete({required String playlistId}) async {
-    await _http.request<void>('/playlists/$playlistId', method: 'DELETE');
+    await _http.request<void>(
+      '/playlists/${seg(playlistId)}',
+      method: 'DELETE',
+    );
   }
 
   /// Rename a playlist.
@@ -195,7 +189,7 @@ class PlexPlaylistsApi {
     required String title,
   }) async {
     await _http.request<void>(
-      '/playlists/$playlistId',
+      '/playlists/${seg(playlistId)}',
       method: 'PUT',
       queryParameters: {'title': title},
     );
@@ -211,11 +205,9 @@ class PlexPlaylistsApi {
     String? afterPlaylistItemId,
   }) async {
     await _http.request<void>(
-      '/playlists/$playlistId/items/$playlistItemId/move',
+      '/playlists/${seg(playlistId)}/items/${seg(playlistItemId)}/move',
       method: 'PUT',
-      queryParameters: afterPlaylistItemId == null
-          ? null
-          : {'after': afterPlaylistItemId},
+      queryParameters: {'after': ?afterPlaylistItemId},
     );
   }
 
@@ -225,7 +217,7 @@ class PlexPlaylistsApi {
   Future<List<PlexPlayQueueGenerator>> generators({
     required String playlistId,
   }) => _http.requestJson(
-    '/playlists/$playlistId/generators',
+    '/playlists/${seg(playlistId)}/generators',
     itemsOf('PlayQueueGenerator', PlexPlayQueueGenerator.fromJson),
   );
 
@@ -234,12 +226,10 @@ class PlexPlaylistsApi {
   Future<List<PlexMetadata>> generatorItems({
     required String playlistId,
     required int generatorId,
-  }) async {
-    return _http.requestJson(
-      '/playlists/$playlistId/items/$generatorId/items',
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
+  }) => _http.requestJson(
+    '/playlists/${seg(playlistId)}/items/$generatorId/items',
+    itemsOf('Metadata', PlexMetadata.fromJson),
+  );
 
   /// `PUT /playlists/{playlistId}/items/{generatorId}/{metadataId}/{action}`
   /// — re-run a generator with an action (`reprocess`, `disable`, or
@@ -251,7 +241,7 @@ class PlexPlaylistsApi {
     required String action,
   }) async {
     await _http.request<void>(
-      '/playlists/$playlistId/items/$generatorId/$metadataId/$action',
+      '/playlists/${seg(playlistId)}/items/$generatorId/${seg(metadataId)}/${seg(action)}',
       method: 'PUT',
     );
   }
@@ -271,12 +261,10 @@ class PlexPlaylistsApi {
   Future<List<PlexMetadata>> upload({
     required String path,
     bool force = true,
-  }) async {
-    return _http.requestJson(
-      '/playlists/upload',
-      method: 'POST',
-      queryParameters: {'path': path, 'force': force ? 1 : 0},
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
+  }) => _http.requestJson(
+    '/playlists/upload',
+    method: 'POST',
+    queryParameters: {'path': path, 'force': force ? 1 : 0},
+    itemsOf('Metadata', PlexMetadata.fromJson),
+  );
 }

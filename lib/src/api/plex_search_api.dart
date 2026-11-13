@@ -6,6 +6,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 
 /// Search endpoints.
 ///
@@ -25,31 +26,24 @@ class PlexSearchApi {
     String? sectionId,
     int limit = 10,
     bool includeCollections = true,
-  }) async {
-    final qp = <String, Object?>{
+  }) => _http.requestJson(
+    '/hubs/search',
+    queryParameters: {
       'query': query,
       'limit': limit,
       'includeCollections': includeCollections ? 1 : 0,
-    };
-    if (sectionId != null) qp['sectionId'] = sectionId;
-    return _http.requestJson(
-      '/hubs/search',
-      queryParameters: qp,
-      itemsOf('Hub', PlexHub.fromJson),
-    );
-  }
+      'sectionId': ?sectionId,
+    },
+    itemsOf('Hub', PlexHub.fromJson),
+  );
 
   /// Legacy flat search (`/search?query=…`).
-  Future<List<PlexMetadata>> flat({
-    required String query,
-    int limit = 30,
-  }) async {
-    return _http.requestJson(
-      '/search',
-      queryParameters: {'query': query, 'limit': limit},
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
+  Future<List<PlexMetadata>> flat({required String query, int limit = 30}) =>
+      _http.requestJson(
+        '/search',
+        queryParameters: {'query': query, 'limit': limit},
+        itemsOf('Metadata', PlexMetadata.fromJson),
+      );
 
   /// Search one section for one kind of item
   /// (`/library/sections/{sectionId}/search?query=…&type=…`).
@@ -64,7 +58,7 @@ class PlexSearchApi {
     int? limit,
   }) {
     return _http.requestJson(
-      '/library/sections/$sectionId/search',
+      '/library/sections/${seg(sectionId)}/search',
       queryParameters: {'query': query, 'type': type.value, 'limit': ?limit},
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -82,13 +76,9 @@ class PlexSearchApi {
     required String query,
     PlexMetadataType? type,
     int limit = 10,
-  }) async {
-    final qp = <String, Object?>{'query': query, 'limit': limit};
-    if (type != null) qp['type'] = type.value;
-    return _http.requestJson(
-      '/hubs/search/voice',
-      queryParameters: qp,
-      itemsOf('Hub', PlexHub.fromJson),
-    );
-  }
+  }) => _http.requestJson(
+    '/hubs/search/voice',
+    queryParameters: {'query': query, 'limit': limit, 'type': ?type?.value},
+    itemsOf('Hub', PlexHub.fromJson),
+  );
 }

@@ -59,16 +59,21 @@ class PlexServerApi {
   /// [source] is required by the server: omitting it (or passing an empty
   /// string) always yields a 400. [refresh] is sent as the BoolInt `1`/`0`
   /// the API expects.
+  ///
+  /// Throws an [ArgumentError] when [source] is empty.
   Future<PlexSecurityResource> securityResources({
     required String source,
     bool? refresh,
-  }) {
-    assert(source.isNotEmpty, 'source must not be empty');
-    final qp = <String, Object?>{'source': source};
-    if (refresh != null) qp['refresh'] = refresh ? 1 : 0;
+  }) async {
+    if (source.isEmpty) {
+      throw ArgumentError.value(source, 'source', 'source must not be empty');
+    }
     return _http.requestJson(
       '/security/resources',
-      queryParameters: qp,
+      queryParameters: {
+        'source': source,
+        if (refresh != null) 'refresh': refresh ? 1 : 0,
+      },
       (json) => PlexSecurityResource.fromJson(mediaContainer(json)),
     );
   }

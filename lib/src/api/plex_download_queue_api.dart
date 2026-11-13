@@ -9,6 +9,7 @@ import '../plex_exception.dart';
 import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 import 'plex_play_queues_api.dart';
 import 'plex_streaming_api.dart';
 
@@ -114,16 +115,11 @@ class PlexDownloadQueueApi {
 
   /// `GET /downloadQueue/{queueId}/item/{itemId}/media` — the URL of the
   /// item's file, once it is `available`: the media itself, not JSON, so
-  /// it is a URL (with the token, when there is one) to hand to
-  /// `downloadToFile` or [PlexClient.requestStream].
+  /// it is a URL to hand to `downloadToFile` or [PlexClient.requestStream].
   ///
-  /// Throws a [PlexException] of type [PlexErrorType.state] before
+  /// The URL carries the token, when there is one: do not log it. Throws
+  /// a [PlexException] of type [PlexErrorType.state] before
   /// [PlexClient.connect].
-  String itemMediaUrl({required int queueId, required int itemId}) {
-    _http.requireConnected();
-    final url = '${_http.baseUrl}/downloadQueue/$queueId/item/$itemId/media';
-    final token = _http.token;
-    if (token == null) return url;
-    return '$url?X-Plex-Token=${Uri.encodeQueryComponent(token)}';
-  }
+  String itemMediaUrl({required int queueId, required int itemId}) =>
+      _http.signedUrl('/downloadQueue/$queueId/item/$itemId/media');
 }

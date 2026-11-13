@@ -6,6 +6,7 @@ import '../models/plex_server_models.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 
 /// `/activities` — long-running server activities (scan progress,
 /// transcoding sessions, etc.).
@@ -30,6 +31,9 @@ class PlexActivitiesApi {
   /// `DELETE /activities/{activityId}` — cancel a running activity
   /// (best-effort; some activity types cannot be cancelled).
   Future<void> cancel({required String activityId}) async {
-    await _http.request<void>('/activities/$activityId', method: 'DELETE');
+    await _http.request<void>(
+      '/activities/${seg(activityId)}',
+      method: 'DELETE',
+    );
   }
 }

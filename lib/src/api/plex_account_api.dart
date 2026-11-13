@@ -651,7 +651,7 @@ class PlexAccountApi {
         url,
         method: method,
         absoluteUrl: true,
-        queryParameters: query == null || query.isEmpty ? null : query,
+        queryParameters: query,
         // The connection's own token goes as it is, so that its renewer
         // can replace it on a retry; another one goes as a header.
         extraHeaders: {'X-Plex-Token': ?(auth == _http.token ? null : auth)},

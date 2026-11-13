@@ -7,6 +7,7 @@ import '../plex_connection.dart';
 import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 
 /// `/media/subscriptions/*` — DVR recording subscriptions.
 ///
@@ -53,24 +54,19 @@ class PlexSubscriptionsApi {
     Map<String, Object?>? hints,
     Map<String, Object?>? prefs,
     Map<String, Object?>? params,
-  }) async {
-    final qp = <String, Object?>{
+  }) => _http.requestJson(
+    '/media/subscriptions',
+    firstOf('MediaSubscription', PlexMediaSubscription.fromJson),
+    method: 'POST',
+    queryParameters: {
       'targetLibrarySectionID': targetLibrarySectionID,
-    };
-    if (targetSectionLocationID != null) {
-      qp['targetSectionLocationID'] = targetSectionLocationID;
-    }
-    if (type != null) qp['type'] = type;
-    if (hints != null) qp['hints'] = hints;
-    if (prefs != null) qp['prefs'] = prefs;
-    if (params != null) qp['params'] = params;
-    return _http.requestJson(
-      '/media/subscriptions',
-      firstOf('MediaSubscription', PlexMediaSubscription.fromJson),
-      method: 'POST',
-      queryParameters: qp,
-    );
-  }
+      'targetSectionLocationID': ?targetSectionLocationID,
+      'type': ?type,
+      'hints': ?hints,
+      'prefs': ?prefs,
+      'params': ?params,
+    },
+  );
 
   /// `POST /media/subscriptions/process` — re-evaluate every
   /// subscription against the current EPG (used after the guide
@@ -113,7 +109,7 @@ class PlexSubscriptionsApi {
     bool includeGrabs = false,
     bool includeStorage = false,
   }) => _http.requestJson(
-    '/media/subscriptions/$subscriptionId',
+    '/media/subscriptions/${seg(subscriptionId)}',
     firstOf('MediaSubscription', PlexMediaSubscription.fromJson),
     queryParameters: {
       'includeGrabs': includeGrabs ? 1 : 0,
@@ -127,12 +123,10 @@ class PlexSubscriptionsApi {
     required String subscriptionId,
     Map<String, Object?>? prefs,
   }) async {
-    final qp = <String, Object?>{};
-    if (prefs != null) qp['prefs'] = prefs;
     await _http.request<void>(
-      '/media/subscriptions/$subscriptionId',
+      '/media/subscriptions/${seg(subscriptionId)}',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'prefs': ?prefs},
     );
   }
 
@@ -140,7 +134,7 @@ class PlexSubscriptionsApi {
   /// subscription (the recordings already on disk stay).
   Future<void> delete({required String subscriptionId}) async {
     await _http.request<void>(
-      '/media/subscriptions/$subscriptionId',
+      '/media/subscriptions/${seg(subscriptionId)}',
       method: 'DELETE',
     );
   }
@@ -154,9 +148,9 @@ class PlexSubscriptionsApi {
   /// the list.
   Future<void> reorder({required String subscriptionId, String? after}) async {
     await _http.request<void>(
-      '/media/subscriptions/$subscriptionId/move',
+      '/media/subscriptions/${seg(subscriptionId)}/move',
       method: 'PUT',
-      queryParameters: after != null ? {'after': after} : null,
+      queryParameters: {'after': ?after},
     );
   }
 
@@ -165,7 +159,7 @@ class PlexSubscriptionsApi {
   /// happening).
   Future<void> cancelGrab({required String operationId}) async {
     await _http.request<void>(
-      '/media/grabbers/operations/$operationId',
+      '/media/grabbers/operations/${seg(operationId)}',
       method: 'DELETE',
     );
   }

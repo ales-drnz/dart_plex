@@ -6,6 +6,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 import 'plex_live_tv_api.dart';
 
 /// `/livetv/dvrs/*` — Plex DVR backend configuration.
@@ -25,14 +26,14 @@ class PlexDvrsApi {
   /// `GET /livetv/dvrs/{dvrId}` — one DVR's full configuration, or
   /// `null` when the answer holds none.
   Future<PlexDvr?> get({required String dvrId}) => _http.requestJson(
-    '/livetv/dvrs/$dvrId',
+    '/livetv/dvrs/${seg(dvrId)}',
     firstOf('Dvr', PlexDvr.fromJson, altKey: 'DVR'),
   );
 
   /// `DELETE /livetv/dvrs/{dvrId}` — drop a DVR (its recordings
   /// stay on disk).
   Future<void> delete({required String dvrId}) async {
-    await _http.request<void>('/livetv/dvrs/$dvrId', method: 'DELETE');
+    await _http.request<void>('/livetv/dvrs/${seg(dvrId)}', method: 'DELETE');
   }
 
   /// `PUT /livetv/dvrs/{dvrId}/prefs` — update DVR preferences.
@@ -50,13 +51,10 @@ class PlexDvrsApi {
     Map<String, Object?>? prefs,
     String? name,
   }) async {
-    final qp = <String, Object?>{};
-    if (name != null) qp['name'] = name;
-    if (prefs != null) qp.addAll(prefs);
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/prefs',
+      '/livetv/dvrs/${seg(dvrId)}/prefs',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'name': ?name, ...?prefs},
     );
   }
 
@@ -67,7 +65,7 @@ class PlexDvrsApi {
     required String lineup,
   }) async {
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/lineups',
+      '/livetv/dvrs/${seg(dvrId)}/lineups',
       method: 'PUT',
       queryParameters: {'lineup': lineup},
     );
@@ -80,7 +78,7 @@ class PlexDvrsApi {
     required String lineup,
   }) async {
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/lineups',
+      '/livetv/dvrs/${seg(dvrId)}/lineups',
       method: 'DELETE',
       queryParameters: {'lineup': lineup},
     );
@@ -90,7 +88,7 @@ class PlexDvrsApi {
   /// program guide.
   Future<void> reloadGuide({required String dvrId}) async {
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/reloadGuide',
+      '/livetv/dvrs/${seg(dvrId)}/reloadGuide',
       method: 'POST',
     );
   }
@@ -99,7 +97,7 @@ class PlexDvrsApi {
   /// guide reload.
   Future<void> stopReloadGuide({required String dvrId}) async {
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/reloadGuide',
+      '/livetv/dvrs/${seg(dvrId)}/reloadGuide',
       method: 'DELETE',
     );
   }
@@ -111,7 +109,7 @@ class PlexDvrsApi {
     required String channel,
   }) async {
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/channels/$channel/tune',
+      '/livetv/dvrs/${seg(dvrId)}/channels/${seg(channel)}/tune',
       method: 'POST',
     );
   }
@@ -123,7 +121,7 @@ class PlexDvrsApi {
     required String deviceId,
   }) async {
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/devices/$deviceId',
+      '/livetv/dvrs/${seg(dvrId)}/devices/${seg(deviceId)}',
       method: 'PUT',
     );
   }
@@ -135,7 +133,7 @@ class PlexDvrsApi {
     required String deviceId,
   }) async {
     await _http.request<void>(
-      '/livetv/dvrs/$dvrId/devices/$deviceId',
+      '/livetv/dvrs/${seg(dvrId)}/devices/${seg(deviceId)}',
       method: 'DELETE',
     );
   }

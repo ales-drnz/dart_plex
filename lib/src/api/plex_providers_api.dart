@@ -6,6 +6,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 
 /// `/media/providers` — third-party media providers (TIDAL, internal
 /// channels, external streaming sources).
@@ -48,6 +49,9 @@ class PlexProvidersApi {
 
   /// `DELETE /media/providers/{provider}` — drop a provider.
   Future<void> delete({required String provider}) async {
-    await _http.request<void>('/media/providers/$provider', method: 'DELETE');
+    await _http.request<void>(
+      '/media/providers/${seg(provider)}',
+      method: 'DELETE',
+    );
   }
 }
