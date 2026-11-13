@@ -13,7 +13,8 @@ import 'plex_exception.dart';
 /// cannot send headers, so the token rides in the query.
 extension PlexSignedUrls on PlexConnection {
   /// The full URL of [path] on the connected server, with [query] and the
-  /// token (`X-Plex-Token`, last, left out when there is none).
+  /// token (`X-Plex-Token`, last, left out when there is none). A [query]
+  /// that names `X-Plex-Token` itself keeps its own.
   ///
   /// [path] starts with `/` and is taken as it is: build its variable
   /// segments with [seg]. Keys and values of [query] are form-encoded; an
@@ -24,10 +25,12 @@ extension PlexSignedUrls on PlexConnection {
   String signedUrl(String path, [Map<String, Object?> query = const {}]) {
     requireConnected();
     final token = this.token;
+    final named = query.keys.any((k) => k.toLowerCase() == 'x-plex-token');
     final pairs = [
       for (final MapEntry(:key, :value) in query.entries)
         if (value != null) _pair(key, value),
-      if (token != null && token.isNotEmpty) _pair('X-Plex-Token', token),
+      if (!named && token != null && token.isNotEmpty)
+        _pair('X-Plex-Token', token),
     ];
     return '$baseUrl$path${pairs.isEmpty ? '' : '?${pairs.join('&')}'}';
   }

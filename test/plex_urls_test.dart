@@ -40,6 +40,11 @@ void main() {
       expect(http.signedUrl('/a/b'), 'http://192.168.1.10:32400/a/b');
     });
 
+    test('a query that names the token keeps its own, once', () {
+      final url = http.signedUrl('/a', {'X-Plex-Token': 'other', 'b': 1});
+      expect(url, 'http://192.168.1.10:32400/a?X-Plex-Token=other&b=1');
+    });
+
     test('before a server is set it is a state error, not "null/…"', () {
       http.baseUrl = null;
       expect(
