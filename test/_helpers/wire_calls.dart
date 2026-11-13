@@ -22,12 +22,14 @@ typedef WireCall = (
 );
 
 /// One test per entry of [calls]: the call is made against a server that
-/// answers an empty JSON object, and the single request it sends is
+/// answers an empty `MediaContainer`, and the single request it sends is
 /// compared with the entry.
 void testWireCalls(List<WireCall> calls) {
   for (final (name, call, method, path, query) in calls) {
     test('$name sends $method $path', () async {
-      final adapter = CapturingAdapter();
+      final adapter = CapturingAdapter(const {
+        'MediaContainer': <String, Object?>{},
+      });
       await call(testClient(adapter));
       expect(adapter.requests, hasLength(1));
       final request = adapter.last!;
