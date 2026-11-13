@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:dart_plex/dart_plex.dart';
+import 'package:dart_plex/src/plex_session_state.dart';
 import 'package:test/test.dart';
 
 import '_helpers/capturing_client.dart';
@@ -205,6 +206,32 @@ void main() {
     });
   });
 
+  group('the device JWTs kept for pins being polled', () {
+    final t0 = DateTime.utc(2026, 11, 13, 12);
+    final reuseUntil = t0.add(const Duration(minutes: 4));
+
+    test('one is reused until its time, then dropped', () {
+      final state = PlexSessionState()..keepPinJwt(1, 'jwt-1', reuseUntil);
+      expect(state.pinJwt(1, t0), 'jwt-1');
+      expect(state.pinJwt(2, t0), isNull);
+      expect(state.pinJwt(1, reuseUntil), isNull);
+      expect(state.pinJwtCount, 0);
+    });
+
+    test('touching the cache drops those of pins nobody polls any more', () {
+      final state = PlexSessionState()
+        ..keepPinJwt(1, 'abandoned', reuseUntil)
+        ..keepPinJwt(2, 'jwt-2', reuseUntil.add(const Duration(minutes: 2)));
+      expect(
+        state.pinJwt(2, reuseUntil.add(const Duration(minutes: 1))),
+        'jwt-2',
+      );
+      expect(state.pinJwtCount, 1);
+      state.dropPinJwt(2);
+      expect(state.pinJwtCount, 0);
+    });
+  });
+
   group('JWT sign-in against a mocked plex.tv', () {
     late CapturingAdapter adapter;
     late PlexClient plex;
@@ -282,6 +309,50 @@ void main() {
         expect(claims['nonce'], isNotNull);
       },
     );
+
+    group('a pin still waiting, polled through views of one client', () {
+      int nonces() => adapter.requests
+          .where((r) => r.uri.path == '/api/v2/auth/nonce')
+          .length;
+
+      setUp(() {
+        final answer = adapter.respond!;
+        adapter.respond = (r) => r.uri.path == '/api/v2/pins/42'
+            ? CannedResponse.json({
+                'id': 42,
+                'code': 'abcdefghijklmnopqrstuvwxy',
+                'createdAt': '2026-11-07T00:00:00Z',
+                'expiresAt': '2099-01-01T00:00:00Z',
+              })
+            : answer(r);
+      });
+
+      test('asks for one nonce and sends one device JWT', () async {
+        final first = plex.withCancelToken(PlexCancelToken());
+        final second = plex.withCancelToken(PlexCancelToken());
+        expect(identical(first.account, second.account), isFalse);
+        for (final view in [first, second, plex, first]) {
+          final pin = await view.account.pollJwtPin(id: 42, key: key);
+          expect(pin.isAuthenticated, isFalse);
+        }
+        expect(nonces(), 1);
+        final sent = adapter.requests
+            .where((r) => r.uri.path == '/api/v2/pins/42')
+            .map((r) => r.queryParameters['deviceJWT'])
+            .toSet();
+        expect(sent, hasLength(1));
+      });
+
+      test('another client signs its own', () async {
+        await plex.account.pollJwtPin(id: 42, key: key);
+        final other = PlexClient(
+          credentials: testCredentials,
+          httpClient: adapter,
+        );
+        await other.account.pollJwtPin(id: 42, key: key);
+        expect(nonces(), 2);
+      });
+    });
 
     test(
       'refreshJwt: nonce, signed device JWT, exchange — no token sent',

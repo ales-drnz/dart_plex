@@ -26,4 +26,28 @@ final class PlexSessionState {
   /// The connection picked by `connectTo` / `connectToResource`; `null`
   /// after a plain `connect(url)`.
   PlexServerConnection? connection;
+
+  /// Device JWTs signed for a JWT pin being polled, by pin id, each with
+  /// the time it stops being reused. Here rather than in the account API
+  /// because every `withCancelToken` view has an account API of its own.
+  final Map<int, (String, DateTime)> _pinJwts = {};
+
+  /// The device JWT kept for the pin [id], if it is still good at [now].
+  /// Expired ones — of any pin, such as one nobody polls any more — are
+  /// dropped on the way.
+  String? pinJwt(int id, DateTime now) {
+    _pinJwts.removeWhere((_, entry) => !now.isBefore(entry.$2));
+    return _pinJwts[id]?.$1;
+  }
+
+  /// Keeps [jwt] for the pin [id], to be reused until [reuseUntil].
+  void keepPinJwt(int id, String jwt, DateTime reuseUntil) =>
+      _pinJwts[id] = (jwt, reuseUntil);
+
+  /// Forgets the device JWT of the pin [id]: it was claimed, or expired.
+  void dropPinJwt(int id) => _pinJwts.remove(id);
+
+  /// How many device JWTs are kept.
+  @visibleForTesting
+  int get pinJwtCount => _pinJwts.length;
 }

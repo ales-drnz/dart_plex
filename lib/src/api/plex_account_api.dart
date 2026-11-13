@@ -39,10 +39,6 @@ class PlexAccountApi {
   final PlexConnection _http;
   final PlexSessionState _state;
 
-  /// Device JWTs signed for a JWT PIN, by pin id, reused while valid: a
-  /// nonce is rate-limited, and polling asks once a second.
-  final Map<int, (String, DateTime)> _pinJwts = {};
-
   /// Construct from a [PlexConnection]. Typically obtained via
   /// [PlexClient.account].
   PlexAccountApi(this._http, {@internal PlexSessionState? state})
@@ -186,25 +182,24 @@ class PlexAccountApi {
   /// [PlexPin.authToken] is the plex.tv JWT (read it with [PlexJwt.parse]).
   ///
   /// The device JWT carries a nonce and lasts five minutes; it is reused
-  /// across polls of the same pin until a minute before it expires.
+  /// across polls of the same pin — through any [PlexClient.withCancelToken]
+  /// view of the client — until a minute before it expires: a nonce is
+  /// rate-limited, and polling asks once a second.
   Future<PlexPin> pollJwtPin({
     required int id,
     required PlexDeviceKey key,
     List<String> scopes = PlexJwt.allScopes,
   }) async {
-    final cached = _pinJwts[id];
     final now = DateTime.now().toUtc();
-    final String deviceJwt;
-    if (cached != null && now.isBefore(cached.$2)) {
-      deviceJwt = cached.$1;
-    } else {
+    var deviceJwt = _state.pinJwt(id, now);
+    if (deviceJwt == null) {
       deviceJwt = await key.deviceJwt(
         clientIdentifier: _http.credentials.clientIdentifier,
         nonce: await authNonce(),
         scopes: scopes,
         now: now,
       );
-      _pinJwts[id] = (deviceJwt, now.add(const Duration(minutes: 4)));
+      _state.keepPinJwt(id, deviceJwt, now.add(const Duration(minutes: 4)));
     }
     final res = await _http.request<Map<String, Object?>>(
       '$_clients/pins/$id',
@@ -215,7 +210,7 @@ class PlexAccountApi {
     final data = res.data;
     if (data == null) throw missingField('a pin', '$_clients/pins/$id');
     final pin = PlexPin.fromJson(data);
-    if (pin.isAuthenticated || pin.isExpired) _pinJwts.remove(id);
+    if (pin.isAuthenticated || pin.isExpired) _state.dropPinJwt(id);
     return pin;
   }
 
