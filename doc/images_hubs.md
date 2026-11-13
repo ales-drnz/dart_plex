@@ -25,6 +25,11 @@ failures, so "no artwork" and "try again later" stay apart. For blur,
 format and the other transcoder options see the transcoder URLs in
 [Streaming](https://pub.dev/documentation/dart_plex/latest/topics/Streaming-topic.html).
 
+**Do not log these URLs.** `transcodeUrl()`, `ultraBlur.imageUrl()` and
+`collections.compositeImageUrl()` answer URLs that carry the
+`X-Plex-Token` in their query, so an image widget can open them without
+headers. Before `connect()` they throw a `state` `PlexException`.
+
 ### Artwork versions and cache keys
 
 ```dart

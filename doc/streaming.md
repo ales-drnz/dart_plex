@@ -188,9 +188,16 @@ final subtitles = plex.transcoder.subtitlesUrl(
 
 `imageUrl()` exposes every option of the photo transcoder (`quality`,
 `blur`, `saturation`, `opacity`, `rotate`, `background`, `blendColor`).
-`startUrl()` builds a `start.{extension}` URL from your own parameters,
-and `triggerFallback()` asks the server for a full transcode after
-direct play failed.
+`triggerFallback()` asks the server for a full transcode after direct
+play failed. `startUrl()` and `streaming.universalVideoUrl()` are
+deprecated: PMS refuses a start without a decision, which
+`startVideoTranscode()` and `startAudioTranscode()` make first.
+
+**Do not log these URLs.** Every URL built here (a transcode `url`,
+`directFileUrl()`, the transcoder URLs) carries the `X-Plex-Token` in its
+query, because the player opens it without this client's headers:
+whoever reads one can use the server as you. Building one before
+`connect()` throws a `state` `PlexException`.
 
 ## Lyrics
 
