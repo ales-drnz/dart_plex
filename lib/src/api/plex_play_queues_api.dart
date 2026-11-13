@@ -129,7 +129,9 @@ class PlexPlayQueuesApi {
   }
 
   /// `PUT /playQueues/{id}/items/{playQueueItemId}/move?after={otherId}`
-  /// — reorder the queue. Omit [afterPlaylistItemId] (leave null) to
+  /// — reorder the queue. [afterPlaylistItemId] is, despite its name, a
+  /// play queue item id (the `playQueueItemID` of an entry of [items]):
+  /// the entry to move [playQueueItemId] after. Omit it (leave null) to
   /// move the item to the very start.
   Future<void> moveItem({
     required int playQueueId,
