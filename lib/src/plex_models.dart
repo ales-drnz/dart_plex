@@ -217,10 +217,7 @@ final class PlexMediaContainer<T> {
     return PlexMediaContainer<T>(
       totalSize: asInt(container['totalSize']) ?? asInt(container['size']) ?? 0,
       size: asInt(container['size']) ?? list.length,
-      items: [
-        for (final e in list)
-          if (e is Map<String, Object?>) parser(e),
-      ],
+      items: asObjectList(list, parser),
       raw: {
         for (final e in container.entries)
           if (e.key != arrayKey) e.key: e.value,

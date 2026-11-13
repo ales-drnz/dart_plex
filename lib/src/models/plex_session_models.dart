@@ -68,11 +68,7 @@ final class PlexPlayQueue {
       selectedItemId: asInt(container['playQueueSelectedItemID']),
       shuffled: asBool(container['playQueueShuffled']),
       version: asInt(container['playQueueVersion']),
-      items: [
-        if (metadata is List)
-          for (final m in metadata)
-            if (m is Map<String, Object?>) PlexMetadata.fromJson(m),
-      ],
+      items: asObjectList(metadata, PlexMetadata.fromJson),
       raw: container,
     );
   }

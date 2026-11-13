@@ -67,11 +67,7 @@ final class PlexHub {
     type: asString(json['type']),
     size: asInt(json['size']) ?? 0,
     more: asBool(json['more']),
-    items: [
-      if (json['Metadata'] is List)
-        for (final m in json['Metadata'] as List)
-          if (m is Map<String, Object?>) PlexMetadata.fromJson(m),
-    ],
+    items: asObjectList(json['Metadata'], PlexMetadata.fromJson),
     raw: json,
   );
 }

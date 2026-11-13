@@ -144,12 +144,7 @@ final class PlexSecurityResource {
   /// of one).
   factory PlexSecurityResource.fromJson(Map<String, Object?> json) {
     final container = mediaContainer(json);
-    final device = container['Device'];
-    final src = switch (device) {
-      final Map<String, Object?> m => m,
-      [final Map<String, Object?> m, ...] => m,
-      _ => container,
-    };
+    final src = asObject(container['Device']) ?? container;
     return PlexSecurityResource(
       name: asString(src['name']),
       clientIdentifier: asString(src['clientIdentifier']),
@@ -271,17 +266,11 @@ final class PlexMediaProvider {
       PlexMediaProvider(
         identifier: asString(json['identifier']) ?? '',
         title: asString(json['title']) ?? '',
-        types: _csv(json['types']),
-        protocols: _csv(json['protocols'] ?? json['Protocol']),
+        types: asCsv(json['types']),
+        protocols: asCsv(json['protocols'] ?? json['Protocol']),
         features: asObjectList(json['Feature'], PlexProviderFeature.fromJson),
         raw: json,
       );
-
-  static List<String> _csv(Object? v) => (asString(v) ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList(growable: false);
 }
 
 /// One feature of a [PlexMediaProvider] (`Feature`).

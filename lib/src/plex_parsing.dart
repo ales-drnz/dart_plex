@@ -51,6 +51,8 @@ T? Function(Object? json) firstOf<T>(
     (json) => entriesOf(key, parser, altKey: altKey)(json).firstOrNull;
 
 Map<String, Object?> _map(Object? json) {
+  // An empty answer has no `MediaContainer`: left to
+  // [PlexMediaContainer.fromJson] to report as that.
   if (json == null) return const <String, Object?>{};
   if (json is Map<String, Object?>) return json;
   throw PlexException(

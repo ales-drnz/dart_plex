@@ -305,11 +305,7 @@ final class PlexMetadata {
       lastViewedAt: asEpochSeconds(json['lastViewedAt']),
       addedAt: asEpochSeconds(json['addedAt']),
       updatedAt: asEpochSeconds(json['updatedAt']),
-      media: [
-        if (json['Media'] is List)
-          for (final m in json['Media'] as List)
-            if (m is Map<String, Object?>) PlexMedia.fromJson(m),
-      ],
+      media: asObjectList(json['Media'], PlexMedia.fromJson),
       genres: tagNames(json['Genre']),
       moods: tagNames(json['Mood']),
       styles: tagNames(json['Style']),
@@ -604,11 +600,7 @@ final class PlexMedia {
     bitDepth: asInt(json['audioBitDepth']) ?? asInt(json['bitDepth']),
     width: asInt(json['width']),
     height: asInt(json['height']),
-    parts: [
-      if (json['Part'] is List)
-        for (final p in json['Part'] as List)
-          if (p is Map<String, Object?>) PlexPart.fromJson(p),
-    ],
+    parts: asObjectList(json['Part'], PlexPart.fromJson),
     raw: json,
   );
 }
@@ -661,11 +653,7 @@ final class PlexPart {
     file: asString(json['file']),
     size: asInt(json['size']),
     container: asString(json['container']),
-    streams: [
-      if (json['Stream'] is List)
-        for (final s in json['Stream'] as List)
-          if (s is Map<String, Object?>) PlexStream.fromJson(s),
-    ],
+    streams: asObjectList(json['Stream'], PlexStream.fromJson),
     raw: json,
   );
 }

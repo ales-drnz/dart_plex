@@ -78,13 +78,8 @@ final class PlexUser {
   /// XML, by a Plex Home switch).
   factory PlexUser.fromJson(Map<String, Object?> json) {
     // Legacy /users/sign_in.json wraps it in {"user": {...}}; v2 returns flat.
-    final wrapped = json['user'];
-    final src = wrapped is Map<String, Object?>
-        ? wrapped
-        : wrapped is List && wrapped.firstOrNull is Map<String, Object?>
-        ? wrapped.first as Map<String, Object?>
-        : json;
-    final subs = _first(src['subscription']);
+    final src = asObject(json['user']) ?? json;
+    final subs = asObject(src['subscription']);
     final features = subs?['features'] ?? subs?['feature'];
     return PlexUser(
       id: asInt(src['id']) ?? 0,
@@ -114,14 +109,6 @@ final class PlexUser {
     );
   }
 }
-
-/// [v] itself when it is a map, its first element when it is a list of
-/// maps (the XML shape of a single child).
-Map<String, Object?>? _first(Object? v) => switch (v) {
-  final Map<String, Object?> m => m,
-  [final Map<String, Object?> m, ...] => m,
-  _ => null,
-};
 
 /// One server entry from `plex.tv/api/v2/resources`.
 ///
@@ -224,16 +211,8 @@ final class PlexResource {
       httpsRequired: asBool(json['httpsRequired']),
       accessToken: asString(json['accessToken']) ?? '',
       publicAddress: asString(json['publicAddress']),
-      provides: (asString(json['provides']) ?? '')
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList(growable: false),
-      connections: [
-        if (conns is List)
-          for (final c in conns)
-            if (c is Map<String, Object?>) PlexServerConnection.fromJson(c),
-      ],
+      provides: asCsv(json['provides']),
+      connections: asObjectList(conns, PlexServerConnection.fromJson),
       raw: json,
     );
   }
@@ -615,11 +594,7 @@ final class PlexAccountUser {
       allowSync: asBool(json['allowSync']),
       allowCameraUpload: asBool(json['allowCameraUpload']),
       allowTuners: asBool(json['allowTuners']),
-      servers: [
-        if (servers is List)
-          for (final s in servers)
-            if (s is Map<String, Object?>) PlexServerShare.fromJson(s),
-      ],
+      servers: asObjectList(servers, PlexServerShare.fromJson),
       raw: json,
     );
   }
@@ -792,11 +767,7 @@ final class PlexDevice {
     product: asString(json['product']) ?? '',
     productVersion: asString(json['productVersion']),
     platform: asString(json['platform']),
-    provides: (asString(json['provides']) ?? '')
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList(growable: false),
+    provides: asCsv(json['provides']),
     token: asString(json['token']) ?? asString(json['accessToken']),
     lastSeenAt:
         asEpochSeconds(json['lastSeenAt']) ?? asUtcDateTime(json['lastSeenAt']),
@@ -864,7 +835,7 @@ final class PlexGeoLocation {
   /// Parses the answer, in the snake_case plex.tv uses (`continent_code`,
   /// `time_zone`) or camelCase.
   factory PlexGeoLocation.fromJson(Map<String, Object?> json) {
-    final src = _first(json['location']) ?? json;
+    final src = asObject(json['location']) ?? json;
     final coords = (asString(src['coordinates']) ?? '').split(',');
     return PlexGeoLocation(
       city: asString(src['city']),

@@ -46,11 +46,8 @@ sealed class PlexEvent {
     String type,
     Map<String, Object?> container,
   ) {
-    List<Map<String, Object?>> entries(String key) => [
-      if (container[key] is List)
-        for (final e in container[key] as List)
-          if (e is Map<String, Object?>) e,
-    ];
+    List<Map<String, Object?>> entries(String key) =>
+        asObjectList(container[key], (e) => e);
 
     switch (type) {
       case 'playing':
