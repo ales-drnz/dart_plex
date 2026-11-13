@@ -11,6 +11,7 @@ import 'package:test/test.dart';
 
 import '_helpers/capturing_client.dart';
 import '_helpers/fixtures.dart';
+import '_helpers/wire_calls.dart';
 
 void main() {
   group('library answers', () {
@@ -91,6 +92,58 @@ void main() {
         'includeMarkers': '1',
         'includeChapters': '1',
       });
+    });
+  });
+
+  group('sections() and item()', () {
+    late CapturingAdapter adapter;
+    late PlexClient plex;
+
+    setUp(() {
+      adapter = CapturingAdapter();
+      plex = testClient(adapter);
+    });
+
+    test('read the entries, also when parsed off the main isolate', () async {
+      const body = {
+        'MediaContainer': {
+          'Directory': [
+            {'key': '1', 'title': 'Music', 'type': 'artist'},
+          ],
+          'Metadata': [
+            {'ratingKey': '7', 'title': 'Track'},
+          ],
+        },
+      };
+      for (final threshold in [0, 1]) {
+        final plex = testClient(
+          CapturingAdapter(body),
+          jsonIsolateThreshold: threshold,
+        );
+        expect((await plex.library.sections()).single.title, 'Music');
+        expect((await plex.library.item(ratingKey: '7'))!.title, 'Track');
+      }
+    });
+
+    test('nothing in the container is an empty list and no item', () async {
+      adapter.responseBody = {
+        'MediaContainer': {'size': 0},
+      };
+      expect(await plex.library.sections(), isEmpty);
+      expect(await plex.library.item(ratingKey: '7'), isNull);
+    });
+
+    test('an empty body, a list or no container is a parse error', () async {
+      final bodies = <CannedResponse>[
+        CannedResponse(200, const []),
+        CannedResponse.json(const <Object?>[]),
+        CannedResponse.json(const <String, Object?>{}),
+      ];
+      for (final body in bodies) {
+        adapter.respond = (_) => body;
+        await expectLater(plex.library.sections(), throwsParseError);
+        await expectLater(plex.library.item(ratingKey: '7'), throwsParseError);
+      }
     });
   });
 

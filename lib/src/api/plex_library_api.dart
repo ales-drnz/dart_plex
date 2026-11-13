@@ -37,15 +37,10 @@ class PlexLibraryApi
   /// `type` (`artist|movie|show|photo`) reveals which content kind is
   /// served. Music apps typically pick the first
   /// [PlexLibraryType.music] entry.
-  Future<List<PlexLibrarySection>> sections() async {
-    final res = await _http.request<Map<String, Object?>>('/library/sections');
-    final c = PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexLibrarySection.fromJson,
-    );
-    return c.items;
-  }
+  Future<List<PlexLibrarySection>> sections() => _http.requestJson(
+    '/library/sections',
+    itemsOf('Directory', PlexLibrarySection.fromJson),
+  );
 
   // -------------------------------------------------------------------------
   // Items inside a section
@@ -226,21 +221,14 @@ class PlexLibraryApi
     required String ratingKey,
     bool includeMarkers = false,
     bool includeChapters = false,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/metadata/${seg(ratingKey)}',
-      queryParameters: {
-        if (includeMarkers) 'includeMarkers': 1,
-        if (includeChapters) 'includeChapters': 1,
-      },
-    );
-    final c = PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    );
-    return c.items.isEmpty ? null : c.items.first;
-  }
+  }) => _http.requestJson(
+    '/library/metadata/${seg(ratingKey)}',
+    queryParameters: {
+      if (includeMarkers) 'includeMarkers': 1,
+      if (includeChapters) 'includeChapters': 1,
+    },
+    (json) => itemsOf('Metadata', PlexMetadata.fromJson)(json).firstOrNull,
+  );
 
   /// `PUT /library/metadata/{ids}` — edit metadata fields on one item
   /// (or a comma-joined list of `ids`). Admin-token only.
@@ -514,26 +502,18 @@ class PlexLibraryApi
 
   /// `GET /library/all` — every item across every section. Heavy
   /// query; use sections / `allByType` for normal browsing.
-  Future<List<PlexMetadata>> all() async {
-    return _http.requestJson(
-      '/library/all',
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
+  Future<List<PlexMetadata>> all() => _http.requestJson(
+    '/library/all',
+    itemsOf('Metadata', PlexMetadata.fromJson),
+  );
 
   /// `GET /library/sections/all` — every section's metadata (Media
   /// Provider Only view). Lighter than [sections]; useful for the
   /// "primary library" entry point.
-  Future<List<PlexLibrarySection>> sectionsAll() async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/sections/all',
-    );
-    return PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Directory',
-      PlexLibrarySection.fromJson,
-    ).items;
-  }
+  Future<List<PlexLibrarySection>> sectionsAll() => _http.requestJson(
+    '/library/sections/all',
+    itemsOf('Directory', PlexLibrarySection.fromJson),
+  );
 
   /// `GET /library/sections/{sectionId}/folder` — the section's folders
   /// and the items directly in them, as on disk (the API document's
