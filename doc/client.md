@@ -269,7 +269,6 @@ final kid = await plex.account.switchHomeUser(userId: kids.first.id, pin: '1234'
 plex.setAccountToken(kid.authToken);              // plex.tv calls as that user
 
 final users = await plex.account.connectedUsers(); // shares, per server
-final friends = await plex.account.friends();
 final where = await plex.account.geoip();
 ```
 
@@ -278,6 +277,10 @@ python-plexapi reads (`plex.tv/api/home/users`, `…/switch`,
 `plex.tv/api/users/`), which plex.tv answers in XML; the package reads the
 XML into the same models. After a switch, fetch the servers again: they
 come with that user's tokens.
+
+`friends()` is deprecated: plex.tv removed its route (`410 Gone`) and has
+no REST replacement; `connectedUsers()` lists the users the account
+shares with.
 
 The watchlist lives on Plex's discover provider, with plex.tv's own
 metadata:
