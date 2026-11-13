@@ -8,6 +8,7 @@ import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../plex_urls.dart';
 
 /// Build & fetch artwork URLs through the server's image transcoder
 /// (`/photo/:/transcode`).
@@ -30,26 +31,22 @@ class PlexImagesApi {
   ///
   /// `width` / `height` cap the output dimensions. Default 500×500 gives
   /// ~50-150KB JPEGs, which is what most music apps cache.
+  ///
+  /// The URL carries the token: do not log it. Throws a `state`
+  /// [PlexException] before [PlexClient.connect].
   String transcodeUrl({
     required String sourcePath,
     int width = 500,
     int height = 500,
     int minSize = 1,
     bool upscale = false,
-  }) {
-    _http.requireConnected();
-    final base = _http.baseUrl!;
-    final token = _http.token ?? '';
-    final qp = <String, String>{
-      'width': '$width',
-      'height': '$height',
-      'minSize': '$minSize',
-      'upscale': upscale ? '1' : '0',
-      'url': sourcePath,
-      'X-Plex-Token': token,
-    };
-    return '$base/photo/:/transcode?${qp.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
-  }
+  }) => _http.signedUrl('/photo/:/transcode', {
+    'width': width,
+    'height': height,
+    'minSize': minSize,
+    'upscale': upscale ? '1' : '0',
+    'url': sourcePath,
+  });
 
   /// Fetch artwork bytes directly. Returns null on `404`.
   Future<Uint8List?> fetch({
@@ -66,7 +63,7 @@ class PlexImagesApi {
       final res = await _http.requestBytes(url);
       final body = res.data;
       if (body == null || body.isEmpty) return null;
-      return Uint8List.fromList(body);
+      return body;
     } on PlexException catch (e) {
       if (e.type == PlexErrorType.notFound) return null;
       rethrow;

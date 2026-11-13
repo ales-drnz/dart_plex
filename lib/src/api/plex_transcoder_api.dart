@@ -4,8 +4,8 @@
 
 import '../plex_client.dart';
 import '../plex_connection.dart';
-import '../plex_error_type.dart';
 import '../plex_exception.dart';
+import '../plex_urls.dart';
 import 'plex_images_api.dart';
 import 'plex_streaming_api.dart';
 
@@ -31,7 +31,13 @@ class PlexTranscoderApi {
   ///
   /// [chromaSubsampling] selects the chroma subsampling mode and must
   /// be one of the server's fixed integer values: `0`=4:1:1, `1`=4:2:0,
-  /// `2`=4:2:2, `3`=4:4:4 (the server default is `3`=4:4:4).
+  /// `2`=4:2:2, `3`=4:4:4 (the server default is `3`=4:4:4); anything
+  /// else throws an [ArgumentError].
+  ///
+  /// The URL carries the token: do not log it. Throws a `state`
+  /// [PlexException] before [PlexClient.connect].
+  ///
+  /// [PlexImagesApi.transcodeUrl] is the short form, for a plain resize.
   String imageUrl({
     required String sourceUrl,
     int? width,
@@ -48,34 +54,30 @@ class PlexTranscoderApi {
     String? background,
     bool? upscale,
   }) {
-    assert(
-      chromaSubsampling == null ||
-          (chromaSubsampling >= 0 && chromaSubsampling <= 3),
-      'chromaSubsampling must be 0, 1, 2 or 3',
-    );
-    _requireConnected();
-    final base = _http.baseUrl!;
-    final token = _http.token ?? '';
-    final qp = <String, String>{'url': sourceUrl, 'X-Plex-Token': token};
-    if (width != null) qp['width'] = '$width';
-    if (height != null) qp['height'] = '$height';
-    if (quality != null) qp['quality'] = '$quality';
-    if (format != null) qp['format'] = format;
-    if (minSize != null) qp['minSize'] = '$minSize';
-    if (rotate != null) qp['rotate'] = '$rotate';
-    if (blur != null) qp['blur'] = '$blur';
-    if (saturation != null) qp['saturation'] = '$saturation';
-    if (opacity != null) qp['opacity'] = '$opacity';
-    if (chromaSubsampling != null) {
-      qp['chromaSubsampling'] = '$chromaSubsampling';
+    if (chromaSubsampling != null &&
+        (chromaSubsampling < 0 || chromaSubsampling > 3)) {
+      throw ArgumentError.value(
+        chromaSubsampling,
+        'chromaSubsampling',
+        'chromaSubsampling must be 0, 1, 2 or 3',
+      );
     }
-    if (blendColor != null) qp['blendColor'] = blendColor;
-    if (background != null) qp['background'] = background;
-    if (upscale != null) qp['upscale'] = upscale ? '1' : '0';
-    final query = qp.entries
-        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    return '$base/photo/:/transcode?$query';
+    return _http.signedUrl('/photo/:/transcode', {
+      'url': sourceUrl,
+      'width': ?width,
+      'height': ?height,
+      'quality': ?quality,
+      'format': ?format,
+      'minSize': ?minSize,
+      'rotate': ?rotate,
+      'blur': ?blur,
+      'saturation': ?saturation,
+      'opacity': ?opacity,
+      'chromaSubsampling': ?chromaSubsampling,
+      'blendColor': ?blendColor,
+      'background': ?background,
+      if (upscale != null) 'upscale': upscale ? '1' : '0',
+    });
   }
 
   /// `POST /{transcodeType}/:/transcode/universal/fallback` —
@@ -86,53 +88,43 @@ class PlexTranscoderApi {
   /// [transcodeType] is `'audio' | 'video' | 'photo'`.
   Future<void> triggerFallback({required String transcodeType}) async {
     await _http.request<void>(
-      '/$transcodeType/:/transcode/universal/fallback',
+      '/${seg(transcodeType)}/:/transcode/universal/fallback',
       method: 'POST',
     );
   }
 
   /// `GET /{transcodeType}/:/transcode/universal/subtitles` — URL
   /// for transcoded subtitle stream.
+  ///
+  /// The URL carries the token: do not log it. Throws a `state`
+  /// [PlexException] before [PlexClient.connect].
   String subtitlesUrl({
     required String transcodeType,
     Map<String, String> params = const {},
-  }) {
-    _requireConnected();
-    final base = _http.baseUrl!;
-    final token = _http.token ?? '';
-    final qp = <String, String>{'X-Plex-Token': token, ...params};
-    final query = qp.entries
-        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    return '$base/$transcodeType/:/transcode/universal/subtitles?$query';
-  }
+  }) => _http.signedUrl(
+    '/${seg(transcodeType)}/:/transcode/universal/subtitles',
+    params,
+  );
 
   /// `GET /{transcodeType}/:/transcode/universal/start.{extension}` —
-  /// URL to start a transcode session. [PlexStreamingApi.startAudioTranscode]
-  /// and [PlexStreamingApi.startVideoTranscode] make the decision PMS
-  /// requires first and build this URL for you; this method is the raw
-  /// path-builder.
+  /// URL to start a transcode session, from your own parameters. PMS
+  /// 1.43.2 refuses a start without a decision and a client profile:
+  /// [PlexStreamingApi.startAudioTranscode] and
+  /// [PlexStreamingApi.startVideoTranscode] ask for the decision and
+  /// build this URL with the same parameters.
+  ///
+  /// The URL carries the token: do not log it. Throws a `state`
+  /// [PlexException] before [PlexClient.connect].
+  @Deprecated(
+    'Use PlexStreamingApi.startVideoTranscode or startAudioTranscode '
+    'instead. Will be removed in 0.4.0.',
+  )
   String startUrl({
     required String transcodeType,
     required String extension,
     Map<String, String> params = const {},
-  }) {
-    _requireConnected();
-    final base = _http.baseUrl!;
-    final token = _http.token ?? '';
-    final qp = <String, String>{'X-Plex-Token': token, ...params};
-    final query = qp.entries
-        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    return '$base/$transcodeType/:/transcode/universal/start.$extension?$query';
-  }
-
-  void _requireConnected() {
-    if (_http.baseUrl == null) {
-      throw const PlexException(
-        'No PMS connection. Call PlexClient.connect() first.',
-        type: PlexErrorType.state,
-      );
-    }
-  }
+  }) => _http.signedUrl(
+    '/${seg(transcodeType)}/:/transcode/universal/start.${seg(extension)}',
+    params,
+  );
 }

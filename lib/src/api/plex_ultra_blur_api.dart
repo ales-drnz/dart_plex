@@ -10,6 +10,7 @@ import '../plex_error_type.dart';
 import '../plex_exception.dart';
 import '../plex_json.dart';
 import '../plex_models.dart';
+import '../plex_urls.dart';
 
 /// `/services/ultrablur/*` — server-side palette extraction and
 /// gradient backdrop rendering.
@@ -50,6 +51,9 @@ class PlexUltraBlurApi {
   /// All colour parameters and dimensions are optional; the server
   /// fills in defaults. Pass `noise: 1` when the result will be used
   /// behind text to reduce banding on shallow gradients.
+  ///
+  /// The URL carries the token: do not log it. Throws a `state`
+  /// [PlexException] before [PlexClient.connect].
   String imageUrl({
     String? topLeft,
     String? topRight,
@@ -58,24 +62,15 @@ class PlexUltraBlurApi {
     int? width,
     int? height,
     int? noise,
-  }) {
-    _http.requireConnected();
-    final base = _http.baseUrl!;
-    final token = _http.token ?? '';
-    final qp = <String, String>{};
-    if (topLeft != null) qp['topLeft'] = topLeft;
-    if (topRight != null) qp['topRight'] = topRight;
-    if (bottomLeft != null) qp['bottomLeft'] = bottomLeft;
-    if (bottomRight != null) qp['bottomRight'] = bottomRight;
-    if (width != null) qp['width'] = '$width';
-    if (height != null) qp['height'] = '$height';
-    if (noise != null) qp['noise'] = '$noise';
-    if (token.isNotEmpty) qp['X-Plex-Token'] = token;
-    final query = qp.entries
-        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    return '$base/services/ultrablur/image${query.isEmpty ? '' : '?$query'}';
-  }
+  }) => _http.signedUrl('/services/ultrablur/image', {
+    'topLeft': ?topLeft,
+    'topRight': ?topRight,
+    'bottomLeft': ?bottomLeft,
+    'bottomRight': ?bottomRight,
+    'width': ?width,
+    'height': ?height,
+    'noise': ?noise,
+  });
 
   /// Fetch a rendered gradient as bytes. Useful for caching the PNG
   /// out-of-band (e.g. into a Flutter ImageCache).
@@ -101,7 +96,7 @@ class PlexUltraBlurApi {
       final res = await _http.requestBytes(url);
       final body = res.data;
       if (body == null || body.isEmpty) return null;
-      return Uint8List.fromList(body);
+      return body;
     } on PlexException catch (e) {
       if (e.type == PlexErrorType.notFound) return null;
       rethrow;
