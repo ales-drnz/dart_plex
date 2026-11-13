@@ -85,24 +85,35 @@ final class PlexLyrics {
       return v.isNegative ? Duration.zero : v;
     }
 
-    final lines = timed.isEmpty
-        ? untimed
-        : ([
-            for (final l in timed)
-              PlexLyricLine(
-                text: l.text,
-                start: shift(l.start!),
-                cues: [
-                  for (final c in l.cues)
-                    PlexLyricCue(
-                      position: c.position,
-                      endPosition: c.endPosition,
-                      start: shift(c.start),
-                      end: c.end == null ? null : shift(c.end!),
-                    ),
-                ],
-              ),
-          ]..sort((a, b) => a.start!.compareTo(b.start!)));
+    if (timed.isEmpty) {
+      return PlexLyrics(text: text, lines: untimed, metadata: metadata);
+    }
+    // A stable sort (List.sort is not): lines sharing a time — a
+    // translation under its original — keep the order of the file.
+    final indexed = [
+      for (final (i, l) in timed.indexed)
+        (
+          i,
+          PlexLyricLine(
+            text: l.text,
+            start: shift(l.start!),
+            cues: [
+              for (final c in l.cues)
+                PlexLyricCue(
+                  position: c.position,
+                  endPosition: c.endPosition,
+                  start: shift(c.start),
+                  end: c.end == null ? null : shift(c.end!),
+                ),
+            ],
+          ),
+        ),
+    ];
+    indexed.sort((a, b) {
+      final byStart = a.$2.start!.compareTo(b.$2.start!);
+      return byStart != 0 ? byStart : a.$1.compareTo(b.$1);
+    });
+    final lines = [for (final (_, l) in indexed) l];
     return PlexLyrics(text: text, lines: lines, metadata: metadata);
   }
 
