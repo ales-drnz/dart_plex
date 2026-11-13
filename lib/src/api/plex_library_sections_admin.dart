@@ -18,11 +18,9 @@ mixin _PlexSectionAdmin {
     required String sectionId,
     bool? includeDetails,
   }) {
-    final qp = <String, Object?>{};
-    if (includeDetails != null) qp['includeDetails'] = includeDetails ? 1 : 0;
     return _http.requestJson(
       '/library/sections/${seg(sectionId)}',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'includeDetails': ?_flag(includeDetails)},
       (json) => PlexSectionDetails.fromJson(
         json is Map<String, Object?> ? json : const {},
       ),
@@ -44,20 +42,18 @@ mixin _PlexSectionAdmin {
     List<String>? locations,
     Map<String, Object?>? prefs,
   }) async {
-    final qp = <String, Object?>{};
-    if (name != null) qp['name'] = name;
-    if (scanner != null) qp['scanner'] = scanner;
-    if (agent != null) qp['agent'] = agent;
-    if (metadataAgentProviderGroupId != null) {
-      qp['metadataAgentProviderGroupId'] = metadataAgentProviderGroupId;
-    }
-    if (language != null) qp['language'] = language;
-    if (locations != null) qp['location'] = locations;
-    prefs?.forEach((k, v) => qp['prefs[$k]'] = v);
     await _http.request<void>(
       '/library/sections/${seg(sectionId)}',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {
+        'name': ?name,
+        'scanner': ?scanner,
+        'agent': ?agent,
+        'metadataAgentProviderGroupId': ?metadataAgentProviderGroupId,
+        'language': ?language,
+        'location': ?locations,
+        ...?prefs?.map((k, v) => MapEntry('prefs[$k]', v)),
+      },
     );
   }
 
@@ -81,12 +77,10 @@ mixin _PlexSectionAdmin {
     bool force = false,
     String? path,
   }) async {
-    final qp = <String, Object?>{'force': force ? 1 : 0};
-    if (path != null) qp['path'] = path;
     await _http.request<void>(
       '/library/sections/${seg(sectionId)}/refresh',
       method: 'POST',
-      queryParameters: qp,
+      queryParameters: {'force': force ? 1 : 0, 'path': ?path},
     );
   }
 
@@ -140,11 +134,9 @@ mixin _PlexSectionAdmin {
     required String sectionId,
     String? agent,
   }) async {
-    final qp = <String, Object?>{};
-    if (agent != null) qp['agent'] = agent;
     final res = await _http.request<Map<String, Object?>>(
       '/library/sections/${seg(sectionId)}/prefs',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'agent': ?agent},
     );
     return res.data ?? const {};
   }
@@ -188,12 +180,9 @@ mixin _PlexSectionAdmin {
     PlexMetadataType? type,
     PlexSort? sort,
   }) async {
-    final qp = <String, Object?>{};
-    if (type != null) qp['type'] = type.value;
-    if (sort != null) qp['sort'] = sort;
     return _http.requestJson(
       '/library/sections/${seg(sectionId)}/firstCharacter',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'type': ?type?.value, 'sort': ?sort},
       itemsOf('Directory', PlexMetadata.fromJson),
     );
   }
@@ -224,10 +213,9 @@ mixin _PlexSectionAdmin {
     required String sectionId,
     required PlexMetadataType type,
   }) async {
-    final qp = <String, Object?>{'type': type.value};
     final res = await _http.request<Map<String, Object?>>(
       '/library/sections/${seg(sectionId)}/common',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'type': type.value},
     );
     return res.data ?? const {};
   }

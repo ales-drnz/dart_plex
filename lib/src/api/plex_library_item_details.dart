@@ -21,16 +21,15 @@ mixin _PlexItemDetails {
     required int endTimeOffset,
     Map<String, Object?>? attributes,
   }) async {
-    final qp = <String, Object?>{
-      'type': type,
-      'startTimeOffset': startTimeOffset,
-      'endTimeOffset': endTimeOffset,
-    };
-    if (attributes != null) qp.addAll(attributes);
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/marker',
       method: 'POST',
-      queryParameters: qp,
+      queryParameters: {
+        'type': type,
+        'startTimeOffset': startTimeOffset,
+        'endTimeOffset': endTimeOffset,
+        ...?attributes,
+      },
     );
   }
 
@@ -43,15 +42,15 @@ mixin _PlexItemDetails {
     int? endTimeOffset,
     Map<String, Object?>? attributes,
   }) async {
-    final qp = <String, Object?>{};
-    if (type != null) qp['type'] = type;
-    if (startTimeOffset != null) qp['startTimeOffset'] = startTimeOffset;
-    if (endTimeOffset != null) qp['endTimeOffset'] = endTimeOffset;
-    if (attributes != null) qp.addAll(attributes);
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/marker/${seg(marker)}',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {
+        'type': ?type,
+        'startTimeOffset': ?startTimeOffset,
+        'endTimeOffset': ?endTimeOffset,
+        ...?attributes,
+      },
     );
   }
 
@@ -74,12 +73,10 @@ mixin _PlexItemDetails {
     required String mediaItem,
     bool? proxy,
   }) async {
-    final qp = <String, Object?>{};
-    if (proxy != null) qp['proxy'] = proxy ? 1 : 0;
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/media/${seg(mediaItem)}',
       method: 'DELETE',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'proxy': ?_flag(proxy)},
     );
   }
 
@@ -143,11 +140,9 @@ mixin _PlexItemDetails {
     required String streamId,
     int? subsample,
   }) async {
-    final qp = <String, Object?>{};
-    if (subsample != null) qp['subsample'] = subsample;
     final res = await _http.request<Map<String, Object?>>(
       '/library/streams/${seg(streamId)}/loudness',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'subsample': ?subsample},
     );
     return res.data ?? const {};
   }
@@ -158,11 +153,9 @@ mixin _PlexItemDetails {
     required String streamId,
     int? subsample,
   }) async {
-    final qp = <String, Object?>{};
-    if (subsample != null) qp['subsample'] = subsample;
     final res = await _http.request<Map<String, Object?>>(
       '/library/streams/${seg(streamId)}/levels',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'subsample': ?subsample},
     );
     return res.data ?? const {};
   }
@@ -179,14 +172,14 @@ mixin _PlexItemDetails {
     String? subtitleStreamID,
     bool? allParts,
   }) async {
-    final qp = <String, Object?>{};
-    if (audioStreamID != null) qp['audioStreamID'] = audioStreamID;
-    if (subtitleStreamID != null) qp['subtitleStreamID'] = subtitleStreamID;
-    if (allParts != null) qp['allParts'] = allParts ? 1 : 0;
     await _http.request<void>(
       '/library/parts/${seg(partId)}',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {
+        'audioStreamID': ?audioStreamID,
+        'subtitleStreamID': ?subtitleStreamID,
+        'allParts': ?_flag(allParts),
+      },
     );
   }
 
@@ -216,11 +209,9 @@ mixin _PlexItemDetails {
     required String index,
     int? interval,
   }) async {
-    final qp = <String, Object?>{};
-    if (interval != null) qp['interval'] = interval;
     final res = await _http.request<Map<String, Object?>>(
       '/library/parts/${seg(partId)}/indexes/${seg(index)}',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'interval': ?interval},
     );
     return res.data ?? const {};
   }
@@ -271,11 +262,13 @@ mixin _PlexItemDetails {
     required String endId,
     double? maxDistance,
   }) async {
-    final qp = <String, Object?>{'startID': startId, 'endID': endId};
-    if (maxDistance != null) qp['maxDistance'] = maxDistance;
     return _http.requestJson(
       '/library/sections/${seg(sectionId)}/computePath',
-      queryParameters: qp,
+      queryParameters: {
+        'startID': startId,
+        'endID': endId,
+        'maxDistance': ?maxDistance,
+      },
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -295,12 +288,14 @@ mixin _PlexItemDetails {
     int? limit,
     double? maxDistance,
   }) async {
-    final qp = <String, Object?>{'type': type, 'values': values.join(',')};
-    if (limit != null) qp['limit'] = limit;
-    if (maxDistance != null) qp['maxDistance'] = maxDistance;
     return _http.requestJson(
       '/library/sections/${seg(sectionId)}/nearest',
-      queryParameters: qp,
+      queryParameters: {
+        'type': type,
+        'values': values.join(','),
+        'limit': ?limit,
+        'maxDistance': ?maxDistance,
+      },
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }

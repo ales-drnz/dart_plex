@@ -19,13 +19,10 @@ mixin _PlexItemEditing {
     String? agent,
     bool? markUpdated,
   }) async {
-    final qp = <String, Object?>{};
-    if (agent != null) qp['agent'] = agent;
-    if (markUpdated != null) qp['markUpdated'] = markUpdated ? 1 : 0;
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/refresh',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'agent': ?agent, 'markUpdated': ?_flag(markUpdated)},
     );
   }
 
@@ -35,13 +32,10 @@ mixin _PlexItemEditing {
     int? thumbOffset,
     int? artOffset,
   }) async {
-    final qp = <String, Object?>{};
-    if (thumbOffset != null) qp['thumbOffset'] = thumbOffset;
-    if (artOffset != null) qp['artOffset'] = artOffset;
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/analyze',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'thumbOffset': ?thumbOffset, 'artOffset': ?artOffset},
     );
   }
 
@@ -52,12 +46,10 @@ mixin _PlexItemEditing {
     bool force = false,
     double? threshold,
   }) async {
-    final qp = <String, Object?>{'force': force ? 1 : 0};
-    if (threshold != null) qp['threshold'] = threshold;
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/intro',
       method: 'PUT',
-      queryParameters: qp,
+      queryParameters: {'force': force ? 1 : 0, 'threshold': ?threshold},
     );
   }
 
@@ -132,14 +124,10 @@ mixin _PlexItemEditing {
     String? name,
     int? year,
   }) async {
-    final qp = <String, Object?>{};
-    if (guid != null) qp['guid'] = guid;
-    if (name != null) qp['name'] = name;
-    if (year != null) qp['year'] = year;
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/match',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {'guid': ?guid, 'name': ?name, 'year': ?year},
     );
   }
 
@@ -154,17 +142,17 @@ mixin _PlexItemEditing {
     int? year,
     bool? manual,
   }) async {
-    final qp = <String, Object?>{};
-    if (title != null) qp['title'] = title;
-    if (parentTitle != null) qp['parentTitle'] = parentTitle;
-    if (agent != null) qp['agent'] = agent;
-    if (language != null) qp['language'] = language;
-    if (year != null) qp['year'] = year;
-    if (manual != null) qp['manual'] = manual ? 1 : 0;
     final res = await _http.request<Map<String, Object?>>(
       '/library/metadata/${seg(ids)}/matches',
       method: 'PUT',
-      queryParameters: qp.isEmpty ? null : qp,
+      queryParameters: {
+        'title': ?title,
+        'parentTitle': ?parentTitle,
+        'agent': ?agent,
+        'language': ?language,
+        'year': ?year,
+        'manual': ?_flag(manual),
+      },
     );
     return res.data ?? const {};
   }
@@ -282,20 +270,17 @@ mixin _PlexItemEditing {
     bool? forced,
     bool? hearingImpaired,
   }) async {
-    final qp = <String, Object?>{
-      'title': title,
-      'language': language,
-      'url': url,
-    };
-    if (format != null) qp['format'] = format;
-    if (mediaItemID != null) qp['mediaItemID'] = mediaItemID;
-    if (forced != null) qp['forced'] = forced ? 1 : 0;
-    if (hearingImpaired != null) {
-      qp['hearingImpaired'] = hearingImpaired ? 1 : 0;
-    }
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/subtitles',
-      queryParameters: qp,
+      queryParameters: {
+        'title': title,
+        'language': language,
+        'url': url,
+        'format': ?format,
+        'mediaItemID': ?mediaItemID,
+        'forced': ?_flag(forced),
+        'hearingImpaired': ?_flag(hearingImpaired),
+      },
     );
   }
 
@@ -331,7 +316,7 @@ mixin _PlexItemEditing {
     await _http.request<void>(
       '/library/metadata/${seg(ids)}/${seg(element)}',
       method: update ? 'PUT' : 'POST',
-      queryParameters: url != null ? {'url': url} : null,
+      queryParameters: {'url': ?url},
       data: data,
     );
   }
