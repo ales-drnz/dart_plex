@@ -8,6 +8,7 @@ import '../plex_error_type.dart';
 import '../plex_exception.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
+import '../plex_urls.dart';
 import 'plex_library_api.dart';
 
 /// `/library/collections/*` — hand-curated groupings of metadata
@@ -41,7 +42,8 @@ class PlexCollectionsApi {
   /// empty collection, then add items with [addItems]) but is
   /// **required when [smart] is `true`** — the server returns 400
   /// ("The uri is missing for a smart collection") otherwise. The
-  /// `smart` flag is sent as Plex's conventional `1`/`0` BoolInt.
+  /// `smart` flag is sent as Plex's conventional `1`/`0` BoolInt, and
+  /// a smart collection without a [seedUri] throws an [ArgumentError].
   Future<PlexMetadata> create({
     required String sectionId,
     String? title,
@@ -49,39 +51,35 @@ class PlexCollectionsApi {
     bool? smart,
     String? seedUri,
   }) async {
-    assert(
-      smart != true || seedUri != null,
-      'seedUri is required when smart is true',
-    );
-    final qp = <String, Object?>{'sectionId': sectionId};
-    if (title != null) qp['title'] = title;
-    if (type != null) qp['type'] = type.value;
-    if (smart != null) qp['smart'] = smart ? '1' : '0';
-    if (seedUri != null) qp['uri'] = seedUri;
-    final res = await _http.request<Map<String, Object?>>(
+    if (smart == true && seedUri == null) {
+      throw ArgumentError('seedUri is required when smart is true');
+    }
+    final items = await _http.requestJson(
       '/library/collections',
+      itemsOf('Metadata', PlexMetadata.fromJson),
       method: 'POST',
-      queryParameters: qp,
+      queryParameters: {
+        'sectionId': sectionId,
+        'title': ?title,
+        'type': ?type?.value,
+        if (smart != null) 'smart': smart ? '1' : '0',
+        'uri': ?seedUri,
+      },
     );
-    final c = PlexMediaContainer.fromJson(
-      res.data ?? const {},
-      'Metadata',
-      PlexMetadata.fromJson,
-    );
-    if (c.items.isEmpty) {
+    if (items.isEmpty) {
       throw const PlexException(
         'Plex returned no collection metadata after create',
         type: PlexErrorType.parse,
       );
     }
-    return c.items.first;
+    return items.first;
   }
 
   /// `GET /library/collections/{collectionId}/items` — items in a
   /// collection.
   Future<List<PlexMetadata>> items({required String collectionId}) async {
     return _http.requestJson(
-      '/library/collections/$collectionId/items',
+      '/library/collections/${seg(collectionId)}/items',
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -93,22 +91,25 @@ class PlexCollectionsApi {
     required String uri,
   }) async {
     await _http.request<void>(
-      '/library/collections/$collectionId/items',
+      '/library/collections/${seg(collectionId)}/items',
       method: 'PUT',
       queryParameters: {'uri': uri},
     );
   }
 
-  /// `PUT /library/collections/{collectionId}/items/{itemId}` —
-  /// delete a single item from a collection. (The spec uses PUT not
-  /// DELETE; the upstream lifecycle is "tombstone via PUT".)
+  /// `DELETE /library/collections/{collectionId}/items/{itemId}` —
+  /// remove a single item from a collection.
+  ///
+  /// The community document lists `PUT` for this route; verified on PMS
+  /// 1.43.2, `PUT` answers 404 and leaves the item, `DELETE` answers 200
+  /// and removes it.
   Future<void> removeItem({
     required String collectionId,
     required String itemId,
   }) async {
     await _http.request<void>(
-      '/library/collections/$collectionId/items/$itemId',
-      method: 'PUT',
+      '/library/collections/${seg(collectionId)}/items/${seg(itemId)}',
+      method: 'DELETE',
     );
   }
 
@@ -121,7 +122,7 @@ class PlexCollectionsApi {
     required String afterItemId,
   }) async {
     await _http.request<void>(
-      '/library/collections/$collectionId/items/$itemId/move',
+      '/library/collections/${seg(collectionId)}/items/${seg(itemId)}/move',
       method: 'PUT',
       queryParameters: {'after': afterItemId},
     );
@@ -129,12 +130,13 @@ class PlexCollectionsApi {
 
   /// `GET /library/collections/{collectionId}/composite/{updatedAt}`
   /// — URL for the collection's auto-composed cover image.
+  ///
+  /// The URL carries the token: do not log it. Throws a `state`
+  /// [PlexException] before [PlexClient.connect].
   String compositeImageUrl({
     required String collectionId,
     required int updatedAt,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/library/collections/$collectionId/composite/$updatedAt?X-Plex-Token=$token';
-  }
+  }) => _http.signedUrl(
+    '/library/collections/${seg(collectionId)}/composite/$updatedAt',
+  );
 }

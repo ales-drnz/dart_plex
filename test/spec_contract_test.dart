@@ -219,6 +219,10 @@ const _extraRoutes = <String, Map<String, List<String>>>{
   // POST answers 200 with an empty container, GET and PUT 404, on PMS
   // 1.43.2 without tuners: the document's GET is the wrong one.
   '/media/grabbers/devices/discover': {'POST': []},
+  // The document lists only PUT (updateCollectionItem). Verified on PMS
+  // 1.43.2: PUT answers 404 and leaves the item, DELETE answers 200 and
+  // removes it. This allows DELETE on this one route and nothing else.
+  '/library/collections/{collectionId}/items/{itemId}': {'DELETE': []},
 };
 
 /// Arguments that must not be the generic stand-in, per method.

@@ -242,9 +242,6 @@ void main() {
         expect(adapter.last!.uri.path, '/library/collections/914/items/4');
         expect(adapter.last!.uri.query, isEmpty);
       },
-      skip:
-          'BUG: collections.removeItem sends PUT, which PMS 1.43.2 answers '
-          '404; the server removes the item on DELETE',
     );
   });
 
