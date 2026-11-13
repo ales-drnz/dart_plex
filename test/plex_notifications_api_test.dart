@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dart_plex/dart_plex.dart';
 import 'package:http/http.dart' as http;
@@ -195,19 +196,290 @@ void main() {
   });
 
   group('PlexNotificationsApi.connectEventSource request', () {
-    test(
-      'GETs the eventsource route with the token and Accept header',
-      () async {
-        final ctx = _makeApi();
-        await _pump(ctx, [utf8.encode(_frame(_title))]);
+    test('GETs the eventsource route, the token in the header only', () async {
+      final ctx = _makeApi();
+      await _pump(ctx, [utf8.encode(_frame(_title))]);
 
-        final req = ctx.adapter.lastRequest!;
-        expect(req.method, 'GET');
-        expect(req.uri.path, '/:/eventsource/notifications');
-        expect(req.uri.queryParameters['X-Plex-Token'], 'tok');
-        expect(req.headers['Accept'], 'text/event-stream');
-      },
-    );
+      final req = ctx.adapter.lastRequest!;
+      expect(req.method, 'GET');
+      expect(req.uri.path, '/:/eventsource/notifications');
+      // The header authenticates; the URL stays free of the secret.
+      expect(req.uri.queryParameters, isEmpty);
+      expect(req.headers['X-Plex-Token'], 'tok');
+      expect(req.headers['Accept'], 'text/event-stream');
+    });
+
+    test('the filter goes in the query', () async {
+      final ctx = _makeApi();
+      final sub = ctx.api.connectEventSource(filter: 'playing').listen((_) {});
+      await ctx.adapter.fetched.future;
+
+      expect(ctx.adapter.lastRequest!.uri.queryParameters, {
+        'filter': 'playing',
+      });
+      await sub.cancel();
+    });
+
+    test('nothing is requested before the first listener', () async {
+      final ctx = _makeApi();
+      final stream = ctx.api.connectEventSource();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(ctx.adapter.requests, isEmpty);
+      expect(ctx.api.isEventSourceConnected, isTrue);
+
+      final sub = stream.listen((_) {});
+      await ctx.adapter.fetched.future;
+      expect(ctx.adapter.requests, hasLength(1));
+      await sub.cancel();
+    });
+  });
+
+  group('PlexNotificationsApi.connectEventSource frames as PMS sends them', () {
+    // Captured from PMS 1.43.2 during a library scan: the type is the
+    // `event:` name, the body has no NotificationContainer and holds one
+    // bare entry, and a `ping` event comes every 10 seconds.
+    final capture = File(
+      'test/fixtures/notifications/eventsource_scan.txt',
+    ).readAsStringSync();
+
+    test('the type comes from the event line and pings are dropped', () async {
+      final received = await _pump(_makeApi(), [
+        utf8.encode(capture),
+      ], expected: 4);
+
+      expect(received.map((n) => n.type), [
+        'activity',
+        'status',
+        'progress',
+        'activity',
+      ]);
+    });
+
+    test('frames come out in the WebSocket shape and decode', () async {
+      final received = await _pump(_makeApi(), [
+        utf8.encode(capture),
+      ], expected: 4);
+
+      final started = received.first;
+      expect(started.raw['type'], 'activity');
+      expect(started.raw['ActivityNotification'], isA<List<Object?>>());
+      expect(started.size, isNull);
+
+      final events = received.expand((n) => n.events).toList();
+      expect(
+        events[0],
+        isA<PlexActivityEvent>()
+            .having((e) => e.event, 'event', 'started')
+            .having((e) => e.activityType, 'type', 'library.update.section')
+            .having((e) => e.isLibraryScan, 'isLibraryScan', isTrue),
+      );
+      expect(
+        events[1],
+        isA<PlexStatusEvent>()
+            .having((e) => e.title, 'title', 'Scanning the "Music" section')
+            .having((e) => e.notificationName, 'name', 'LIBRARY_UPDATE'),
+      );
+      expect(
+        events[2],
+        isA<PlexUnknownEvent>().having((e) => e.type, 'type', 'progress'),
+      );
+      expect(
+        events[3],
+        isA<PlexActivityEvent>()
+            .having((e) => e.isEnded, 'isEnded', isTrue)
+            .having((e) => e.librarySectionId, 'section', '1'),
+      );
+    });
+
+    test('CRLF line endings frame the same', () async {
+      final received = await _pump(_makeApi(), [
+        utf8.encode(capture.replaceAll('\n', '\r\n')),
+      ], expected: 4);
+
+      expect(received, hasLength(4));
+      expect(received.last.events.single, isA<PlexActivityEvent>());
+    });
+
+    test('a body with its own type keeps it', () async {
+      final received = await _pump(_makeApi(), [
+        utf8.encode('event: other\ndata: {"type":"playing","size":2}\n\n'),
+      ]);
+
+      expect(received.single.type, 'playing');
+      expect(received.single.size, 2);
+    });
+  });
+
+  group('PlexNotificationsApi.connectEventSource malformed frames', () {
+    test('are dropped and counted, and the stream goes on', () async {
+      final ctx = _makeApi();
+      final errors = <Object>[];
+      final received = <PlexNotification>[];
+      final got = Completer<void>();
+      final sub = ctx.api.connectEventSource().listen((n) {
+        received.add(n);
+        got.complete();
+      }, onError: errors.add);
+      await ctx.adapter.fetched.future;
+
+      ctx.adapter
+        ..emit(utf8.encode('event: playing\ndata: {not json\n\n'))
+        ..emit(utf8.encode('event: playing\ndata: [1, 2]\n\n'))
+        ..emit(utf8.encode(_frame(_title)));
+      await got.future.timeout(const Duration(seconds: 5));
+
+      expect(received.single.type, 'playing');
+      expect(errors, isEmpty);
+      expect(ctx.api.malformedFrameCount, 2);
+      await sub.cancel();
+    });
+  });
+
+  group('PlexNotificationsApi.connectEventSource failing to open', () {
+    test('the error reaches a listener that subscribes late', () async {
+      final adapter = CapturingAdapter()
+        ..respond = (_) => CannedResponse(401, utf8.encode('Unauthorized'));
+      final api = PlexNotificationsApi(testConnection(adapter)..token = 'tok');
+      final stream = api.connectEventSource();
+      // A broadcast stream drops what nobody listens to: opening at once
+      // would lose the failure during this gap.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final errors = <Object>[];
+      final done = Completer<void>();
+      stream.listen((_) {}, onError: errors.add, onDone: done.complete);
+      await done.future.timeout(const Duration(seconds: 5));
+
+      expect(
+        errors.single,
+        isA<PlexException>()
+            .having((e) => e.type, 'type', PlexErrorType.auth)
+            .having((e) => e.statusCode, 'statusCode', 401),
+      );
+      expect(api.isEventSourceConnected, isFalse);
+    });
+  });
+
+  group('PlexNotificationsApi.connectEventSource idle watchdog', () {
+    test('a silent connection errors with timeout and ends', () async {
+      final ctx = _makeApi();
+      final errors = <Object>[];
+      final done = Completer<void>();
+      ctx.api
+          .connectEventSource(idleTimeout: const Duration(milliseconds: 60))
+          .listen((_) {}, onError: errors.add, onDone: done.complete);
+      await ctx.adapter.fetched.future;
+
+      await done.future.timeout(const Duration(seconds: 5));
+
+      expect(
+        errors.single,
+        isA<PlexException>().having(
+          (e) => e.type,
+          'type',
+          PlexErrorType.timeout,
+        ),
+      );
+      expect(ctx.api.isEventSourceConnected, isFalse);
+    });
+
+    test('the server pings keep it open', () async {
+      final ctx = _makeApi();
+      final errors = <Object>[];
+      final received = <PlexNotification>[];
+      final sub = ctx.api
+          .connectEventSource(idleTimeout: const Duration(milliseconds: 300))
+          .listen(received.add, onError: errors.add);
+      await ctx.adapter.fetched.future;
+
+      // Twice the timeout in total, never 300 ms without a byte.
+      for (var i = 0; i < 12; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        ctx.adapter.emit(utf8.encode('event: ping\ndata: {}\n\n'));
+      }
+
+      expect(errors, isEmpty);
+      expect(received, isEmpty, reason: 'pings are not notifications');
+      expect(ctx.api.isEventSourceConnected, isTrue);
+      expect(ctx.api.malformedFrameCount, 0);
+      await sub.cancel();
+    });
+
+    test('null never times out', () async {
+      final ctx = _makeApi();
+      final errors = <Object>[];
+      final sub = ctx.api
+          .connectEventSource(idleTimeout: null)
+          .listen((_) {}, onError: errors.add);
+      await ctx.adapter.fetched.future;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(errors, isEmpty);
+      expect(ctx.api.isEventSourceConnected, isTrue);
+      await sub.cancel();
+    });
+  });
+
+  group('PlexNotificationsApi.connectEventSource lifecycle', () {
+    test('a second connect while one is open is a state error', () async {
+      final ctx = _makeApi();
+      ctx.api.connectEventSource();
+
+      expect(
+        ctx.api.connectEventSource,
+        throwsA(
+          isA<PlexException>().having(
+            (e) => e.type,
+            'type',
+            PlexErrorType.state,
+          ),
+        ),
+      );
+      await ctx.api.closeEventSource();
+      expect(ctx.api.isEventSourceConnected, isFalse);
+    });
+
+    test('only the last subscription cancelling closes it', () async {
+      final ctx = _makeApi();
+      final stream = ctx.api.connectEventSource();
+      final first = stream.listen((_) {});
+      final second = stream.listen((_) {});
+      await ctx.adapter.fetched.future;
+
+      await first.cancel();
+      expect(ctx.api.isEventSourceConnected, isTrue);
+      await second.cancel();
+      expect(ctx.api.isEventSourceConnected, isFalse);
+    });
+
+    test('the server ending the body ends the stream', () async {
+      final ctx = _makeApi();
+      final done = Completer<void>();
+      ctx.api.connectEventSource().listen((_) {}, onDone: done.complete);
+      await ctx.adapter.fetched.future;
+
+      await ctx.adapter.finish();
+      await done.future.timeout(const Duration(seconds: 5));
+
+      expect(ctx.api.isEventSourceConnected, isFalse);
+    });
+
+    test('PlexClient.close() closes it', () async {
+      final adapter = StreamingAdapter();
+      final plex = testClient(adapter);
+      final done = Completer<void>();
+      plex.notifications.connectEventSource().listen(
+        (_) {},
+        onDone: done.complete,
+      );
+      await adapter.fetched.future;
+
+      plex.close();
+      await done.future.timeout(const Duration(seconds: 5));
+
+      expect(plex.notifications.isEventSourceConnected, isFalse);
+    });
   });
 }
 

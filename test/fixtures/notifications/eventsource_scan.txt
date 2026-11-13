@@ -1,0 +1,15 @@
+event: activity
+data: {"ActivityNotification":{"event":"started","uuid":"0c64f351-b705-4d56-a3c9-08e6df4ddd94","Activity":{"uuid":"0c64f351-b705-4d56-a3c9-08e6df4ddd94","type":"library.update.section","cancellable":false,"userID":1,"title":"Scanning","subtitle":"","progress":0}}}
+
+event: status
+data: {"StatusNotification":{"title":"Scanning the \"Music\" section","description":"","notificationName":"LIBRARY_UPDATE"}}
+
+event: progress
+data: {"ProgressNotification":{"message":"Scanning Test Artist/Test Album"}}
+
+event: activity
+data: {"ActivityNotification":{"event":"ended","uuid":"0c64f351-b705-4d56-a3c9-08e6df4ddd94","Activity":{"uuid":"0c64f351-b705-4d56-a3c9-08e6df4ddd94","type":"library.update.section","cancellable":false,"userID":1,"title":"Scanning Music","subtitle":"Test Artist - Test Album","progress":100,"Context":{"librarySectionID":"1"}}}}
+
+event: ping
+data: {}
+

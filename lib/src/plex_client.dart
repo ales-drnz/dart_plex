@@ -2,6 +2,7 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
@@ -465,7 +466,15 @@ class PlexClient {
   /// Closes the HTTP client this client created. Requests made afterwards
   /// — through this client or any [withCancelToken] view — fail with
   /// [PlexErrorType.state]. Does nothing to an injected `httpClient`.
-  void close() => _http.close();
+  ///
+  /// Also closes the notification WebSocket and event source, if open or
+  /// still connecting: their streams end. The closes are not awaited; use
+  /// `notifications.closeWebSocket()` / `closeEventSource()` to wait.
+  void close() {
+    unawaited(notifications.closeWebSocket());
+    unawaited(notifications.closeEventSource());
+    _http.close();
+  }
 
   /// Escape hatch: issue an arbitrary request through the same HTTP client
   /// and headers as the sub-APIs.
