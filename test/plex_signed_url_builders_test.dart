@@ -2,6 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+// The deprecated builders are tested here until they go.
+// ignore_for_file: deprecated_member_use_from_same_package
+
 /// The URLs the streaming, transcoder, image, UltraBlur and collection
 /// sub-APIs hand to a player or an image widget, and the ids they put in
 /// a path.

@@ -86,7 +86,9 @@ jobs:
       - run: dart doc --dry-run
       # The main library stays free of dart:io: it compiles for the web.
       - run: dart compile js example/dart_plex_example.dart -o "$RUNNER_TEMP/example.js"
-      # The pub.dev score: fails when a point is lost.
+      # The pub.dev score: fails when a point is lost. pana converts the
+      # pubspec screenshot with the webp tools.
+      - run: sudo apt-get update && sudo apt-get install -y webp
       - run: dart pub global activate pana
       - run: dart pub global run pana --no-warning --exit-code-threshold 0 .
 

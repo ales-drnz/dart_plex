@@ -74,6 +74,7 @@ void main() {
     test('universalVideoUrl takes the protocol enum', () {
       final plex = testClient(CapturingAdapter());
       final url = Uri.parse(
+        // ignore: deprecated_member_use_from_same_package
         plex.streaming.universalVideoUrl(
           ratingKey: '1',
           protocol: PlexStreamingProtocol.dash,

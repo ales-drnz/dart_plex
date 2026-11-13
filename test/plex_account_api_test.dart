@@ -153,12 +153,14 @@ void main() {
       answer([
         {'id': 1, 'uuid': 'a', 'title': 'Ann', 'username': 'ann'},
       ]);
+      // ignore: deprecated_member_use_from_same_package
       expect((await plex.account.friends()).single.username, 'ann');
       answer({
         'users': [
           {'id': 2, 'username': 'bob'},
         ],
       });
+      // ignore: deprecated_member_use_from_same_package
       expect((await plex.account.friends()).single.title, 'bob');
     });
 

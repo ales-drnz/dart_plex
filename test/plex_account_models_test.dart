@@ -242,6 +242,7 @@ void main() {
       adapter.respond = (_) =>
           CannedResponse(410, const [], contentType: 'text/plain');
       await expectLater(
+        // ignore: deprecated_member_use_from_same_package
         plex.account.friends(),
         throwsA(
           isA<PlexException>().having((e) => e.statusCode, 'statusCode', 410),
