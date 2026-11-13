@@ -74,6 +74,20 @@ void main() {
       expect(PlexMetadataType.fromWire('album'), PlexMetadataType.album);
       expect(PlexMetadataType.fromWire('bogus'), PlexMetadataType.unknown);
     });
+
+    // The pinned spec's numbers; PMS 1.43.2 answers the photo filters
+    // (make, model, aperture, …) to type=13 and none to type=14.
+    test('13 is photo and 14 photoalbum', () {
+      expect(PlexMetadataType.photo.value, 13);
+      expect(PlexMetadataType.photoAlbum.value, 14);
+      expect(PlexMetadataType.fromValue(13), PlexMetadataType.photo);
+      expect(PlexMetadataType.fromValue(14), PlexMetadataType.photoAlbum);
+      expect(PlexMetadataType.fromWire('photo'), PlexMetadataType.photo);
+      expect(
+        PlexMetadataType.fromWire('photoalbum'),
+        PlexMetadataType.photoAlbum,
+      );
+    });
   });
 
   group('PlexMediaContainer.fromJson', () {

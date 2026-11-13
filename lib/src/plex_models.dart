@@ -80,7 +80,7 @@ enum PlexLibraryType {
 /// The integer type tag used on every `/library/metadata/{id}` response.
 ///
 /// `type=1 movie, 2 show, 3 season, 4 episode, 5 trailer, 8 artist,
-///  9 album, 10 track, 13 photoAlbum, 14 photo, 15 playlist, 18 collection`.
+///  9 album, 10 track, 13 photo, 14 photoAlbum, 15 playlist, 18 collection`.
 ///
 /// {@category Library}
 enum PlexMetadataType {
@@ -108,16 +108,21 @@ enum PlexMetadataType {
   /// Music track (`type=10`).
   track(10, 'track'),
 
-  /// Photo album (`type=13`).
+  /// Photo album (`type=14`).
   ///
   /// The wire string `photoalbum` matches Plex's lowercase library/libtype
   /// token. Note that individual photo-album *metadata* items report their
   /// `type` as `photo`, so they resolve to [photo] via [fromWire]; use
-  /// [fromValue] with `13` to obtain this variant explicitly.
-  photoAlbum(13, 'photoalbum'),
+  /// [fromValue] with `14` to obtain this variant explicitly.
+  photoAlbum(14, 'photoalbum'),
 
-  /// Photo (`type=14`).
-  photo(14, 'photo'),
+  /// Photo (`type=13`).
+  ///
+  /// The number the pinned spec gives, and the one PMS 1.43.2 answers to:
+  /// `/library/sections/{id}/filters?type=13` lists the camera fields
+  /// (`make`, `model`, `aperture`, `iso`, `lens`) and `sorts?type=13`
+  /// sorts by `photo.titleSort`, while `type=14` lists neither.
+  photo(13, 'photo'),
 
   /// Playlist (`type=15`).
   playlist(15, 'playlist'),
