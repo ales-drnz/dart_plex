@@ -28,6 +28,8 @@
 library;
 
 import 'dart:io';
+// Deprecated since Dart 3.14; this test is the one user, on the VM only.
+// ignore: deprecated_member_use
 import 'dart:mirrors';
 import 'dart:typed_data';
 
