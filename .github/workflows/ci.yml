@@ -58,7 +58,37 @@ jobs:
           sdk: ${{ matrix.sdk }}
       - run: dart pub get
       # The integration suites are tagged and skipped here (dart_test.yaml).
+      # No network: the upstream spec is watched by its own job below.
       - run: dart test
+        env:
+          PLEX_SPEC_OFFLINE: '1'
+
+  spec-drift:
+    name: Upstream spec drift (informational)
+    runs-on: ubuntu-latest
+    # Fetches the community API document: a network failure or a drift
+    # must not fail the build.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+      - run: dart pub get
+      - run: dart test test/spec_drift_watchdog_test.dart
+
+  docs-and-web:
+    name: API docs, web build and pana
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+      - run: dart pub get
+      # Every doc reference and topic link resolves.
+      - run: dart doc --dry-run
+      # The main library stays free of dart:io: it compiles for the web.
+      - run: dart compile js example/dart_plex_example.dart -o "$RUNNER_TEMP/example.js"
+      # The pub.dev score: fails when a point is lost.
+      - run: dart pub global activate pana
+      - run: dart pub global run pana --no-warning --exit-code-threshold 0 .
 
   publish:
     name: Publish dry run
