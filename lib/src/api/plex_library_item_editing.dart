@@ -246,11 +246,11 @@ mixin _PlexItemEditing {
 
   /// `GET /library/metadata/{ids}/file?url={inBundlePath}` — fetch
   /// a file inside the item's metadata bundle.
-  String itemFileUrl({required String ids, required String url}) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/library/metadata/${seg(ids)}/file?url=${Uri.encodeQueryComponent(url)}&X-Plex-Token=$token';
-  }
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
+  String itemFileUrl({required String ids, required String url}) =>
+      _http.signedUrl('/library/metadata/${seg(ids)}/file', {'url': url});
 
   /// `GET /library/metadata/{ids}/tree` — items as a hierarchical
   /// tree (parents → children).
@@ -301,15 +301,16 @@ mixin _PlexItemEditing {
 
   /// `GET /library/metadata/{ids}/{element}/{timestamp}` — URL for
   /// an item's artwork, theme, or other typed asset.
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
   String itemArtworkUrl({
     required String ids,
     required String element,
     required int timestamp,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/library/metadata/${seg(ids)}/${seg(element)}/$timestamp?X-Plex-Token=$token';
-  }
+  }) => _http.signedUrl(
+    '/library/metadata/${seg(ids)}/${seg(element)}/$timestamp',
+  );
 
   /// `POST|PUT /library/metadata/{ids}/{element}?url={url}` — set a
   /// custom artwork/theme asset on an item (e.g. change its poster).

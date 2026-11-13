@@ -246,12 +246,13 @@ mixin _PlexSectionAdmin {
 
   /// `GET /library/sections/{sectionId}/composite/{updatedAt}` —
   /// URL for the section's auto-composed cover image.
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
   String sectionCompositeImageUrl({
     required String sectionId,
     required int updatedAt,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/library/sections/${seg(sectionId)}/composite/$updatedAt?X-Plex-Token=$token';
-  }
+  }) => _http.signedUrl(
+    '/library/sections/${seg(sectionId)}/composite/$updatedAt',
+  );
 }

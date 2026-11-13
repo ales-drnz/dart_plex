@@ -723,3 +723,6 @@ class PlexLibraryApi
     return res.data ?? const {};
   }
 }
+
+/// A flag as Plex reads it in a query: `1` or `0`, `null` when unset.
+int? _flag(bool? value) => value == null ? null : (value ? 1 : 0);

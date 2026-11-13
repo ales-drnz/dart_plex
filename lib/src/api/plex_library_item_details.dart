@@ -85,11 +85,11 @@ mixin _PlexItemDetails {
 
   /// `GET /library/media/{mediaId}/chapterImages/{chapter}` — URL
   /// for a chapter thumbnail.
-  String chapterImageUrl({required String mediaId, required int chapter}) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/library/media/${seg(mediaId)}/chapterImages/$chapter?X-Plex-Token=$token';
-  }
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
+  String chapterImageUrl({required String mediaId, required int chapter}) =>
+      _http.signedUrl('/library/media/${seg(mediaId)}/chapterImages/$chapter');
 
   // -------------------------------------------------------------------------
   // Streams (audio / subtitle / video)
@@ -97,26 +97,20 @@ mixin _PlexItemDetails {
 
   /// `GET /library/streams/{streamId}.{ext}` — URL for a media
   /// stream file (subtitle text, etc.).
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
   String streamUrl({
     required String streamId,
     required String ext,
     String? encoding,
     String? format,
     bool? autoAdjustSubtitle,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    final qp = <String, String>{'X-Plex-Token': token};
-    if (encoding != null) qp['encoding'] = encoding;
-    if (format != null) qp['format'] = format;
-    if (autoAdjustSubtitle != null) {
-      qp['autoAdjustSubtitle'] = autoAdjustSubtitle ? '1' : '0';
-    }
-    final query = qp.entries
-        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    return '$base/library/streams/${seg(streamId)}.${seg(ext)}?$query';
-  }
+  }) => _http.signedUrl('/library/streams/${seg(streamId)}.${seg(ext)}', {
+    'encoding': ?encoding,
+    'format': ?format,
+    'autoAdjustSubtitle': ?_flag(autoAdjustSubtitle),
+  });
 
   /// `PUT /library/streams/{streamId}.{ext}?offset={ms}` — adjust
   /// a stream's offset (subtitle sync).
@@ -198,21 +192,22 @@ mixin _PlexItemDetails {
 
   /// `GET /library/parts/{partId}/{changestamp}/{filename}` — URL
   /// for a media part file (direct file download).
+  ///
+  /// [filename] may hold subfolders: each piece between `/` is encoded on
+  /// its own, and an empty piece, `.` or `..` is an [ArgumentError].
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
   String partFileUrl({
     required String partId,
     required int changestamp,
     required String filename,
     bool? download,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    final qp = <String, String>{'X-Plex-Token': token};
-    if (download != null) qp['download'] = download ? '1' : '0';
-    final query = qp.entries
-        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    return '$base/library/parts/${seg(partId)}/$changestamp/$filename?$query';
-  }
+  }) => _http.signedUrl(
+    '/library/parts/${seg(partId)}/$changestamp/'
+    '${filename.split('/').map(seg).join('/')}',
+    {'download': ?_flag(download)},
+  );
 
   /// `GET /library/parts/{partId}/indexes/{index}` — BIF index
   /// metadata for a media part.
@@ -232,15 +227,16 @@ mixin _PlexItemDetails {
 
   /// `GET /library/parts/{partId}/indexes/{index}/{offset}` — URL
   /// for a single BIF thumbnail at an offset.
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
   String partBifThumbUrl({
     required String partId,
     required String index,
     required int offset,
-  }) {
-    final base = _http.baseUrl;
-    final token = _http.token ?? '';
-    return '$base/library/parts/${seg(partId)}/indexes/${seg(index)}/$offset?X-Plex-Token=$token';
-  }
+  }) => _http.signedUrl(
+    '/library/parts/${seg(partId)}/indexes/${seg(index)}/$offset',
+  );
 
   // -------------------------------------------------------------------------
   // People

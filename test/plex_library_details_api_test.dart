@@ -552,5 +552,97 @@ void main() {
       );
       expect(pathAndToken(url), ('/library/parts/5/indexes/sd/30000', 'tok'));
     });
+
+    test('partFileUrl keeps the folders of a filename, each piece encoded', () {
+      final url = plex.library.partFileUrl(
+        partId: '5/6',
+        changestamp: 1,
+        filename: 'CD 1/a#b.mp3',
+        download: false,
+      );
+      expect(
+        url,
+        'http://192.168.1.10:32400/library/parts/5%2F6/1/CD%201/a%23b.mp3'
+        '?download=0&X-Plex-Token=tok',
+      );
+      for (final bad in ['', '/file.mp3', 'a//b.mp3', '../file.mp3']) {
+        expect(
+          () => plex.library.partFileUrl(
+            partId: '5',
+            changestamp: 1,
+            filename: bad,
+          ),
+          throwsArgumentError,
+          reason: bad,
+        );
+      }
+    });
+
+    test('the token is the last parameter, form-encoded', () {
+      plex.connect('http://192.168.1.10:32400', accessToken: 'to k&n=1');
+      final url = plex.library.streamUrl(
+        streamId: '21',
+        ext: 'srt',
+        encoding: 'utf-8',
+      );
+      expect(
+        url,
+        'http://192.168.1.10:32400/library/streams/21.srt'
+        '?encoding=utf-8&X-Plex-Token=to+k%26n%3D1',
+      );
+      expect(Uri.parse(url).queryParameters['X-Plex-Token'], 'to k&n=1');
+    });
+
+    test('without a token no X-Plex-Token is sent', () {
+      final anonymous = PlexClient(
+        credentials: testCredentials,
+        httpClient: CapturingAdapter(),
+      )..connect('http://192.168.1.10:32400');
+      expect(
+        anonymous.library.chapterImageUrl(mediaId: '11', chapter: 2),
+        'http://192.168.1.10:32400/library/media/11/chapterImages/2',
+      );
+      expect(
+        anonymous.library.partFileUrl(
+          partId: '5',
+          changestamp: 1,
+          filename: 'file.mp3',
+          download: true,
+        ),
+        'http://192.168.1.10:32400/library/parts/5/1/file.mp3?download=1',
+      );
+    });
+
+    test('before connect() every URL is a state error, not "null/…"', () {
+      final library = PlexClient(
+        credentials: testCredentials,
+        httpClient: CapturingAdapter(),
+      ).library;
+      final builders = <String Function()>[
+        () => library.chapterImageUrl(mediaId: '11', chapter: 2),
+        () => library.streamUrl(streamId: '21', ext: 'srt'),
+        () => library.partFileUrl(
+          partId: '5',
+          changestamp: 1,
+          filename: 'file.mp3',
+        ),
+        () => library.partBifThumbUrl(partId: '5', index: 'sd', offset: 0),
+        () => library.itemFileUrl(ids: '7', url: 'Contents/a.jpg'),
+        () => library.itemArtworkUrl(ids: '7', element: 'thumb', timestamp: 1),
+        () => library.sectionCompositeImageUrl(sectionId: '1', updatedAt: 1),
+      ];
+      for (final build in builders) {
+        expect(
+          build,
+          throwsA(
+            isA<PlexException>().having(
+              (e) => e.type,
+              'type',
+              PlexErrorType.state,
+            ),
+          ),
+        );
+      }
+    });
   });
 }
