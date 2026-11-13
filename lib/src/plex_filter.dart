@@ -90,6 +90,15 @@ final class PlexFilter {
 
   /// Values for this condition. More than one means "any of" — they
   /// travel comma-separated, which Plex reads as OR.
+  ///
+  /// A comma inside a value is therefore a separator too: PMS 1.43.2
+  /// splits on it whether it arrives literal or percent-encoded (`%2C`,
+  /// which is how it travels), and no escape for it is known. A text
+  /// filter for `Hello, World` asks for `Hello` or ` World`; filter on a
+  /// part without the comma instead.
+  ///
+  /// The named constructors hold an unmodifiable list. The unnamed one is
+  /// `const` and keeps the list it is given.
   final List<String> values;
 
   /// Creates a condition directly.
@@ -97,6 +106,11 @@ final class PlexFilter {
   /// Prefer the named constructors below; reach for this one when the
   /// field you need is not among them (the vocabulary is per-section —
   /// see [PlexLibraryApi.filters]).
+  ///
+  /// [values] is kept, not copied (a `const` constructor cannot): do not
+  /// change the list afterwards, or the condition, its equality and its
+  /// [hashCode] change with it. Pass a copy (`List.of`) of a list that
+  /// lives on.
   const PlexFilter({
     required this.field,
     required this.values,
@@ -121,7 +135,7 @@ final class PlexFilter {
         type: PlexErrorType.parse,
       );
     }
-    return PlexFilter(field: tag.field, values: ['$id']);
+    return PlexFilter(field: tag.field, values: List.unmodifiable(['$id']));
   }
 
   /// Tag-valued field — `genre`, `mood`, `style`, `collection`,
@@ -140,7 +154,7 @@ final class PlexFilter {
     operator: exclude
         ? PlexFilterOperator.doesNotMatch
         : PlexFilterOperator.matches,
-    values: [for (final id in tagIds) '$id'],
+    values: List.unmodifiable([for (final id in tagIds) '$id']),
   );
 
   /// The `genre` field, by tag id — `?genre={tagId}`.
@@ -155,7 +169,11 @@ final class PlexFilter {
     String field,
     num value, {
     PlexFilterOperator operator = PlexFilterOperator.matches,
-  }) => PlexFilter(field: field, operator: operator, values: ['$value']);
+  }) => PlexFilter(
+    field: field,
+    operator: operator,
+    values: List.unmodifiable(['$value']),
+  );
 
   /// Released in exactly [year] — `?year={year}`.
   factory PlexFilter.year(int year) => PlexFilter.number('year', year);
@@ -184,12 +202,17 @@ final class PlexFilter {
   factory PlexFilter.rated() => PlexFilter.ratingAbove(0);
 
   /// Free-text field compared with [operator], which defaults to the
-  /// server's substring match.
+  /// server's substring match. A comma in [value] splits it into
+  /// alternatives (see [values]).
   factory PlexFilter.text(
     String field,
     String value, {
     PlexFilterOperator operator = PlexFilterOperator.matches,
-  }) => PlexFilter(field: field, operator: operator, values: [value]);
+  }) => PlexFilter(
+    field: field,
+    operator: operator,
+    values: List.unmodifiable([value]),
+  );
 
   /// Titles containing [text] — `?title={text}`.
   factory PlexFilter.titleContains(String text) =>
@@ -219,7 +242,7 @@ final class PlexFilter {
   /// Boolean field, sent as the `1` / `0` Plex uses for flags (the
   /// spec's `BoolInt`) rather than `true` / `false`.
   factory PlexFilter.flag(String field, {bool value = true}) =>
-      PlexFilter(field: field, values: [value ? '1' : '0']);
+      PlexFilter(field: field, values: List.unmodifiable([value ? '1' : '0']));
 
   /// Items the user has never played — `?unwatched=1`.
   factory PlexFilter.unplayed() => PlexFilter.flag('unwatched');

@@ -76,6 +76,54 @@ void main() {
       expect(PlexFilter.genre(6), isNot(PlexFilter.genre(7)));
       expect(PlexFilter.genre(6), isNot(PlexFilter.genre(6, exclude: true)));
     });
+
+    test('the named constructors hold a list nobody can change', () {
+      final ids = [3, 7];
+      final byTag = PlexFilter.tag('mood', ids);
+      final hash = byTag.hashCode;
+      ids.add(11);
+      expect(byTag.parameterValue, '3,7');
+      expect(byTag.hashCode, hash);
+      for (final filter in [
+        byTag,
+        PlexFilter.genre(6),
+        PlexFilter.of(
+          const PlexTag(id: 6, title: 'Rock', field: 'genre', raw: {}),
+        ),
+        PlexFilter.year(2009),
+        PlexFilter.titleContains('abbey'),
+        PlexFilter.unplayed(),
+        PlexFilter.videoCodec(['hevc']),
+      ]) {
+        expect(
+          () => filter.values.add('x'),
+          throwsUnsupportedError,
+          reason: '$filter',
+        );
+      }
+    });
+
+    test('the unnamed constructor is const and keeps its list', () {
+      const filter = PlexFilter(field: 'studio', values: ['A24']);
+      expect(filter, PlexFilter.studio('A24'));
+      expect(filter.hashCode, PlexFilter.studio('A24').hashCode);
+    });
+
+    // PMS 1.43.2 reads `title=Track 1%2CTrack 2` as Track 1 or Track 2:
+    // a comma in a value cannot be told from the one between values.
+    test('a comma in a value is sent as it is', () {
+      expect(
+        PlexFilter.titleContains('Hello, World').parameterValue,
+        'Hello, World',
+      );
+      expect(
+        PlexFilter.titleContains('Hello, World').parameterValue,
+        const PlexFilter(
+          field: 'title',
+          values: ['Hello', ' World'],
+        ).parameterValue,
+      );
+    });
   });
 
   group('PlexLibraryApi.allByType', () {
