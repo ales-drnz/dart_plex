@@ -538,6 +538,17 @@ class PlexAccountApi {
   );
 
   /// The account's friends (`GET plex.tv/api/v2/friends`).
+  ///
+  /// plex.tv removed this endpoint: it answers `410 Gone`, as do
+  /// `plex.tv/api/friends/all` and `clients.plex.tv/api/v2/friends`
+  /// (verified in November 2026), so this throws a [PlexException] with
+  /// that status. No REST route lists friends any more; the closest is
+  /// [connectedUsers], the users the account shares servers or a Home
+  /// with.
+  @Deprecated(
+    'plex.tv removed this endpoint (410 Gone): use connectedUsers() for '
+    'the users servers are shared with. Will be removed in 0.4.0.',
+  )
   Future<List<PlexFriend>> friends() => _plexTv(
     '$_v2/friends',
     (json) => switch (json) {
