@@ -15,6 +15,7 @@ import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_events.dart';
 import '../plex_exception.dart';
+import '../plex_urls.dart';
 import '../transport/plex_cancel_token.dart';
 
 /// `/:/websockets/notifications` and `/:/eventsource/notifications`
@@ -126,9 +127,7 @@ class PlexNotificationsApi {
       );
     }
     _http.requireConnected();
-    final base = _http.baseUrl;
-    final token = _http.token;
-    if (token == null) {
+    if (_http.token == null) {
       throw const PlexException(
         'No PMS token. Call connect() / setToken() first.',
         type: PlexErrorType.state,
@@ -136,12 +135,9 @@ class PlexNotificationsApi {
     }
     // The token goes in the query: a browser cannot set headers on a
     // WebSocket handshake.
-    final qp = <String, String>{'X-Plex-Token': token};
-    if (filter != null) qp['filter'] = filter;
-    final query = qp.entries
-        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
-        .join('&');
-    final wsUrl = _toWs('$base/:/websockets/notifications?$query');
+    final wsUrl = _toWs(
+      _http.signedUrl('/:/websockets/notifications', {'filter': ?filter}),
+    );
 
     final abort = _wsConnecting = Completer<void>();
     WebSocketChannel? opening;

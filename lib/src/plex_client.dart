@@ -81,82 +81,82 @@ class PlexClient {
   final PlexSessionState _state;
 
   /// `https://plex.tv/api/v2` operations — server identity, user info, friends.
-  late final PlexAccountApi account;
+  late final PlexAccountApi account = PlexAccountApi(_http, state: _state);
 
   /// Top-level PMS endpoints — `/`, `/identity`, `/capabilities`.
-  late final PlexServerApi server;
+  late final PlexServerApi server = PlexServerApi(_http);
 
   /// `/library/sections` and `/library/metadata/{id}` browsing.
-  late final PlexLibraryApi library;
+  late final PlexLibraryApi library = PlexLibraryApi(_http);
 
   /// `/playlists` and `/playlists/{id}/items` — create, list, mutate playlists.
-  late final PlexPlaylistsApi playlists;
+  late final PlexPlaylistsApi playlists = PlexPlaylistsApi(_http);
 
   /// `/hubs/search` and legacy `/search` — global and per-section search.
-  late final PlexSearchApi search;
+  late final PlexSearchApi search = PlexSearchApi(_http);
 
   /// `/:/timeline`, `/:/scrobble`, `/:/rate` — playback reporting and ratings.
-  late final PlexPlaybackApi playback;
+  late final PlexPlaybackApi playback = PlexPlaybackApi(_http);
 
   /// Build signed `/music/:/transcode/universal/*` streaming URLs.
-  late final PlexStreamingApi streaming;
+  late final PlexStreamingApi streaming = PlexStreamingApi(_http);
 
   /// `/photo/:/transcode` — resized artwork URLs.
-  late final PlexImagesApi images;
+  late final PlexImagesApi images = PlexImagesApi(_http);
 
   /// `/status/sessions` — currently active playback sessions.
-  late final PlexSessionsApi sessions;
+  late final PlexSessionsApi sessions = PlexSessionsApi(_http);
 
   /// `/hubs` — home-screen rails (Recently Added, Continue Listening, …).
-  late final PlexHubsApi hubs;
+  late final PlexHubsApi hubs = PlexHubsApi(_http);
 
   /// `/playQueues` — server-side queues for cast / multi-device playback.
-  late final PlexPlayQueuesApi playQueues;
+  late final PlexPlayQueuesApi playQueues = PlexPlayQueuesApi(_http);
 
   /// `/livetv/sessions` and related Live TV consumer endpoints.
-  late final PlexLiveTvApi liveTv;
+  late final PlexLiveTvApi liveTv = PlexLiveTvApi(_http);
 
   /// `/services/ultrablur/colors` — corner-colour artwork gradients.
-  late final PlexUltraBlurApi ultraBlur;
+  late final PlexUltraBlurApi ultraBlur = PlexUltraBlurApi(_http);
 
   /// `/library/collections` — create / add / remove / reorder collections.
-  late final PlexCollectionsApi collections;
+  late final PlexCollectionsApi collections = PlexCollectionsApi(_http);
 
   /// `/media/grabbers` and related tuner / grabber device endpoints.
-  late final PlexDevicesApi devices;
+  late final PlexDevicesApi devices = PlexDevicesApi(_http);
 
   /// `/livetv/dvrs` — DVR configuration (admin).
-  late final PlexDvrsApi dvrs;
+  late final PlexDvrsApi dvrs = PlexDvrsApi(_http);
 
   /// `/media/subscriptions` — DVR recording rules.
-  late final PlexSubscriptionsApi subscriptions;
+  late final PlexSubscriptionsApi subscriptions = PlexSubscriptionsApi(_http);
 
   /// `/downloadQueue` — legacy mobile sync surface.
-  late final PlexDownloadQueueApi downloadQueue;
+  late final PlexDownloadQueueApi downloadQueue = PlexDownloadQueueApi(_http);
 
   /// `/livetv/epg/*` — electronic program guide.
-  late final PlexEpgApi epg;
+  late final PlexEpgApi epg = PlexEpgApi(_http);
 
   /// `/butler` — scheduled maintenance tasks (thumbnails, intro detection, …).
-  late final PlexButlerApi butler;
+  late final PlexButlerApi butler = PlexButlerApi(_http);
 
   /// `/:/transcode/*` — subtitle/image transcode endpoints not covered by [streaming].
-  late final PlexTranscoderApi transcoder;
+  late final PlexTranscoderApi transcoder = PlexTranscoderApi(_http);
 
   /// `/media/providers` — registered media providers.
-  late final PlexProvidersApi providers;
+  late final PlexProvidersApi providers = PlexProvidersApi(_http);
 
   /// `/:/prefs` — server preferences (settings).
-  late final PlexPreferencesApi preferences;
+  late final PlexPreferencesApi preferences = PlexPreferencesApi(_http);
 
   /// `/log` — write entries into the server log stream.
-  late final PlexLogApi log;
+  late final PlexLogApi log = PlexLogApi(_http);
 
   /// `/updater/*` — server software update lifecycle (admin).
-  late final PlexUpdaterApi updater;
+  late final PlexUpdaterApi updater = PlexUpdaterApi(_http);
 
   /// `/activities` — list and cancel running background activities.
-  late final PlexActivitiesApi activities;
+  late final PlexActivitiesApi activities = PlexActivitiesApi(_http);
 
   /// `/:/websockets/notifications` and `/:/eventsource/notifications` — server-push events.
   late final PlexNotificationsApi notifications;
@@ -199,13 +199,13 @@ class PlexClient {
        ),
        _state = PlexSessionState() {
     _http.renewal.renewer = tokenRenewer;
-    _wire(PlexNotificationsApi(_http));
+    notifications = PlexNotificationsApi(_http);
   }
 
   PlexClient._scoped(PlexClient parent, PlexCancelToken token)
     : _http = PlexConnection.scoped(parent._http, token),
       _state = parent._state {
-    _wire(parent.notifications);
+    notifications = parent.notifications;
   }
 
   /// A view of this client whose every request is cancelled by
@@ -231,36 +231,6 @@ class PlexClient {
   /// cancelled.
   PlexClient withCancelToken(PlexCancelToken cancelToken) =>
       PlexClient._scoped(this, cancelToken);
-
-  void _wire(PlexNotificationsApi notifications) {
-    account = PlexAccountApi(_http, state: _state);
-    server = PlexServerApi(_http);
-    library = PlexLibraryApi(_http);
-    playlists = PlexPlaylistsApi(_http);
-    search = PlexSearchApi(_http);
-    playback = PlexPlaybackApi(_http);
-    streaming = PlexStreamingApi(_http);
-    images = PlexImagesApi(_http);
-    sessions = PlexSessionsApi(_http);
-    hubs = PlexHubsApi(_http);
-    playQueues = PlexPlayQueuesApi(_http);
-    liveTv = PlexLiveTvApi(_http);
-    ultraBlur = PlexUltraBlurApi(_http);
-    collections = PlexCollectionsApi(_http);
-    devices = PlexDevicesApi(_http);
-    dvrs = PlexDvrsApi(_http);
-    subscriptions = PlexSubscriptionsApi(_http);
-    downloadQueue = PlexDownloadQueueApi(_http);
-    epg = PlexEpgApi(_http);
-    butler = PlexButlerApi(_http);
-    transcoder = PlexTranscoderApi(_http);
-    providers = PlexProvidersApi(_http);
-    preferences = PlexPreferencesApi(_http);
-    log = PlexLogApi(_http);
-    updater = PlexUpdaterApi(_http);
-    activities = PlexActivitiesApi(_http);
-    this.notifications = notifications;
-  }
 
   /// The credentials this client was created with.
   PlexCredentials get credentials => _http.credentials;

@@ -77,33 +77,20 @@ final class PlexCredentials {
 
   /// Headers to attach to every request — auth token is added by the
   /// HTTP layer separately.
-  Map<String, String> toHeaders() {
-    final h = <String, String>{
-      'X-Plex-Client-Identifier': clientIdentifier,
-      'X-Plex-Product': product,
-      'X-Plex-Version': version,
-      'X-Plex-Device': device,
-      'X-Plex-Device-Name': deviceName,
-      'X-Plex-Platform': platform,
-      'Accept': 'application/json',
-    };
-    if (platformVersion != null) {
-      h['X-Plex-Platform-Version'] = platformVersion!;
-    }
-    if (clientProfileExtra != null) {
-      h['X-Plex-Client-Profile-Extra'] = clientProfileExtra!;
-    }
-    if (model != null) {
-      h['X-Plex-Model'] = model!;
-    }
-    if (deviceVendor != null) {
-      h['X-Plex-Device-Vendor'] = deviceVendor!;
-    }
-    if (marketplace != null) {
-      h['X-Plex-Marketplace'] = marketplace!;
-    }
-    return h;
-  }
+  Map<String, String> toHeaders() => {
+    'X-Plex-Client-Identifier': clientIdentifier,
+    'X-Plex-Product': product,
+    'X-Plex-Version': version,
+    'X-Plex-Device': device,
+    'X-Plex-Device-Name': deviceName,
+    'X-Plex-Platform': platform,
+    'Accept': 'application/json',
+    'X-Plex-Platform-Version': ?platformVersion,
+    'X-Plex-Client-Profile-Extra': ?clientProfileExtra,
+    'X-Plex-Model': ?model,
+    'X-Plex-Device-Vendor': ?deviceVendor,
+    'X-Plex-Marketplace': ?marketplace,
+  };
 
   /// Return a copy with the given fields replaced; preserves [clientIdentifier] unless overridden.
   PlexCredentials copyWith({

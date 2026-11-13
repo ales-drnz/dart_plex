@@ -342,7 +342,7 @@ final class PlexJwtSession {
   /// Secret: store it where the platform keeps secrets.
   Map<String, Object?> toJson() => {
     'key': key.toJson(),
-    if (_token != null) 'token': _token!.token,
+    'token': ?_token?.token,
     'scopes': scopes,
   };
 

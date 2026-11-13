@@ -33,6 +33,20 @@ call that creates something (`playlists.create`, `collections.create`,
 the answer does not hold it. `subscriptions.create` returns `null`
 instead: what PMS answers to it is not verified.
 
+A call that lists (`sections`, `children`, `playlists.items`, …) throws a
+`parse` error for an answer without a `MediaContainer`, and returns an
+empty list for a container that holds no entries. A call that answers a
+raw map (`library.itemTree`, `topUsers`, `sectionCommon`,
+`streamLevels`, …) returns an empty map for an empty answer, and
+`server.transientToken` returns `null` when the answer names no token.
+
+Wrong arguments are not a `PlexException`: an id that is empty, `.` or
+`..`, a missing or contradictory combination of parameters, a negative
+time, throw an `ArgumentError` before anything is sent. So do
+`PlexDeviceKey.fromSeed` for a seed of the wrong length, while
+`PlexDeviceKey.fromJson` and `PlexJwtSession.fromJson` throw a
+`FormatException` for stored JSON they cannot read.
+
 ### Classifying a failure
 
 ```dart
