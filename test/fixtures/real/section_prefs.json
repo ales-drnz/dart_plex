@@ -1,0 +1,31 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "Setting": [
+      {
+        "id": "hidden",
+        "label": "Visibility",
+        "summary": "Restrict where content from this library should appear.",
+        "type": "int",
+        "default": "0",
+        "value": "0",
+        "hidden": false,
+        "advanced": false,
+        "group": "",
+        "enumValues": "0:Include in home screen and global search|1:Exclude from home screen|2:Exclude from home screen and global search"
+      },
+      {
+        "id": "albumSort",
+        "label": "Album sorting",
+        "summary": "How to sort the albums for artists.",
+        "type": "text",
+        "default": "-1",
+        "value": "-1",
+        "hidden": false,
+        "advanced": false,
+        "group": "",
+        "enumValues": "0:Newest first|1:Oldest first|2:By name"
+      }
+    ]
+  }
+}

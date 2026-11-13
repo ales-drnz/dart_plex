@@ -1,0 +1,19 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "allowSync": true,
+    "identifier": "com.plexapp.plugins.library",
+    "Hub": [
+      {
+        "key": "/hubs/continueWatching/items",
+        "title": "Continue Watching",
+        "type": "mixed",
+        "hubIdentifier": "continueWatching",
+        "context": "hub.continueWatching",
+        "size": 0,
+        "more": false,
+        "style": "hero"
+      }
+    ]
+  }
+}

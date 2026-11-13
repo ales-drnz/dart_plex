@@ -1,0 +1,13 @@
+{
+  "code": "IT",
+  "european_union_member": true,
+  "continent_code": "EU",
+  "country": "Italy",
+  "city": "Rome",
+  "time_zone": "Europe/Rome",
+  "postal_code": "00100",
+  "in_privacy_restricted_country": true,
+  "in_privacy_restricted_region": true,
+  "subdivisions": "Lazio",
+  "coordinates": "41.9, 12.5"
+}

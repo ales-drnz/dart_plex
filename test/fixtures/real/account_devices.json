@@ -1,0 +1,48 @@
+[
+  {
+    "id": 1000,
+    "name": "Test player",
+    "product": "dart_plex bootstrap",
+    "platform": "Test",
+    "device": "integration-tests",
+    "model": null,
+    "vendor": null,
+    "provides": null,
+    "token": "device-token-player",
+    "publicAddress": "203.0.113.7",
+    "platformVersion": null,
+    "clientIdentifier": "player-client-identifier",
+    "createdAt": "2026-01-02T03:04:05Z",
+    "lastSeenAt": "2026-02-03T04:05:06Z",
+    "screenDensity": null,
+    "syncLists": [],
+    "screenResolution": "",
+    "presence": false,
+    "connections": []
+  },
+  {
+    "id": 1001,
+    "name": "Test server",
+    "product": "Plex Media Server",
+    "platform": "Linux",
+    "device": "Docker Container",
+    "model": "x86_64",
+    "vendor": "Docker",
+    "provides": "server",
+    "token": "device-token-server",
+    "publicAddress": "203.0.113.7",
+    "platformVersion": "6.1.0",
+    "clientIdentifier": "0000000000000000000000000000000000000000",
+    "createdAt": "2026-01-02T03:04:05Z",
+    "lastSeenAt": "2026-02-03T04:05:06Z",
+    "screenDensity": null,
+    "syncLists": [],
+    "screenResolution": "",
+    "presence": true,
+    "connections": [
+      {
+        "uri": "http://192.0.2.10:32400"
+      }
+    ]
+  }
+]

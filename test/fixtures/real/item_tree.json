@@ -1,0 +1,75 @@
+{
+  "MediaContainer": {
+    "size": 1,
+    "identifier": "com.plexapp.plugins.library",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "mediaTagVersion": 1777730215,
+    "MetadataItem": [
+      {
+        "id": 1,
+        "title": "Test Artist",
+        "guid": "local://1",
+        "parentTitle": "",
+        "instanceRatingKey": "",
+        "index": 1,
+        "originallyAvailableAt": "",
+        "addedAt": 1786528061,
+        "refreshedAt": 1786528061,
+        "MetadataItem": [
+          {
+            "id": 2,
+            "title": "Test Album",
+            "guid": "local://2",
+            "parentTitle": "",
+            "instanceRatingKey": "",
+            "index": 1,
+            "originallyAvailableAt": "2020-01-01",
+            "addedAt": 1786528061,
+            "refreshedAt": 1794079152,
+            "MetadataItem": [
+              {
+                "id": 3,
+                "title": "Track 1",
+                "guid": "local://3",
+                "parentTitle": "",
+                "instanceRatingKey": "",
+                "index": 1,
+                "originallyAvailableAt": "",
+                "absoluteIndex": 1,
+                "addedAt": 1786527974,
+                "refreshedAt": 1786528061,
+                "MediaItem": [
+                  {
+                    "id": 1,
+                    "MediaPart": [
+                      {
+                        "metadataType": 10,
+                        "id": 1,
+                        "file": "/data/Music/Test Artist/Test Album/01 - Track 1.mp3",
+                        "size": 49037,
+                        "openSubtitleHash": "",
+                        "hash": "490375593ae75c50f427b16b079987d29c5d5d29ce8ee",
+                        "duration": 3030,
+                        "MediaStream": [
+                          {
+                            "id": 1,
+                            "index": 0,
+                            "type": 2,
+                            "channels": 2,
+                            "codec": "mp3",
+                            "audioChannelLayout": "stereo",
+                            "samplingRate": "44100"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

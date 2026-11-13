@@ -1,0 +1,25 @@
+{
+  "MediaContainer": {
+    "size": 2,
+    "Hub": [
+      {
+        "identifier": "music.mixes",
+        "title": "Mixes For You",
+        "recommendationsVisibility": "all",
+        "homeVisibility": "none",
+        "promotedToRecommended": true,
+        "promotedToOwnHome": false,
+        "promotedToSharedHome": false
+      },
+      {
+        "identifier": "music.recent.played",
+        "title": "Recently Played Music",
+        "recommendationsVisibility": "all",
+        "homeVisibility": "none",
+        "promotedToRecommended": true,
+        "promotedToOwnHome": false,
+        "promotedToSharedHome": false
+      }
+    ]
+  }
+}

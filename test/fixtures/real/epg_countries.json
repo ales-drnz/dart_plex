@@ -1,0 +1,37 @@
+{
+  "MediaContainer": {
+    "size": 3,
+    "Country": [
+      {
+        "key": "and/tv.plex.providers.epg.cloud/lineups",
+        "type": "country",
+        "title": "Andorra",
+        "code": "and",
+        "language": "cat",
+        "languageTitle": "català",
+        "example": "",
+        "flavor": 2
+      },
+      {
+        "key": "ita/tv.plex.providers.epg.cloud/lineups",
+        "type": "country",
+        "title": "Italy",
+        "code": "ita",
+        "language": "ita",
+        "languageTitle": "Italiano",
+        "example": "00100",
+        "flavor": 1
+      },
+      {
+        "key": "usa/tv.plex.providers.epg.cloud/lineups",
+        "type": "country",
+        "title": "United States",
+        "code": "usa",
+        "language": "eng",
+        "languageTitle": "English",
+        "example": "96779",
+        "flavor": 1
+      }
+    ]
+  }
+}
