@@ -25,7 +25,7 @@ class PlexDvrsApi {
 
   /// `GET /livetv/dvrs/{dvrId}` — one DVR's full configuration, or
   /// `null` when the answer holds none.
-  Future<PlexDvr?> get({required String dvrId}) => _http.requestJson(
+  Future<PlexDvr?> get({required String dvrId}) async => _http.requestJson(
     '/livetv/dvrs/${seg(dvrId)}',
     firstOf('Dvr', PlexDvr.fromJson, altKey: 'DVR'),
   );

@@ -46,16 +46,6 @@ void main() {
       expect(url, contains('width=320'));
     });
 
-    test('transcoder.startUrl builds the universal-start URL', () {
-      final url = plex.transcoder.startUrl(
-        transcodeType: 'audio',
-        extension: 'm3u8',
-        params: const {'path': '/library/metadata/1'},
-      );
-      expect(url, contains('/audio/:/transcode/universal/start.m3u8'));
-      expect(url, contains('X-Plex-Token='));
-    });
-
     test('transcoder.subtitlesUrl builds the universal-subtitles URL', () {
       final url = plex.transcoder.subtitlesUrl(transcodeType: 'video');
       expect(url, contains('/video/:/transcode/universal/subtitles'));

@@ -17,7 +17,7 @@ mixin _PlexSectionAdmin {
   Future<PlexSectionDetails> sectionDetails({
     required String sectionId,
     bool? includeDetails,
-  }) {
+  }) async {
     return _http.requestJson(
       '/library/sections/${seg(sectionId)}',
       queryParameters: {'includeDetails': ?_flag(includeDetails)},

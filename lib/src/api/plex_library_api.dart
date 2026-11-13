@@ -160,7 +160,7 @@ class PlexLibraryApi
   Future<List<PlexTag>> genres({
     required String sectionId,
     required PlexMetadataType type,
-  }) => _tagIndex(
+  }) async => _tagIndex(
     path: '/library/sections/${seg(sectionId)}/genre',
     field: 'genre',
     queryParameters: {'type': type.value},
@@ -221,7 +221,7 @@ class PlexLibraryApi
     required String ratingKey,
     bool includeMarkers = false,
     bool includeChapters = false,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/library/metadata/${seg(ratingKey)}',
     queryParameters: {
       if (includeMarkers) 'includeMarkers': 1,
@@ -277,7 +277,7 @@ class PlexLibraryApi
     int? start,
     int? size,
     PlexSort? sort,
-  }) {
+  }) async {
     return _http.requestJson(
       '/library/metadata/${seg(ratingKey)}/children',
       queryParameters: {
@@ -309,7 +309,7 @@ class PlexLibraryApi
     required String ratingKey,
     int? start,
     int? size,
-  }) {
+  }) async {
     return _http.requestJson(
       '/library/metadata/${seg(ratingKey)}/allLeaves',
       queryParameters: containerPage(start: start, size: size),
@@ -325,7 +325,7 @@ class PlexLibraryApi
     required String ratingKey,
     int? start,
     int? size,
-  }) {
+  }) async {
     return _http.requestJson(
       '/library/metadata/${seg(ratingKey)}/grandchildren',
       queryParameters: containerPage(start: start, size: size),
@@ -344,7 +344,7 @@ class PlexLibraryApi
     String? sectionId,
     int? start,
     int? size,
-  }) {
+  }) async {
     return _http.requestJson(
       sectionId == null
           ? '/library/recentlyAdded'
@@ -385,7 +385,7 @@ class PlexLibraryApi
     double? maxDistance,
     String? excludeParentRatingKey,
     String? excludeGrandparentRatingKey,
-  }) {
+  }) async {
     return _http.requestJson(
       '/library/metadata/${seg(ratingKey)}/nearest',
       queryParameters: {
@@ -528,7 +528,7 @@ class PlexLibraryApi
     String? parent,
     int? start,
     int? size,
-  }) {
+  }) async {
     return _http.requestJson(
       '/library/sections/${seg(sectionId)}/folder',
       queryParameters: {

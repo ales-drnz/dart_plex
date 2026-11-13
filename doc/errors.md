@@ -42,7 +42,9 @@ raw map (`library.itemTree`, `topUsers`, `sectionCommon`,
 
 Wrong arguments are not a `PlexException`: an id that is empty, `.` or
 `..`, a missing or contradictory combination of parameters, a negative
-time, throw an `ArgumentError` before anything is sent. So do
+time, throw an `ArgumentError` before anything is sent. A call that
+returns a `Future` reports it through that `Future`, never while it is
+being called; a URL builder, which answers at once, throws at once. So do
 `PlexDeviceKey.fromSeed` for a seed of the wrong length, while
 `PlexDeviceKey.fromJson` and `PlexJwtSession.fromJson` throw a
 `FormatException` for stored JSON they cannot read.

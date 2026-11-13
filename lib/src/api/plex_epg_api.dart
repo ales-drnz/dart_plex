@@ -41,7 +41,7 @@ class PlexEpgApi {
     required String country,
     required String epgId,
     String? postalCode,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/livetv/epg/countries/${seg(country)}/${seg(epgId)}/lineups',
     entriesOf('Lineup', PlexLineup.fromJson),
     queryParameters: {'postalCode': ?postalCode},
@@ -53,7 +53,7 @@ class PlexEpgApi {
   Future<List<PlexEpgCountry>> countryRegions({
     required String country,
     required String epgId,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/livetv/epg/countries/${seg(country)}/${seg(epgId)}/regions',
     itemsOf('Country', PlexEpgCountry.fromJson),
   );
@@ -64,7 +64,7 @@ class PlexEpgApi {
     required String country,
     required String epgId,
     required String region,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/livetv/epg/countries/${seg(country)}/${seg(epgId)}/regions/${seg(region)}/lineups',
     entriesOf('Lineup', PlexLineup.fromJson),
   );

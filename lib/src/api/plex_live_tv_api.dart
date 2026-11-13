@@ -51,7 +51,7 @@ class PlexLiveTvApi {
   /// `GET /livetv/sessions/{sessionId}` — a single live session, as the
   /// item being watched (with the tuned channel in its media), or `null`
   /// when the answer holds none.
-  Future<PlexMetadata?> liveSession({required String sessionId}) =>
+  Future<PlexMetadata?> liveSession({required String sessionId}) async =>
       _http.requestJson(
         '/livetv/sessions/${seg(sessionId)}',
         (json) => PlexMediaContainer.fromJson(

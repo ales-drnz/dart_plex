@@ -108,7 +108,7 @@ class PlexSubscriptionsApi {
     required String subscriptionId,
     bool includeGrabs = false,
     bool includeStorage = false,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/media/subscriptions/${seg(subscriptionId)}',
     firstOf('MediaSubscription', PlexMediaSubscription.fromJson),
     queryParameters: {

@@ -56,7 +56,7 @@ class PlexSearchApi {
     required String query,
     required PlexMetadataType type,
     int? limit,
-  }) {
+  }) async {
     return _http.requestJson(
       '/library/sections/${seg(sectionId)}/search',
       queryParameters: {'query': query, 'type': type.value, 'limit': ?limit},

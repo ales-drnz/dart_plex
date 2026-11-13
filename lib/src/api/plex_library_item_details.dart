@@ -235,14 +235,15 @@ mixin _PlexItemDetails {
 
   /// `GET /library/people/{personId}` — a person, or `null` when the
   /// answer holds none.
-  Future<PlexPerson?> person({required String personId}) => _http.requestJson(
-    '/library/people/${seg(personId)}',
-    (json) => PlexMediaContainer.fromJson(
-      json is Map<String, Object?> ? json : const {},
-      'Directory',
-      PlexPerson.fromJson,
-    ).items.firstOrNull,
-  );
+  Future<PlexPerson?> person({required String personId}) async =>
+      _http.requestJson(
+        '/library/people/${seg(personId)}',
+        (json) => PlexMediaContainer.fromJson(
+          json is Map<String, Object?> ? json : const {},
+          'Directory',
+          PlexPerson.fromJson,
+        ).items.firstOrNull,
+      );
 
   /// `GET /library/people/{personId}/media` — items credited to
   /// a person.

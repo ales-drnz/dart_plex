@@ -107,7 +107,7 @@ class PlexPlaylistsApi {
     required String playlistId,
     int? start,
     int? size,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/playlists/${seg(playlistId)}/items',
     queryParameters: containerPage(start: start, size: size),
     itemsOf('Metadata', PlexMetadata.fromJson),
@@ -216,7 +216,7 @@ class PlexPlaylistsApi {
   /// takes.
   Future<List<PlexPlayQueueGenerator>> generators({
     required String playlistId,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/playlists/${seg(playlistId)}/generators',
     itemsOf('PlayQueueGenerator', PlexPlayQueueGenerator.fromJson),
   );
@@ -226,7 +226,7 @@ class PlexPlaylistsApi {
   Future<List<PlexMetadata>> generatorItems({
     required String playlistId,
     required int generatorId,
-  }) => _http.requestJson(
+  }) async => _http.requestJson(
     '/playlists/${seg(playlistId)}/items/$generatorId/items',
     itemsOf('Metadata', PlexMetadata.fromJson),
   );

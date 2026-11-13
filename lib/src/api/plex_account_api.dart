@@ -577,7 +577,7 @@ class PlexAccountApi {
     PlexMetadataType? type,
     int start = 0,
     int size = 50,
-  }) => _plexTv(
+  }) async => _plexTv(
     '$_discover/library/sections/watchlist/${filter.name}',
     (json) => PlexMediaContainer.fromJson(
       _object(json),

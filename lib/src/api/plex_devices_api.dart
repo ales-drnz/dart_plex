@@ -60,7 +60,7 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers/devices/{deviceId}` — one device's details, or
   /// `null` when the answer holds none.
-  Future<PlexTunerDevice?> details({required String deviceId}) =>
+  Future<PlexTunerDevice?> details({required String deviceId}) async =>
       _http.requestJson(
         '/media/grabbers/devices/${seg(deviceId)}',
         firstOf('Device', PlexTunerDevice.fromJson),
@@ -89,7 +89,7 @@ class PlexDevicesApi {
 
   /// `GET /media/grabbers/devices/{deviceId}/channels` — channels
   /// the device can see.
-  Future<List<PlexDeviceChannel>> channels({required String deviceId}) =>
+  Future<List<PlexDeviceChannel>> channels({required String deviceId}) async =>
       _http.requestJson(
         '/media/grabbers/devices/${seg(deviceId)}/channels',
         itemsOf('DeviceChannel', PlexDeviceChannel.fromJson),
