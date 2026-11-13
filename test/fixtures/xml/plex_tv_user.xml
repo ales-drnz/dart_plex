@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<user email="tester@example.invalid" id="100000001" uuid="0123456789abcdef" mailing_list_status="active" thumb="https://plex.tv/users/0123456789abcdef/avatar?c=1700000000" username="tester" title="tester" cloudSyncDevice="" locale="" authenticationToken="FAKE-ACCOUNT-TOKEN-0" authToken="FAKE-ACCOUNT-TOKEN-0" scrobbleTypes="" restricted="0" home="0" guest="0" queueEmail="queue+FAKE@save.example.invalid" queueUid="" hasPassword="true" homeSize="1" maxHomeSize="15" secure="1" certificateVersion="3">
+  <subscription active="0" status="Inactive" plan="">
+    <feature id="guided-upgrade"/>
+    <feature id="increase-password-complexity"/>
+    <feature id="upgrade-3ds2"/>
+    <feature id="plexpass_5_year_sku"/>
+    <feature id="enable-create-payment-account-age-check"/>
+    <feature id="ad-countdown-timer"/>
+    <feature id="adaptive_bitrate"/>
+    <feature id="amazon-loop-debug"/>
+    <feature id="Android - Dolby Vision"/>
+    <feature id="Android - PiP"/>
+    <feature id="apple-pay-purchases"/>
+    <feature id="avod-ad-analysis"/>
+    <feature id="avod-ad-loudness"/>
+    <feature id="avod-new-media"/>
+    <feature id="blacklist_get_signin"/>
+    <feature id="CU Sunset"/>
+    <feature id="client-radio-stations"/>
+    <feature id="cloudflare-turnstile-required"/>
+    <feature id="comments_and_replies_push_notifications"/>
+    <feature id="friend_request_push_notifications"/>
+    <feature id="community_friends_and_followers_new_followers_push"/>
+    <feature id="community_access_plex_tv"/>
+    <feature id="community_friends_group_notifications"/>
+    <feature id="companions_sonos"/>
+    <feature id="custom-home-removal"/>
+    <feature id="disable-facebook-auth"/>
+    <feature id="disable_home_user_friendships"/>
+    <feature id="disable_sharing_friendships"/>
+    <feature id="drm_support"/>
+    <feature id="le_isrg_root_x1"/>
+    <feature id="enable-create-payment-methods"/>
+    <feature id="federated-auth"/>
+    <feature id="home"/>
+    <feature id="HRK_enable_EUR"/>
+    <feature id="ios14-privacy-banner"/>
+    <feature id="iterable-notification-tokens"/>
+    <feature id="keep-payment-method"/>
+    <feature id="kevin-bacon"/>
+    <feature id="lets_encrypt"/>
+    <feature id="lightning-dvr-pivot"/>
+    <feature id="livetv"/>
+    <feature id="live-tv-support-incomplete-segments"/>
+    <feature id="tuner-sharing"/>
+    <feature id="metadata_search"/>
+    <feature id="vod_cloudflare"/>
+    <feature id="new_plex_pass_prices"/>
+    <feature id="news-provider-sunset-modal"/>
+    <feature id="photos-favorites"/>
+    <feature id="photos-metadata-edition"/>
+    <feature id="pms_health"/>
+    <feature id="rate-limit-client-token"/>
+    <feature id="rating_reminder_in_app_notifications"/>
+    <feature id="reactions_push_notifications_settings"/>
+    <feature id="shared_server_notification"/>
+    <feature id="shared_source_notification"/>
+    <feature id="redirect-subscription-to-account-page"/>
+    <feature id="scrobbling-service-plex-tv"/>
+    <feature id="collections"/>
+    <feature id="radio"/>
+    <feature id="exclude restrictions"/>
+    <feature id="signin_with_apple"/>
+    <feature id="spring_serve_ad_provider"/>
+    <feature id="transcoder_cache"/>
+    <feature id="TREBLE-show-features"/>
+    <feature id="two-factor-authentication"/>
+    <feature id="unsupportedtuners"/>
+    <feature id="plexpass_from_billing_context"/>
+    <feature id="vod-schema"/>
+    <feature id="watch-together-invite"/>
+    <feature id="web_server_dashboard"/>
+  </subscription>
+  <entitlements all="0">
+  </entitlements>
+  <profile_settings default_audio_language="C." default_subtitle_language="C." auto_select_subtitle="0" auto_select_audio="0" default_subtitle_accessibility="0" default_subtitle_forced="0" watched_indicator="1" media_reviews_visibility="0" media_posts_visibility="true"/>
+  <services>
+    <service identifier="epg" endpoint="https://epg.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="epg-staging" endpoint="https://epg-staging.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="epg-dev" endpoint="https://epg-dev.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="eyeq" endpoint="https://eyeq.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="eyeq-channel-icons" endpoint="https://eyeq-channel-icons.example.invalid/" status="online"/>
+    <service identifier="graph-dev" endpoint="https://graph-dev.example.invalid/" status="online"/>
+    <service identifier="graph-staging" endpoint="https://graph-staging.example.invalid/" status="online"/>
+    <service identifier="community-dev" endpoint="https://community-dev.example.invalid/" status="online"/>
+    <service identifier="community-staging" endpoint="https://community-staging.example.invalid/" status="online"/>
+    <service identifier="community" endpoint="https://community.example.invalid/" status="online"/>
+    <service identifier="metadata" endpoint="https://metadata.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="metadata-dev" endpoint="https://metadata-dev.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="metadata-provider" endpoint="https://metadata-provider.example.invalid/" status="online"/>
+    <service identifier="tmsapi" endpoint="https://tmsapi.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="subtitles-search" endpoint="https://subtitles-search.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="acoustid" endpoint="https://acoustid.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="lyricfind" endpoint="https://lyricfind.example.invalid/" token="FAKE-SERVICE-TOKEN" secret="FAKE-SERVICE-SECRET" status="online"/>
+    <service identifier="lyricfind-search" endpoint="https://lyricfind-search.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+    <service identifier="tvdb" endpoint="https://tvdb.example.invalid/" token="FAKE-SERVICE-TOKEN" status="online"/>
+  </services>
+  <username>tester</username>
+  <email>tester@example.invalid</email>
+  <joined-at type="datetime">2024-01-02 03:04:05 UTC</joined-at>
+  <authentication-token>FAKE-ACCOUNT-TOKEN-0</authentication-token>
+</user>

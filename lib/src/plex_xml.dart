@@ -11,8 +11,15 @@
 /// children are lists under their tag name, and the root is wrapped under
 /// its own tag — `<MediaContainer size="1"><User id="7"/></MediaContainer>`
 /// becomes `{MediaContainer: {size: "1", User: [{id: "7"}]}}`. Values stay
-/// strings (the lenient readers in `plex_json.dart` take them). Text
-/// content, comments, processing instructions and DTDs are skipped.
+/// strings (the lenient readers in `plex_json.dart` take them).
+///
+/// A child with text and nothing else (`<email>a@b.c</email>`, as in
+/// plex.tv's legacy `<user>`) is read as an attribute of its parent would
+/// be: a string under its tag name. An attribute of the same name wins
+/// over any child (the legacy `<user>` carries `username` and `email` as
+/// both), and the first of two such children over the second. The text of
+/// an element that has attributes or children, comments, processing
+/// instructions and DTDs are skipped.
 library;
 
 /// The Plex-JSON shape of [xml]. Throws a [FormatException], and nothing
@@ -27,31 +34,43 @@ Map<String, Object?> plexXmlToJson(String xml) {
 bool looksLikeXml(String text) => text.trimLeft().startsWith('<');
 
 final class _Reader {
+  /// Deeper than any Plex answer; past it the document is refused rather
+  /// than left to overflow the stack.
+  static const _maxDepth = 64;
+
   final String s;
   int i = 0;
 
   _Reader(this.s);
 
   (String, Map<String, Object?>) readDocument() {
-    _skipMisc();
-    if (i >= s.length || s[i] != '<') {
-      throw FormatException('No root element', s, i);
-    }
-    return _element();
+    _skipMisc(prolog: true);
+    if (i >= s.length) throw FormatException('No root element', s, i);
+    final (name, map, _) = _element(1);
+    _skipMisc(prolog: false);
+    if (i < s.length) throw FormatException('Content after the root', s, i);
+    return (name, map ?? <String, Object?>{});
   }
 
-  void _skipMisc() {
+  /// Skips what may surround the root: white space, comments and
+  /// processing instructions, and before it ([prolog]) a byte-order mark
+  /// and a DTD. Stops at anything else.
+  void _skipMisc({required bool prolog}) {
+    if (prolog && s.startsWith('﻿', i)) i++;
     while (i < s.length) {
       if (s.startsWith('<?', i)) {
         i = _after('?>');
       } else if (s.startsWith('<!--', i)) {
         i = _after('-->');
-      } else if (s.startsWith('<!', i)) {
-        i = _after('>');
-      } else if (s[i] == '<') {
-        return;
-      } else {
+      } else if (prolog && s.startsWith('<!DOCTYPE', i)) {
+        // An internal subset (`[ … ]`) holds declarations with their own >.
+        final gt = _after('>');
+        final subset = s.indexOf('[', i);
+        i = subset >= 0 && subset < gt ? _after(']>') : gt;
+      } else if (_isSpace(s.codeUnitAt(i))) {
         i++;
+      } else {
+        return;
       }
     }
   }
@@ -62,7 +81,13 @@ final class _Reader {
     return at + end.length;
   }
 
-  (String, Map<String, Object?>) _element() {
+  /// The element at [i]: its name and its map — or, when it has text and
+  /// neither attributes nor children, no map and that text.
+  (String, Map<String, Object?>?, String) _element(int depth) {
+    if (depth > _maxDepth) {
+      throw FormatException('Nested deeper than $_maxDepth elements', s, i);
+    }
+    if (s[i] != '<') throw FormatException('Expected an element', s, i);
     i++; // <
     final name = _name();
     final map = <String, Object?>{};
@@ -71,7 +96,7 @@ final class _Reader {
       if (i >= s.length) throw FormatException('Unterminated tag', s, i);
       if (s.startsWith('/>', i)) {
         i += 2;
-        return (name, map);
+        return (name, map, '');
       }
       if (s[i] == '>') {
         i++;
@@ -97,30 +122,53 @@ final class _Reader {
       map[attr] = _unescape(s.substring(i + 1, end));
       i = end + 1;
     }
-    // Content: children and text, up to the closing tag.
+    // Content: children and text, up to the closing tag. The text counts
+    // only while the element has nothing else.
+    var textOnly = map.isEmpty;
+    final text = StringBuffer();
     while (true) {
       final lt = s.indexOf('<', i);
       if (lt < 0) throw FormatException('Missing </$name>', s, i);
+      if (textOnly) text.write(_unescape(s.substring(i, lt)));
       i = lt;
       if (s.startsWith('</', i)) {
-        i = _after('>');
-        return (name, map);
+        i += 2;
+        final at = i;
+        if (_name() != name) throw FormatException('Expected </$name>', s, at);
+        _spaces();
+        if (i >= s.length || s[i] != '>') {
+          throw FormatException('Unterminated </$name>', s, i);
+        }
+        i++;
+        final value = textOnly ? text.toString().trim() : '';
+        return (name, value.isEmpty ? map : null, value);
       }
-      if (s.startsWith('<!--', i) || s.startsWith('<?', i)) {
-        _skipMisc();
+      if (s.startsWith('<!--', i)) {
+        i = _after('-->');
+        continue;
+      }
+      if (s.startsWith('<?', i)) {
+        i = _after('?>');
         continue;
       }
       if (s.startsWith('<![CDATA[', i)) {
-        i = _after(']]>');
+        final end = _after(']]>');
+        if (textOnly) text.write(s.substring(i + 9, end - 3));
+        i = end;
         continue;
       }
-      final at = i;
-      final (child, value) = _element();
-      final list = map[child] ??= <Object?>[];
-      if (list is! List<Object?>) {
-        throw FormatException('<$child> clashes with an attribute', s, at);
+      final (child, value, childText) = _element(depth + 1);
+      textOnly = false;
+      final had = map[child];
+      if (value == null) {
+        // Text alone: a string, unless the name is taken.
+        if (had == null) map[child] = childText;
+      } else if (had == null) {
+        map[child] = <Object?>[value];
+      } else if (had is List<Object?>) {
+        had.add(value);
       }
-      list.add(value);
+      // Otherwise an attribute, or a text child, has the name and keeps it.
     }
   }
 
@@ -133,17 +181,15 @@ final class _Reader {
     return s.substring(start, i);
   }
 
+  static bool _isSpace(int c) =>
+      c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D;
+
+  // White space and > / = <, none of which a name holds.
   static bool _isEnd(int c) =>
-      c == 0x20 ||
-      c == 0x09 ||
-      c == 0x0A ||
-      c == 0x0D || //
-      c == 0x3E ||
-      c == 0x2F ||
-      c == 0x3D; // > / =
+      _isSpace(c) || c == 0x3E || c == 0x2F || c == 0x3D || c == 0x3C;
 
   void _spaces() {
-    while (i < s.length && ' \t\r\n'.contains(s[i])) {
+    while (i < s.length && _isSpace(s.codeUnitAt(i))) {
       i++;
     }
   }

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer friendlyName="myPlex" identifier="com.plexapp.plugins.myplex" machineIdentifier="0000000000000000000000000000000000000000" size="1">
+  <User id="100000001" uuid="0123456789abcdef" admin="1" guest="0" restricted="0" restrictionProfile="" hasPassword="true" protected="0" title="tester" username="tester" email="tester@example.invalid" thumb="https://plex.tv/users/0123456789abcdef/avatar?c=1700000000"/>
+</MediaContainer>
