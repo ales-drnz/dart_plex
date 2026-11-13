@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'quality/**']
   pull_request:
   workflow_dispatch:
     inputs:
@@ -107,19 +107,27 @@ jobs:
         with:
           path: dart_plex
       # The sibling's branch: main from main; otherwise the branch of the
-      # same name, else its newest release/* branch, else main. A transport
-      # change lands in both repositories on release branches first.
+      # same name, else its newest branch of the same family (quality/*
+      # for quality/*, release/* for release/*: the two packages have their
+      # own version numbers), else its newest release/* branch, else main.
+      # A transport change lands in both repositories on these branches
+      # first.
       - name: Check out dart_jellyfin
         run: |
           url=https://github.com/ales-drnz/dart_jellyfin.git
+          newest() {
+            git ls-remote --heads "$url" "$1" \
+              | sed 's|.*refs/heads/||' | sort -V | tail -n 1
+          }
           ref=main
           if [ "$BRANCH" != main ]; then
             if git ls-remote --exit-code --heads "$url" "$BRANCH" >/dev/null; then
               ref=$BRANCH
             else
-              newest=$(git ls-remote --heads "$url" 'release/*' \
-                | sed 's|.*refs/heads/||' | sort -V | tail -n 1)
-              ref=${newest:-main}
+              family=${BRANCH%%/*}
+              ref=$(newest "$family/*")
+              [ -n "$ref" ] || ref=$(newest 'release/*')
+              ref=${ref:-main}
             fi
           fi
           echo "dart_jellyfin at $ref"
