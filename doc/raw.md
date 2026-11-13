@@ -47,7 +47,11 @@ await for (final chunk in res.stream) {
 
 `requestBytes()` and `requestStream()` take a full URL by default; pass
 `absoluteUrl: false` for a path on the connected server. The token
-travels in the headers either way. Listen to a `PlexStreamedResponse`'s
+travels in the headers to the connected server (its host and port) and
+to plex.tv only: a full URL to any other host, such as artwork on a CDN,
+is requested without it. To send one there, name it:
+`extraHeaders: {'X-Plex-Token': token}` on `request()` or
+`requestStream()`. Listen to a `PlexStreamedResponse`'s
 `stream` once; cancelling the subscription closes the connection. A
 pause longer than the receive timeout fails the stream unless
 `stallTimeout` is `false`.

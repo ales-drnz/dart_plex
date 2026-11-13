@@ -44,7 +44,10 @@ try {
   } else if (e.isPassRequired) {
     showPassNeeded(); // remote video needs a Plex Pass or Remote Watch Pass
   } else if (e.isAuthError) {
-    await signInAgain(); // 401, 403 or 498: the token is refused
+    // 401 or 498: the token is refused. A 403 can also be a valid token
+    // that may not do this (a shared user on an owner's route): check
+    // e.statusCode before signing the user out.
+    await signInAgain();
   } else if (e.isTransient) {
     scheduleRetry(e.retryAfter); // network, 5xx or 429
   } else if (e.isNotFound) {

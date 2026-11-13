@@ -24,6 +24,10 @@ enum PlexErrorType {
   /// `498` (plex.tv's "token expired", for a JWT), or a sign-in answered
   /// without a token. Callers should refresh the JWT or re-run the PIN or
   /// sign-in flow.
+  ///
+  /// A `403` is also what a server answers to a valid token that may not
+  /// do what was asked (a shared user calling an owner's route): check
+  /// [PlexException.statusCode] before signing the user out for one.
   auth,
 
   /// Playback or a transcode was refused because the account needs a

@@ -1035,6 +1035,197 @@ void main() {
     );
   });
 
+  group('who gets the token', () {
+    late CapturingAdapter adapter;
+    late PlexConnection http;
+
+    setUp(() {
+      adapter = CapturingAdapter();
+      http = _connection(adapter)..token = 'secret';
+    });
+
+    Future<Map<String, String>> sent(
+      String url, {
+      bool absoluteUrl = true,
+      Map<String, String>? extraHeaders,
+    }) async {
+      await http.request<Object>(
+        url,
+        absoluteUrl: absoluteUrl,
+        extraHeaders: extraHeaders,
+      );
+      return adapter.last!.headers;
+    }
+
+    test('the connected server, by path or by full URL', () async {
+      expect(
+        (await sent('/identity', absoluteUrl: false))['X-Plex-Token'],
+        'secret',
+      );
+      expect(
+        (await sent('https://pms.example.test/identity'))['X-Plex-Token'],
+        'secret',
+      );
+      expect(
+        (await sent('https://PMS.example.test:443/x'))['X-Plex-Token'],
+        'secret',
+      );
+    });
+
+    test('plex.tv and its subdomains', () async {
+      for (final url in [
+        'https://plex.tv/api/v2/user',
+        'https://discover.provider.plex.tv/library',
+        'https://clients.plex.tv/api/v2/pins',
+      ]) {
+        expect((await sent(url))['X-Plex-Token'], 'secret', reason: url);
+      }
+    });
+
+    test('no other host: the identity goes, the token does not', () async {
+      for (final url in [
+        'https://image.tmdb.org/t/p/poster.jpg',
+        'https://notplex.tv/x',
+        'https://plex.tv.evil.test/x',
+        'https://pms.example.test:8443/x',
+      ]) {
+        final headers = await sent(url);
+        expect(headers.containsKey('X-Plex-Token'), isFalse, reason: url);
+        expect(headers['X-Plex-Client-Identifier'], 'test-uuid');
+      }
+    });
+
+    test('a full URL in a relative request is judged by its host', () async {
+      final headers = await sent(
+        'https://image.tmdb.org/t/p/poster.jpg',
+        absoluteUrl: false,
+      );
+      expect(headers.containsKey('X-Plex-Token'), isFalse);
+    });
+
+    test('an explicit extra header still sends one anywhere', () async {
+      final headers = await sent(
+        'https://other.example.test/x',
+        extraHeaders: {'X-Plex-Token': 'named'},
+      );
+      expect(headers['X-Plex-Token'], 'named');
+    });
+
+    test('requestStream and requestBytes follow the same rule', () async {
+      final res = await http.requestStream('https://cdn.example.test/a.mp3');
+      await res.stream.drain<void>();
+      expect(adapter.last!.headers.containsKey('X-Plex-Token'), isFalse);
+      await http.requestBytes('https://cdn.example.test/a.jpg');
+      expect(adapter.last!.headers.containsKey('X-Plex-Token'), isFalse);
+    });
+
+    test('a 401 from a host that got no token renews nothing', () async {
+      var renewals = 0;
+      http.renewal.renewer = (_) async {
+        renewals++;
+        return 'fresh';
+      };
+      adapter.respond = (_) => CannedResponse(401, const []);
+      final e = await _caught(
+        http.request<Object>('https://other.example.test/x'),
+      );
+      expect(e.statusCode, 401);
+      expect(renewals, 0);
+      expect(http.token, 'secret');
+    });
+
+    test('a renewer that throws is the cause of the refusal', () async {
+      http.renewal.renewer = (_) async => throw StateError('no network');
+      adapter.respond = (_) => CannedResponse(401, const []);
+      final e = await _caught(http.request<Object>('/x'));
+      expect(e.statusCode, 401);
+      expect(e.type, PlexErrorType.auth);
+      expect(e.cause, isA<StateError>());
+    });
+  });
+
+  group('classification by type (dart:io)', () {
+    Future<PlexException> failing(Object error) => _caught(
+      _connection(_FnClient((_) => Future.error(error))).request<Object>('/x'),
+    );
+
+    test('a refused connection is a connection error', () async {
+      final e = await failing(
+        const SocketException(
+          'Connection refused',
+          osError: OSError('Connection refused', 111),
+        ),
+      );
+      expect(e.type, PlexErrorType.connection);
+    });
+
+    test('ETIMEDOUT is a timeout, whatever the wording', () async {
+      for (final code in [110, 60, 10060]) {
+        final e = await failing(
+          SocketException('Verbindung', osError: OSError('Zeit', code)),
+        );
+        expect(e.type, PlexErrorType.timeout, reason: '$code');
+      }
+    });
+
+    test("dart:io's connection timeout is a timeout", () async {
+      final e = await failing(
+        const SocketException('HTTP connection timed out after 0:00:15'),
+      );
+      expect(e.type, PlexErrorType.timeout);
+    });
+
+    test('a failed TLS handshake is a connection error', () async {
+      final e = await failing(const HandshakeException('bad certificate'));
+      expect(e.type, PlexErrorType.connection);
+      expect(e.isNetworkFailure, isTrue);
+    });
+
+    test('an unknown error stays unknown', () async {
+      final e = await failing(StateError('odd'));
+      expect(e.type, PlexErrorType.unknown);
+    });
+  });
+
+  group('base URL', () {
+    PlexConnection bare() => PlexConnection(
+      credentials: _credentials,
+      httpClient: _FnClient((_) => throw UnimplementedError()),
+    );
+
+    test('a trailing slash is dropped; null disconnects', () {
+      final http = bare()..baseUrl = 'http://192.168.1.10:32400/';
+      expect(http.baseUrl, 'http://192.168.1.10:32400');
+      http.baseUrl = null;
+      expect(http.baseUrl, isNull);
+    });
+
+    test('a URL without http(s) or without a host is a state error', () {
+      for (final url in ['192.168.1.10:32400', 'pms.local', 'ftp://h', '']) {
+        expect(
+          () => bare().baseUrl = url,
+          throwsA(
+            isA<PlexException>().having(
+              (e) => e.type,
+              'type',
+              PlexErrorType.state,
+            ),
+          ),
+          reason: url,
+        );
+      }
+    });
+
+    test('PlexClient.connect() refuses it and keeps the previous server', () {
+      final plex = testClient(CapturingAdapter());
+      expect(
+        () => plex.connect('pms.local:32400'),
+        throwsA(isA<PlexException>()),
+      );
+      expect(plex.baseUrl, 'http://192.168.1.10:32400');
+    });
+  });
+
   group('client ownership', () {
     test('an injected client is not closed', () {
       final client = _FnClient((_) => throw UnimplementedError());

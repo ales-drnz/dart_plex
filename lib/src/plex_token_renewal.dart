@@ -48,11 +48,25 @@ final class PlexTokenRenewal {
       try {
         return await attempt();
       } on PlexException catch (e) {
-        if (renewed ||
-            (e.statusCode != 401 && e.statusCode != 498) ||
-            !await _renew(connection, sent)) {
-          rethrow;
+        if (renewed || (e.statusCode != 401 && e.statusCode != 498)) rethrow;
+        final bool fresh;
+        try {
+          fresh = await _renew(connection, sent);
+        } on Object catch (renewError) {
+          // The refusal is what the caller asked about; why it could not
+          // be renewed rides along as its cause.
+          throw PlexException(
+            e.message,
+            type: e.type,
+            statusCode: e.statusCode,
+            path: e.path,
+            cause: renewError,
+            stackTrace: e.stackTrace,
+            retryAfter: e.retryAfter,
+            body: e.body,
+          );
         }
+        if (!fresh) rethrow;
         renewed = true;
         return attempt();
       }
@@ -60,20 +74,15 @@ final class PlexTokenRenewal {
   }
 
   /// Asks [renewer] for a token to replace [rejected]; true when there is
-  /// a different one to retry with.
+  /// a different one to retry with. Throws what [renewer] throws.
   Future<bool> _renew(PlexConnection connection, String? rejected) async {
     final renew = renewer;
     if (renew == null) return false;
     if (connection.token != rejected) return true;
-    final String? fresh;
-    try {
-      fresh = await (_pending ??= runZoned(
-        () => renew(rejected),
-        zoneValues: {_inside: true},
-      ).whenComplete(() => _pending = null));
-    } catch (_) {
-      return false;
-    }
+    final fresh = await (_pending ??= runZoned(
+      () => renew(rejected),
+      zoneValues: {_inside: true},
+    ).whenComplete(() => _pending = null));
     if (fresh == null || fresh == rejected) return false;
     if (connection.token == rejected) connection.token = fresh;
     return true;

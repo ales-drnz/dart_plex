@@ -41,7 +41,8 @@ final class PlexException implements Exception {
   String? get path => _path == null ? null : _redact(_path);
 
   /// The underlying error, if any (the transport's `ClientException`, a
-  /// `FormatException`, …).
+  /// `FormatException`, …). Kept as it came: its text can quote the
+  /// request URL with a token in it, so log [toString], not this.
   final Object? cause;
 
   /// How long the server asked the client to wait (`Retry-After`, on a
@@ -51,6 +52,7 @@ final class PlexException implements Exception {
   /// The body of the error answer as text, whole, when the server sent
   /// one ([message] holds at most its first 512 bytes). Kept so a refusal
   /// the package does not recognise can still be read, logged or shown.
+  /// Kept as it came, not redacted.
   final String? body;
 
   /// The originating stack trace, when captured. Preserves the async stack
