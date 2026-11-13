@@ -22,6 +22,9 @@ Uint8List gunzip(Uint8List bytes) =>
 Stream<List<int>> gunzipStream(Stream<List<int>> body) =>
     throw UnsupportedError('gzip is handled by the browser');
 
+/// The browser reports a failed request as text only: the type never says.
+bool? timedOut(Object error) => null;
+
 /// Whether [runOffIsolate] really leaves the calling isolate.
 const bool canUseIsolates = false;
 

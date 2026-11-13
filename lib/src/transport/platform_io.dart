@@ -84,6 +84,26 @@ int _isize(List<int> b, int at) =>
 
 int _mod32(int n) => n & 0xFFFFFFFF;
 
+/// Whether a transport [error] is a timeout (`true`) or another failure
+/// to reach the server (`false`), told by its type; `null` when the type
+/// does not say.
+///
+/// A `SocketException` is a timeout when the OS says so (`ETIMEDOUT`) or
+/// when it is `dart:io`'s own connection timeout, which has no code. A
+/// failed TLS handshake never reached the server either.
+bool? timedOut(Object error) => switch (error) {
+  TimeoutException() => true,
+  SocketException(:final osError, :final message) =>
+    _timedOutCodes.contains(osError?.errorCode) ||
+        message.contains('timed out'),
+  TlsException() => false,
+  _ => null,
+};
+
+/// `ETIMEDOUT` on Linux and Android, on macOS and iOS, and on Windows
+/// (`WSAETIMEDOUT`).
+const Set<int> _timedOutCodes = {110, 60, 10060};
+
 /// Whether [runOffIsolate] really leaves the calling isolate.
 const bool canUseIsolates = true;
 

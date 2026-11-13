@@ -131,8 +131,29 @@ final class PlexConnection {
   String? get baseUrl => _shared.baseUrl;
 
   /// Sets the server root URL, stripping a trailing `/` if present.
+  ///
+  /// Throws a [PlexErrorType.state] [PlexException] for a URL that is
+  /// not `http://` or `https://` with a host: better now than at the first
+  /// request.
   set baseUrl(String? value) {
-    _shared.baseUrl = value != null && value.endsWith('/')
+    if (value == null) {
+      _shared.baseUrl = null;
+      return;
+    }
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.isScheme('http') && !uri.isScheme('https')) {
+      throw PlexException(
+        'The server URL must start with http:// or https://: $value',
+        type: PlexErrorType.state,
+      );
+    }
+    if (uri.host.isEmpty) {
+      throw PlexException(
+        'The server URL has no host: $value',
+        type: PlexErrorType.state,
+      );
+    }
+    _shared.baseUrl = value.endsWith('/')
         ? value.substring(0, value.length - 1)
         : value;
   }
@@ -168,12 +189,34 @@ final class PlexConnection {
     if (_shared.ownsClient) _shared.client.close();
   }
 
-  /// Headers sent on every request: the `X-Plex-*` identity, `Accept:
-  /// application/json` (PMS answers XML otherwise) and the token.
-  Map<String, String> get _baseHeaders => {
+  /// Hosts that get the token besides the connected server, each with its
+  /// subdomains.
+  static const List<String> _tokenHosts = ['plex.tv'];
+
+  /// Headers sent to [uri]: the `X-Plex-*` identity, `Accept:
+  /// application/json` (PMS answers XML otherwise) and, when
+  /// [sendsTokenTo] says so, the token.
+  Map<String, String> _headersFor(Uri uri) => {
     ...credentials.toHeaders(),
-    'X-Plex-Token': ?token,
+    if (sendsTokenTo(uri)) 'X-Plex-Token': ?token,
   };
+
+  /// Whether a request to [uri] carries the token: only the connected
+  /// server (the host and port of [baseUrl], whatever the scheme) and
+  /// [_tokenHosts] do. A full URL to any other host — artwork on a CDN,
+  /// say — goes without, so the token never reaches a third party; a
+  /// request that must send it there names it in its `extraHeaders`.
+  @visibleForTesting
+  bool sendsTokenTo(Uri uri) {
+    final host = uri.host.toLowerCase();
+    for (final trusted in _tokenHosts) {
+      if (host == trusted || host.endsWith('.$trusted')) return true;
+    }
+    final base = baseUrl == null ? null : Uri.tryParse(baseUrl!);
+    return base != null &&
+        base.host.toLowerCase() == host &&
+        base.port == uri.port;
+  }
 
   /// Issues an HTTP request relative to [baseUrl] (or absolute when
   /// `absoluteUrl` is `true`) and decodes the body per [responseType].
@@ -183,6 +226,8 @@ final class PlexConnection {
   ///
   /// Pass [absoluteUrl] = true and a full URL in [path] to target a host
   /// other than the connected server — used by the plex.tv account API.
+  /// The token goes only to the connected server and to plex.tv (see
+  /// [sendsTokenTo]).
   ///
   /// A `List` value in [queryParameters] repeats its key once per element.
   ///
@@ -316,31 +361,36 @@ final class PlexConnection {
     PlexCancelToken? cancelToken,
   }) async {
     const method = 'GET';
-    final opened = await _retrying(method, cancelToken, extraHeaders, () async {
-      final opened = await _open(
-        url,
-        method: 'GET',
-        queryParameters: queryParameters,
-        data: null,
-        extraHeaders: extraHeaders,
-        absoluteUrl: absoluteUrl,
-        cancelToken: cancelToken,
-      );
-      if (!stallTimeout) opened.receiveTimeout = null;
-      final res = opened.response;
-      final gzipped = _isGzipped(res.headers);
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        final body = await _readAll(opened);
-        throw _statusError(
-          res.statusCode,
-          res.reasonPhrase,
-          opened.uri,
-          gzipped ? _tryGunzip(body) : body,
-          res.headers,
+    final uri = _target(url, queryParameters, absoluteUrl: absoluteUrl);
+    final opened = await _retrying(
+      method,
+      uri,
+      cancelToken,
+      extraHeaders,
+      () async {
+        final opened = await _open(
+          uri,
+          method: method,
+          data: null,
+          extraHeaders: extraHeaders,
+          cancelToken: cancelToken,
         );
-      }
-      return opened;
-    });
+        if (!stallTimeout) opened.receiveTimeout = null;
+        final res = opened.response;
+        final gzipped = _isGzipped(res.headers);
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          final body = await _readAll(opened);
+          throw _statusError(
+            res.statusCode,
+            res.reasonPhrase,
+            opened.uri,
+            gzipped ? _tryGunzip(body) : body,
+            res.headers,
+          );
+        }
+        return opened;
+      },
+    );
     final res = opened.response;
     final gzipped = _isGzipped(res.headers);
     final body = _guard(opened);
@@ -371,30 +421,67 @@ final class PlexConnection {
     required Map<String, String>? extraHeaders,
     required bool absoluteUrl,
     required PlexCancelToken? cancelToken,
-  }) => _retrying(
-    method,
-    cancelToken,
-    extraHeaders,
-    () => _exchangeOnce(
-      path,
-      method: method,
-      queryParameters: queryParameters,
-      data: data,
-      extraHeaders: extraHeaders,
-      absoluteUrl: absoluteUrl,
-      cancelToken: cancelToken,
-    ),
-  );
+  }) async {
+    final uri = _target(path, queryParameters, absoluteUrl: absoluteUrl);
+    return _retrying(
+      method,
+      uri,
+      cancelToken,
+      extraHeaders,
+      () => _exchangeOnce(
+        uri,
+        method: method,
+        data: data,
+        extraHeaders: extraHeaders,
+        cancelToken: cancelToken,
+      ),
+    );
+  }
+
+  /// The URI of a request, or a [PlexErrorType.state] [PlexException]
+  /// when the client is closed, not connected (for a relative [path]) or
+  /// the URL is not one.
+  Uri _target(
+    String path,
+    Map<String, Object?>? queryParameters, {
+    required bool absoluteUrl,
+  }) {
+    _checkOpen();
+    try {
+      return buildUri(absoluteUrl ? path : _resolve(path), queryParameters);
+    } on FormatException catch (e, st) {
+      throw PlexException(
+        'Invalid request URL: ${e.message}',
+        type: PlexErrorType.state,
+        path: path,
+        cause: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  void _checkOpen() {
+    if (_shared.closed) {
+      throw const PlexException(
+        'PlexClient.close() has been called.',
+        type: PlexErrorType.state,
+      );
+    }
+  }
 
   /// Runs [attempt] under the client's [PlexRetryPolicy].
   Future<T> _retrying<T>(
     String method,
+    Uri uri,
     PlexCancelToken? cancelToken,
     Map<String, String>? extraHeaders,
     Future<T> Function() attempt,
   ) async {
     final token = cancelToken ?? scopeToken;
-    final guarded = _shared.renewal.guard(this, extraHeaders, attempt);
+    // A host that was not sent the token cannot have refused it.
+    final guarded = sendsTokenTo(uri)
+        ? _shared.renewal.guard(this, extraHeaders, attempt)
+        : attempt;
     for (var n = 1; ; n++) {
       try {
         return await guarded();
@@ -415,28 +502,24 @@ final class PlexConnection {
         await waited.future;
         unregister?.call();
         if (token != null && token.isCancelled) {
-          throw _cancelled(Uri.tryParse(e.path ?? '') ?? Uri());
+          throw _cancelled(uri);
         }
       }
     }
   }
 
   Future<_Exchange> _exchangeOnce(
-    String path, {
+    Uri uri, {
     required String method,
-    required Map<String, Object?>? queryParameters,
     required Object? data,
     required Map<String, String>? extraHeaders,
-    required bool absoluteUrl,
     required PlexCancelToken? cancelToken,
   }) async {
     final opened = await _open(
-      path,
+      uri,
       method: method,
-      queryParameters: queryParameters,
       data: data,
       extraHeaders: extraHeaders,
-      absoluteUrl: absoluteUrl,
       cancelToken: cancelToken,
     );
     final res = opened.response;
@@ -456,32 +539,13 @@ final class PlexConnection {
 
   /// Sends the request and waits for the response headers.
   Future<_Opened> _open(
-    String path, {
+    Uri uri, {
     required String method,
-    required Map<String, Object?>? queryParameters,
     required Object? data,
     required Map<String, String>? extraHeaders,
-    required bool absoluteUrl,
     required PlexCancelToken? cancelToken,
   }) async {
-    if (_shared.closed) {
-      throw const PlexException(
-        'PlexClient.close() has been called.',
-        type: PlexErrorType.state,
-      );
-    }
-    final Uri uri;
-    try {
-      uri = buildUri(absoluteUrl ? path : _resolve(path), queryParameters);
-    } on FormatException catch (e, st) {
-      throw PlexException(
-        'Invalid request URL: ${e.message}',
-        type: PlexErrorType.state,
-        path: path,
-        cause: e,
-        stackTrace: st,
-      );
-    }
+    _checkOpen();
     final token = cancelToken ?? scopeToken;
     if (token != null && token.isCancelled) throw _cancelled(uri);
 
@@ -494,7 +558,7 @@ final class PlexConnection {
     // An empty extra header removes the header (`X-Plex-Token: ''`), whatever
     // the case of its name: HTTP header names are case-insensitive.
     final merged = <String, String>{
-      ..._baseHeaders,
+      ..._headersFor(uri),
       if (_shared.inflates) 'Accept-Encoding': 'gzip',
     };
     extraHeaders?.forEach((name, value) {
@@ -855,14 +919,19 @@ final class PlexConnection {
     }
     if (e is TimeoutException) return _timeout('$e', uri, e, st);
     final text = '$e';
-    // A redirect loop is an answer, not a lost connection: not retried.
-    final type = text.contains('timed out')
-        ? PlexErrorType.timeout
-        : e is http.ClientException && text.contains('Redirect')
-        ? PlexErrorType.unknown
-        : e is http.ClientException
-        ? PlexErrorType.connection
-        : PlexErrorType.unknown;
+    // By type where the platform can tell; by the wording otherwise
+    // (`package:http` wraps a `dart:io` `HttpException` into a bare
+    // `ClientException`, and a browser reports only text). A redirect
+    // loop is an answer, not a lost connection: not retried.
+    final type = switch (platform.timedOut(e)) {
+      true => PlexErrorType.timeout,
+      false => PlexErrorType.connection,
+      null when text.contains('timed out') => PlexErrorType.timeout,
+      null when e is http.ClientException && text.contains('Redirect') =>
+        PlexErrorType.unknown,
+      null when e is http.ClientException => PlexErrorType.connection,
+      null => PlexErrorType.unknown,
+    };
     return PlexException(
       text,
       type: type,
