@@ -532,7 +532,9 @@ final class PlexHomeUser {
     guest: asBool(json['guest']),
     restricted: asBool(json['restricted']),
     restrictionProfile: asString(json['restrictionProfile']),
-    protected: asBool(json['protected']) || asBool(json['hasPassword']),
+    // Not `hasPassword`: that is the account's own password, "true" for
+    // an admin plex.tv lists with `protected="0"`.
+    protected: asBool(json['protected']),
     raw: json,
   );
 }

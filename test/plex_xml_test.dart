@@ -172,6 +172,9 @@ void main() {
       expect(user.title, 'tester');
       expect(user.admin, isTrue);
       expect(user.restricted, isFalse);
+      // hasPassword="true" is the account's password, not a PIN.
+      expect(user.raw['hasPassword'], 'true');
+      expect(user.protected, isFalse);
       expect(user.thumb, startsWith('https://plex.tv/users/'));
     });
 
