@@ -262,8 +262,8 @@ final class PlexTag {
   }
   for (final candidate in [fastKey, key]) {
     if (candidate == null || !candidate.contains('?')) continue;
-    final params = Uri.parse(candidate).queryParameters;
-    for (final entry in params.entries) {
+    final params = _uriPart(candidate, (u) => u.queryParameters);
+    for (final entry in (params ?? const <String, String>{}).entries) {
       if (entry.key == 'type') continue;
       final value = int.tryParse(entry.value);
       if (value != null) return (id: value, field: entry.key);
@@ -272,8 +272,8 @@ final class PlexTag {
   if (key != null) {
     final bare = int.tryParse(key);
     if (bare != null) return (id: bare, field: null);
-    final segments = Uri.parse(key).pathSegments;
-    if (segments.isNotEmpty) {
+    final segments = _uriPart(key, (u) => u.pathSegments);
+    if (segments != null && segments.isNotEmpty) {
       final last = int.tryParse(segments.last);
       if (last != null) {
         return (
@@ -284,6 +284,16 @@ final class PlexTag {
     }
   }
   return (id: null, field: null);
+}
+
+/// A part of the URI [s], or `null` when [s] is not one or the part does
+/// not decode (`%FF`): a key the server made up must not fail the page.
+T? _uriPart<T>(String s, T Function(Uri) part) {
+  try {
+    return part(Uri.parse(s));
+  } on FormatException {
+    return null;
+  }
 }
 
 /// A person in the library (`/library/people/{id}`): an actor, a

@@ -13,6 +13,7 @@ import 'api/plex_account_api.dart';
 import 'plex_client.dart';
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
+import 'plex_json.dart';
 
 /// The Ed25519 key pair a device signs in to plex.tv with.
 ///
@@ -260,10 +261,8 @@ final class PlexJwt {
 
   /// Seconds since the epoch, or `null` when [v] is not a number in
   /// [DateTime]'s range.
-  static DateTime? _epoch(Object? v) {
-    if (v is! num || !v.isFinite || v.abs() > 8640000000000) return null;
-    return DateTime.fromMillisecondsSinceEpoch(v.toInt() * 1000, isUtc: true);
-  }
+  /// (A claim is a JSON number: a numeric string is not one.)
+  static DateTime? _epoch(Object? v) => v is num ? asEpochSeconds(v) : null;
 
   @override
   String toString() => 'PlexJwt(expiresAt: $expiresAt)';
