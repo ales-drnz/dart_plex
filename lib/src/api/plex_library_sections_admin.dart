@@ -21,7 +21,7 @@ mixin _PlexSectionAdmin {
     final qp = <String, Object?>{};
     if (includeDetails != null) qp['includeDetails'] = includeDetails ? 1 : 0;
     return _http.requestJson(
-      '/library/sections/$sectionId',
+      '/library/sections/${seg(sectionId)}',
       queryParameters: qp.isEmpty ? null : qp,
       (json) => PlexSectionDetails.fromJson(
         json is Map<String, Object?> ? json : const {},
@@ -55,7 +55,7 @@ mixin _PlexSectionAdmin {
     if (locations != null) qp['location'] = locations;
     prefs?.forEach((k, v) => qp['prefs[$k]'] = v);
     await _http.request<void>(
-      '/library/sections/$sectionId',
+      '/library/sections/${seg(sectionId)}',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -68,7 +68,7 @@ mixin _PlexSectionAdmin {
     bool asyncMode = false,
   }) async {
     await _http.request<void>(
-      '/library/sections/$sectionId',
+      '/library/sections/${seg(sectionId)}',
       method: 'DELETE',
       queryParameters: {'async': asyncMode ? 1 : 0},
     );
@@ -84,7 +84,7 @@ mixin _PlexSectionAdmin {
     final qp = <String, Object?>{'force': force ? 1 : 0};
     if (path != null) qp['path'] = path;
     await _http.request<void>(
-      '/library/sections/$sectionId/refresh',
+      '/library/sections/${seg(sectionId)}/refresh',
       method: 'POST',
       queryParameters: qp,
     );
@@ -94,7 +94,7 @@ mixin _PlexSectionAdmin {
   /// running refresh.
   Future<void> cancelSectionRefresh({required String sectionId}) async {
     await _http.request<void>(
-      '/library/sections/$sectionId/refresh',
+      '/library/sections/${seg(sectionId)}/refresh',
       method: 'DELETE',
     );
   }
@@ -103,7 +103,7 @@ mixin _PlexSectionAdmin {
   /// item in a section (loudness, intros, etc.).
   Future<void> analyzeSection({required String sectionId}) async {
     await _http.request<void>(
-      '/library/sections/$sectionId/analyze',
+      '/library/sections/${seg(sectionId)}/analyze',
       method: 'PUT',
     );
   }
@@ -112,7 +112,7 @@ mixin _PlexSectionAdmin {
   /// section's recycle bin.
   Future<void> emptyTrash({required String sectionId}) async {
     await _http.request<void>(
-      '/library/sections/$sectionId/emptyTrash',
+      '/library/sections/${seg(sectionId)}/emptyTrash',
       method: 'PUT',
     );
   }
@@ -121,7 +121,7 @@ mixin _PlexSectionAdmin {
   /// section's indexes (forces a rebuild on next access).
   Future<void> deleteSectionIndexes({required String sectionId}) async {
     await _http.request<void>(
-      '/library/sections/$sectionId/indexes',
+      '/library/sections/${seg(sectionId)}/indexes',
       method: 'DELETE',
     );
   }
@@ -130,7 +130,7 @@ mixin _PlexSectionAdmin {
   /// markers in a section so they can be regenerated.
   Future<void> deleteSectionIntros({required String sectionId}) async {
     await _http.request<void>(
-      '/library/sections/$sectionId/intros',
+      '/library/sections/${seg(sectionId)}/intros',
       method: 'DELETE',
     );
   }
@@ -143,7 +143,7 @@ mixin _PlexSectionAdmin {
     final qp = <String, Object?>{};
     if (agent != null) qp['agent'] = agent;
     final res = await _http.request<Map<String, Object?>>(
-      '/library/sections/$sectionId/prefs',
+      '/library/sections/${seg(sectionId)}/prefs',
       queryParameters: qp.isEmpty ? null : qp,
     );
     return res.data ?? const {};
@@ -156,7 +156,7 @@ mixin _PlexSectionAdmin {
     required Map<String, Object?> prefs,
   }) async {
     await _http.request<void>(
-      '/library/sections/$sectionId/prefs',
+      '/library/sections/${seg(sectionId)}/prefs',
       method: 'PUT',
       queryParameters: prefs,
     );
@@ -173,7 +173,7 @@ mixin _PlexSectionAdmin {
     Map<String, Object?>? fieldQuery,
   }) async {
     final res = await _http.request<Map<String, Object?>>(
-      '/library/sections/$sectionId/autocomplete',
+      '/library/sections/${seg(sectionId)}/autocomplete',
       queryParameters: {'type': type.value, ...?fieldQuery},
     );
     return res.data ?? const {};
@@ -192,7 +192,7 @@ mixin _PlexSectionAdmin {
     if (type != null) qp['type'] = type.value;
     if (sort != null) qp['sort'] = sort;
     return _http.requestJson(
-      '/library/sections/$sectionId/firstCharacter',
+      '/library/sections/${seg(sectionId)}/firstCharacter',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Directory', PlexMetadata.fromJson),
     );
@@ -202,7 +202,7 @@ mixin _PlexSectionAdmin {
   /// on the section.
   Future<List<PlexMetadata>> sectionSorts({required String sectionId}) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/sorts',
+      '/library/sections/${seg(sectionId)}/sorts',
       itemsOf('Directory', PlexMetadata.fromJson),
     );
   }
@@ -213,7 +213,7 @@ mixin _PlexSectionAdmin {
     required String sectionId,
   }) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/collections',
+      '/library/sections/${seg(sectionId)}/collections',
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -226,7 +226,7 @@ mixin _PlexSectionAdmin {
   }) async {
     final qp = <String, Object?>{'type': type.value};
     final res = await _http.request<Map<String, Object?>>(
-      '/library/sections/$sectionId/common',
+      '/library/sections/${seg(sectionId)}/common',
       queryParameters: qp.isEmpty ? null : qp,
     );
     return res.data ?? const {};
@@ -239,7 +239,7 @@ mixin _PlexSectionAdmin {
     required String collectionId,
   }) async {
     await _http.request<void>(
-      '/library/sections/$sectionId/collection/$collectionId',
+      '/library/sections/${seg(sectionId)}/collection/${seg(collectionId)}',
       method: 'DELETE',
     );
   }
@@ -252,6 +252,6 @@ mixin _PlexSectionAdmin {
   }) {
     final base = _http.baseUrl;
     final token = _http.token ?? '';
-    return '$base/library/sections/$sectionId/composite/$updatedAt?X-Plex-Token=$token';
+    return '$base/library/sections/${seg(sectionId)}/composite/$updatedAt?X-Plex-Token=$token';
   }
 }

@@ -93,4 +93,59 @@ void main() {
       });
     });
   });
+
+  group('ids in a request path', () {
+    late CapturingAdapter adapter;
+    late PlexClient plex;
+
+    setUp(() {
+      adapter = CapturingAdapter(const {'MediaContainer': <String, Object?>{}});
+      plex = testClient(adapter);
+    });
+
+    test('an id with a slash stays one encoded segment', () async {
+      await plex.library.children(ratingKey: 'a/b?c#d');
+      expect(
+        adapter.last!.uri.path,
+        '/library/metadata/a%2Fb%3Fc%23d/children',
+      );
+      expect(adapter.last!.uri.query, isEmpty);
+      await plex.library.sectionSorts(sectionId: '../1');
+      expect(adapter.last!.uri.path, '/library/sections/..%2F1/sorts');
+      await plex.library.deleteSectionCollection(
+        sectionId: '1',
+        collectionId: '5/../6',
+      );
+      expect(
+        adapter.last!.uri.path,
+        '/library/sections/1/collection/5%2F..%2F6',
+      );
+      await plex.library.setStreamOffset(
+        streamId: '2/1',
+        ext: 's rt',
+        offsetMs: 100,
+      );
+      expect(adapter.last!.uri.path, '/library/streams/2%2F1.s%20rt');
+    });
+
+    test('a list of rating keys keeps its commas', () async {
+      await plex.library.editItem(ids: '1,2,3', args: {'title.value': 'T'});
+      expect(adapter.last!.uri.path, '/library/metadata/1,2,3');
+    });
+
+    test('an empty id, "." and ".." are refused before any request', () {
+      expect(() => plex.library.children(ratingKey: ''), throwsArgumentError);
+      expect(() => plex.library.item(ratingKey: '..'), throwsArgumentError);
+      expect(() => plex.library.unmatch(ids: '.'), throwsArgumentError);
+      expect(
+        () => plex.library.deleteMarker(ids: '7', marker: ''),
+        throwsArgumentError,
+      );
+      expect(
+        () => plex.library.emptyTrash(sectionId: '..'),
+        throwsArgumentError,
+      );
+      expect(adapter.requests, isEmpty);
+    });
+  });
 }

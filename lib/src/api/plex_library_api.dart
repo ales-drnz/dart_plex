@@ -10,6 +10,7 @@ import '../plex_filter.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
 import '../plex_query.dart';
+import '../plex_urls.dart';
 import '../plex_vocabulary.dart';
 
 part 'plex_library_item_details.dart';
@@ -84,7 +85,7 @@ class PlexLibraryApi
     if (sort != null) qp['sort'] = sort;
     applyFilters(qp, filters);
     return _http.requestJson(
-      '/library/sections/$sectionId/all',
+      '/library/sections/${seg(sectionId)}/all',
       queryParameters: qp,
       containerOf('Metadata', PlexMetadata.fromJson),
     );
@@ -142,7 +143,7 @@ class PlexLibraryApi
     if (filterExpression != null) qp['filters'] = filterExpression;
     qp.addAll(changes);
     await _http.request<void>(
-      '/library/sections/$sectionId/all',
+      '/library/sections/${seg(sectionId)}/all',
       method: 'PUT',
       queryParameters: qp,
     );
@@ -165,7 +166,7 @@ class PlexLibraryApi
     required String sectionId,
     required PlexMetadataType type,
   }) => _tagIndex(
-    path: '/library/sections/$sectionId/genre',
+    path: '/library/sections/${seg(sectionId)}/genre',
     field: 'genre',
     queryParameters: {'type': type.value},
   );
@@ -227,7 +228,7 @@ class PlexLibraryApi
     bool includeChapters = false,
   }) async {
     final res = await _http.request<Map<String, Object?>>(
-      '/library/metadata/$ratingKey',
+      '/library/metadata/${seg(ratingKey)}',
       queryParameters: {
         if (includeMarkers) 'includeMarkers': 1,
         if (includeChapters) 'includeChapters': 1,
@@ -256,7 +257,7 @@ class PlexLibraryApi
     PlexMetadataType? type,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids',
+      '/library/metadata/${seg(ids)}',
       method: 'PUT',
       queryParameters: {if (type != null) 'type': type.value, ...args},
     );
@@ -271,7 +272,7 @@ class PlexLibraryApi
     final qp = <String, Object?>{};
     if (proxy != null) qp['proxy'] = proxy ? 1 : 0;
     await _http.request<void>(
-      '/library/metadata/$ids',
+      '/library/metadata/${seg(ids)}',
       method: 'DELETE',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -294,7 +295,7 @@ class PlexLibraryApi
     final qp = containerPage(start: start, size: size);
     if (sort != null) qp['sort'] = sort;
     return _http.requestJson(
-      '/library/metadata/$ratingKey/children',
+      '/library/metadata/${seg(ratingKey)}/children',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -304,7 +305,7 @@ class PlexLibraryApi
   /// tracks), read from `totalSize` of an empty page — no rows travel.
   Future<int> countChildren({required String ratingKey}) async {
     final page = await _http.requestJson(
-      '/library/metadata/$ratingKey/children',
+      '/library/metadata/${seg(ratingKey)}/children',
       queryParameters: containerPage(start: 0, size: 0),
       containerOf('Metadata', PlexMetadata.fromJson),
     );
@@ -324,7 +325,7 @@ class PlexLibraryApi
   }) {
     final qp = containerPage(start: start, size: size);
     return _http.requestJson(
-      '/library/metadata/$ratingKey/allLeaves',
+      '/library/metadata/${seg(ratingKey)}/allLeaves',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -341,7 +342,7 @@ class PlexLibraryApi
   }) {
     final qp = containerPage(start: start, size: size);
     return _http.requestJson(
-      '/library/metadata/$ratingKey/grandchildren',
+      '/library/metadata/${seg(ratingKey)}/grandchildren',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -363,7 +364,7 @@ class PlexLibraryApi
     return _http.requestJson(
       sectionId == null
           ? '/library/recentlyAdded'
-          : '/library/sections/$sectionId/recentlyAdded',
+          : '/library/sections/${seg(sectionId)}/recentlyAdded',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -383,7 +384,7 @@ class PlexLibraryApi
     final qp = <String, Object?>{};
     if (count != null) qp['count'] = count;
     return _http.requestJson(
-      '/library/metadata/$ratingKey/similar',
+      '/library/metadata/${seg(ratingKey)}/similar',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -413,7 +414,7 @@ class PlexLibraryApi
       qp['excludeGrandparentID'] = excludeGrandparentRatingKey;
     }
     return _http.requestJson(
-      '/library/metadata/$ratingKey/nearest',
+      '/library/metadata/${seg(ratingKey)}/nearest',
       queryParameters: qp.isEmpty ? null : qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -434,7 +435,7 @@ class PlexLibraryApi
   /// view.
   Future<List<PlexLibraryFilter>> filters({required String sectionId}) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/filters',
+      '/library/sections/${seg(sectionId)}/filters',
       itemsOf('Directory', PlexLibraryFilter.fromJson),
     );
   }
@@ -452,7 +453,7 @@ class PlexLibraryApi
       'X-Plex-Container-Size': size,
     };
     return _http.requestJson(
-      '/library/sections/$sectionId/albums',
+      '/library/sections/${seg(sectionId)}/albums',
       queryParameters: qp,
       containerOf('Metadata', PlexMetadata.fromJson),
     );
@@ -464,7 +465,7 @@ class PlexLibraryApi
     required String sectionId,
   }) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/location',
+      '/library/sections/${seg(sectionId)}/location',
       itemsOf('Directory', PlexMetadata.fromJson),
     );
   }
@@ -473,7 +474,7 @@ class PlexLibraryApi
   /// categories for the section (mostly used by photo libraries).
   Future<List<PlexMetadata>> categories({required String sectionId}) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/categories',
+      '/library/sections/${seg(sectionId)}/categories',
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -484,7 +485,7 @@ class PlexLibraryApi
     required String sectionId,
   }) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/allLeaves',
+      '/library/sections/${seg(sectionId)}/allLeaves',
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -493,7 +494,7 @@ class PlexLibraryApi
   /// (Directory entries with `art` paths).
   Future<List<PlexMetadata>> sectionArts({required String sectionId}) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/arts',
+      '/library/sections/${seg(sectionId)}/arts',
       itemsOf('Directory', PlexMetadata.fromJson),
     );
   }
@@ -504,7 +505,7 @@ class PlexLibraryApi
     required String sectionId,
   }) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/cluster',
+      '/library/sections/${seg(sectionId)}/cluster',
       itemsOf('Directory', PlexMetadata.fromJson),
     );
   }
@@ -513,7 +514,7 @@ class PlexLibraryApi
   /// photo library (notable moments grouped by date/place).
   Future<List<PlexMetadata>> sectionMoments({required String sectionId}) async {
     return _http.requestJson(
-      '/library/sections/$sectionId/moment',
+      '/library/sections/${seg(sectionId)}/moment',
       itemsOf('Directory', PlexMetadata.fromJson),
     );
   }
@@ -562,7 +563,7 @@ class PlexLibraryApi
     final qp = containerPage(start: start, size: size);
     if (parent != null) qp['parent'] = parent;
     return _http.requestJson(
-      '/library/sections/$sectionId/folder',
+      '/library/sections/${seg(sectionId)}/folder',
       queryParameters: qp.isEmpty ? null : qp,
       containerOf('Metadata', PlexMetadata.fromJson),
     );

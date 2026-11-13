@@ -28,7 +28,7 @@ mixin _PlexItemDetails {
     };
     if (attributes != null) qp.addAll(attributes);
     await _http.request<void>(
-      '/library/metadata/$ids/marker',
+      '/library/metadata/${seg(ids)}/marker',
       method: 'POST',
       queryParameters: qp,
     );
@@ -49,7 +49,7 @@ mixin _PlexItemDetails {
     if (endTimeOffset != null) qp['endTimeOffset'] = endTimeOffset;
     if (attributes != null) qp.addAll(attributes);
     await _http.request<void>(
-      '/library/metadata/$ids/marker/$marker',
+      '/library/metadata/${seg(ids)}/marker/${seg(marker)}',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -62,7 +62,7 @@ mixin _PlexItemDetails {
     required String marker,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/marker/$marker',
+      '/library/metadata/${seg(ids)}/marker/${seg(marker)}',
       method: 'DELETE',
     );
   }
@@ -77,7 +77,7 @@ mixin _PlexItemDetails {
     final qp = <String, Object?>{};
     if (proxy != null) qp['proxy'] = proxy ? 1 : 0;
     await _http.request<void>(
-      '/library/metadata/$ids/media/$mediaItem',
+      '/library/metadata/${seg(ids)}/media/${seg(mediaItem)}',
       method: 'DELETE',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -88,7 +88,7 @@ mixin _PlexItemDetails {
   String chapterImageUrl({required String mediaId, required int chapter}) {
     final base = _http.baseUrl;
     final token = _http.token ?? '';
-    return '$base/library/media/$mediaId/chapterImages/$chapter?X-Plex-Token=$token';
+    return '$base/library/media/${seg(mediaId)}/chapterImages/$chapter?X-Plex-Token=$token';
   }
 
   // -------------------------------------------------------------------------
@@ -115,7 +115,7 @@ mixin _PlexItemDetails {
     final query = qp.entries
         .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
         .join('&');
-    return '$base/library/streams/$streamId.$ext?$query';
+    return '$base/library/streams/${seg(streamId)}.${seg(ext)}?$query';
   }
 
   /// `PUT /library/streams/{streamId}.{ext}?offset={ms}` — adjust
@@ -126,7 +126,7 @@ mixin _PlexItemDetails {
     required int offsetMs,
   }) async {
     await _http.request<void>(
-      '/library/streams/$streamId.$ext',
+      '/library/streams/${seg(streamId)}.${seg(ext)}',
       method: 'PUT',
       queryParameters: {'offset': offsetMs},
     );
@@ -138,7 +138,7 @@ mixin _PlexItemDetails {
     required String ext,
   }) async {
     await _http.request<void>(
-      '/library/streams/$streamId.$ext',
+      '/library/streams/${seg(streamId)}.${seg(ext)}',
       method: 'DELETE',
     );
   }
@@ -152,7 +152,7 @@ mixin _PlexItemDetails {
     final qp = <String, Object?>{};
     if (subsample != null) qp['subsample'] = subsample;
     final res = await _http.request<Map<String, Object?>>(
-      '/library/streams/$streamId/loudness',
+      '/library/streams/${seg(streamId)}/loudness',
       queryParameters: qp.isEmpty ? null : qp,
     );
     return res.data ?? const {};
@@ -167,7 +167,7 @@ mixin _PlexItemDetails {
     final qp = <String, Object?>{};
     if (subsample != null) qp['subsample'] = subsample;
     final res = await _http.request<Map<String, Object?>>(
-      '/library/streams/$streamId/levels',
+      '/library/streams/${seg(streamId)}/levels',
       queryParameters: qp.isEmpty ? null : qp,
     );
     return res.data ?? const {};
@@ -190,7 +190,7 @@ mixin _PlexItemDetails {
     if (subtitleStreamID != null) qp['subtitleStreamID'] = subtitleStreamID;
     if (allParts != null) qp['allParts'] = allParts ? 1 : 0;
     await _http.request<void>(
-      '/library/parts/$partId',
+      '/library/parts/${seg(partId)}',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -211,7 +211,7 @@ mixin _PlexItemDetails {
     final query = qp.entries
         .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
         .join('&');
-    return '$base/library/parts/$partId/$changestamp/$filename?$query';
+    return '$base/library/parts/${seg(partId)}/$changestamp/$filename?$query';
   }
 
   /// `GET /library/parts/{partId}/indexes/{index}` — BIF index
@@ -224,7 +224,7 @@ mixin _PlexItemDetails {
     final qp = <String, Object?>{};
     if (interval != null) qp['interval'] = interval;
     final res = await _http.request<Map<String, Object?>>(
-      '/library/parts/$partId/indexes/$index',
+      '/library/parts/${seg(partId)}/indexes/${seg(index)}',
       queryParameters: qp.isEmpty ? null : qp,
     );
     return res.data ?? const {};
@@ -239,7 +239,7 @@ mixin _PlexItemDetails {
   }) {
     final base = _http.baseUrl;
     final token = _http.token ?? '';
-    return '$base/library/parts/$partId/indexes/$index/$offset?X-Plex-Token=$token';
+    return '$base/library/parts/${seg(partId)}/indexes/${seg(index)}/$offset?X-Plex-Token=$token';
   }
 
   // -------------------------------------------------------------------------
@@ -249,7 +249,7 @@ mixin _PlexItemDetails {
   /// `GET /library/people/{personId}` — a person, or `null` when the
   /// answer holds none.
   Future<PlexPerson?> person({required String personId}) => _http.requestJson(
-    '/library/people/$personId',
+    '/library/people/${seg(personId)}',
     (json) => PlexMediaContainer.fromJson(
       json is Map<String, Object?> ? json : const {},
       'Directory',
@@ -261,7 +261,7 @@ mixin _PlexItemDetails {
   /// a person.
   Future<List<PlexMetadata>> personMedia({required String personId}) async {
     return _http.requestJson(
-      '/library/people/$personId/media',
+      '/library/people/${seg(personId)}/media',
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -278,7 +278,7 @@ mixin _PlexItemDetails {
     final qp = <String, Object?>{'startID': startId, 'endID': endId};
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
     return _http.requestJson(
-      '/library/sections/$sectionId/computePath',
+      '/library/sections/${seg(sectionId)}/computePath',
       queryParameters: qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
@@ -303,7 +303,7 @@ mixin _PlexItemDetails {
     if (limit != null) qp['limit'] = limit;
     if (maxDistance != null) qp['maxDistance'] = maxDistance;
     return _http.requestJson(
-      '/library/sections/$sectionId/nearest',
+      '/library/sections/${seg(sectionId)}/nearest',
       queryParameters: qp,
       itemsOf('Metadata', PlexMetadata.fromJson),
     );

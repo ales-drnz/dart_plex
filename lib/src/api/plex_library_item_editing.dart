@@ -23,7 +23,7 @@ mixin _PlexItemEditing {
     if (agent != null) qp['agent'] = agent;
     if (markUpdated != null) qp['markUpdated'] = markUpdated ? 1 : 0;
     await _http.request<void>(
-      '/library/metadata/$ids/refresh',
+      '/library/metadata/${seg(ids)}/refresh',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -39,7 +39,7 @@ mixin _PlexItemEditing {
     if (thumbOffset != null) qp['thumbOffset'] = thumbOffset;
     if (artOffset != null) qp['artOffset'] = artOffset;
     await _http.request<void>(
-      '/library/metadata/$ids/analyze',
+      '/library/metadata/${seg(ids)}/analyze',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -55,7 +55,7 @@ mixin _PlexItemEditing {
     final qp = <String, Object?>{'force': force ? 1 : 0};
     if (threshold != null) qp['threshold'] = threshold;
     await _http.request<void>(
-      '/library/metadata/$ids/intro',
+      '/library/metadata/${seg(ids)}/intro',
       method: 'PUT',
       queryParameters: qp,
     );
@@ -69,7 +69,7 @@ mixin _PlexItemEditing {
     bool manual = false,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/credits',
+      '/library/metadata/${seg(ids)}/credits',
       method: 'PUT',
       queryParameters: {'force': force ? 1 : 0, 'manual': manual ? 1 : 0},
     );
@@ -78,7 +78,10 @@ mixin _PlexItemEditing {
   /// `PUT /library/metadata/{ids}/addetect` — ad detection (on
   /// recorded TV).
   Future<void> detectAds({required String ids}) async {
-    await _http.request<void>('/library/metadata/$ids/addetect', method: 'PUT');
+    await _http.request<void>(
+      '/library/metadata/${seg(ids)}/addetect',
+      method: 'PUT',
+    );
   }
 
   /// `PUT /library/metadata/{ids}/voiceActivity?force={b}&manual={b}`
@@ -89,7 +92,7 @@ mixin _PlexItemEditing {
     bool manual = false,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/voiceActivity',
+      '/library/metadata/${seg(ids)}/voiceActivity',
       method: 'PUT',
       queryParameters: {'force': force ? 1 : 0, 'manual': manual ? 1 : 0},
     );
@@ -102,7 +105,7 @@ mixin _PlexItemEditing {
     bool force = false,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/chapterThumbs',
+      '/library/metadata/${seg(ids)}/chapterThumbs',
       method: 'PUT',
       queryParameters: {'force': force ? 1 : 0},
     );
@@ -115,7 +118,7 @@ mixin _PlexItemEditing {
     bool force = false,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/index',
+      '/library/metadata/${seg(ids)}/index',
       method: 'PUT',
       queryParameters: {'force': force ? 1 : 0},
     );
@@ -134,7 +137,7 @@ mixin _PlexItemEditing {
     if (name != null) qp['name'] = name;
     if (year != null) qp['year'] = year;
     await _http.request<void>(
-      '/library/metadata/$ids/match',
+      '/library/metadata/${seg(ids)}/match',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -159,7 +162,7 @@ mixin _PlexItemEditing {
     if (year != null) qp['year'] = year;
     if (manual != null) qp['manual'] = manual ? 1 : 0;
     final res = await _http.request<Map<String, Object?>>(
-      '/library/metadata/$ids/matches',
+      '/library/metadata/${seg(ids)}/matches',
       method: 'PUT',
       queryParameters: qp.isEmpty ? null : qp,
     );
@@ -169,7 +172,10 @@ mixin _PlexItemEditing {
   /// `PUT /library/metadata/{ids}/unmatch` — clear the upstream
   /// guid match.
   Future<void> unmatch({required String ids}) async {
-    await _http.request<void>('/library/metadata/$ids/unmatch', method: 'PUT');
+    await _http.request<void>(
+      '/library/metadata/${seg(ids)}/unmatch',
+      method: 'PUT',
+    );
   }
 
   /// `PUT /library/metadata/{ids}/merge?ids={otherIds}` — merge
@@ -179,7 +185,7 @@ mixin _PlexItemEditing {
     required List<String> otherIds,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$primaryId/merge',
+      '/library/metadata/${seg(primaryId)}/merge',
       method: 'PUT',
       queryParameters: {'ids': otherIds.join(',')},
     );
@@ -187,7 +193,10 @@ mixin _PlexItemEditing {
 
   /// `PUT /library/metadata/{ids}/split` — undo a merge.
   Future<void> splitItem({required String ids}) async {
-    await _http.request<void>('/library/metadata/$ids/split', method: 'PUT');
+    await _http.request<void>(
+      '/library/metadata/${seg(ids)}/split',
+      method: 'PUT',
+    );
   }
 
   /// `PUT /library/metadata/{ids}/prefs` — set metadata-edit
@@ -197,7 +206,7 @@ mixin _PlexItemEditing {
     required Map<String, Object?> args,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/prefs',
+      '/library/metadata/${seg(ids)}/prefs',
       method: 'PUT',
       queryParameters: args,
     );
@@ -207,7 +216,7 @@ mixin _PlexItemEditing {
   /// a metadata item.
   Future<List<PlexHub>> relatedItems({required String ids}) async {
     return _http.requestJson(
-      '/library/metadata/$ids/related',
+      '/library/metadata/${seg(ids)}/related',
       itemsOf('Hub', PlexHub.fromJson),
     );
   }
@@ -216,7 +225,7 @@ mixin _PlexItemEditing {
   /// (interviews, trailers) attached to an item.
   Future<List<PlexMetadata>> extras({required String ids}) async {
     return _http.requestJson(
-      '/library/metadata/$ids/extras',
+      '/library/metadata/${seg(ids)}/extras',
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
@@ -229,7 +238,7 @@ mixin _PlexItemEditing {
     required String url,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/extras',
+      '/library/metadata/${seg(ids)}/extras',
       method: 'POST',
       queryParameters: {'extraType': extraType, 'url': url},
     );
@@ -240,14 +249,14 @@ mixin _PlexItemEditing {
   String itemFileUrl({required String ids, required String url}) {
     final base = _http.baseUrl;
     final token = _http.token ?? '';
-    return '$base/library/metadata/$ids/file?url=${Uri.encodeQueryComponent(url)}&X-Plex-Token=$token';
+    return '$base/library/metadata/${seg(ids)}/file?url=${Uri.encodeQueryComponent(url)}&X-Plex-Token=$token';
   }
 
   /// `GET /library/metadata/{ids}/tree` — items as a hierarchical
   /// tree (parents → children).
   Future<Map<String, Object?>> itemTree({required String ids}) async {
     final res = await _http.request<Map<String, Object?>>(
-      '/library/metadata/$ids/tree',
+      '/library/metadata/${seg(ids)}/tree',
     );
     return res.data ?? const {};
   }
@@ -256,7 +265,7 @@ mixin _PlexItemEditing {
   /// viewers for this item.
   Future<Map<String, Object?>> topUsers({required String ids}) async {
     final res = await _http.request<Map<String, Object?>>(
-      '/library/metadata/$ids/users/top',
+      '/library/metadata/${seg(ids)}/users/top',
     );
     return res.data ?? const {};
   }
@@ -285,7 +294,7 @@ mixin _PlexItemEditing {
       qp['hearingImpaired'] = hearingImpaired ? 1 : 0;
     }
     await _http.request<void>(
-      '/library/metadata/$ids/subtitles',
+      '/library/metadata/${seg(ids)}/subtitles',
       queryParameters: qp,
     );
   }
@@ -299,7 +308,7 @@ mixin _PlexItemEditing {
   }) {
     final base = _http.baseUrl;
     final token = _http.token ?? '';
-    return '$base/library/metadata/$ids/$element/$timestamp?X-Plex-Token=$token';
+    return '$base/library/metadata/${seg(ids)}/${seg(element)}/$timestamp?X-Plex-Token=$token';
   }
 
   /// `POST|PUT /library/metadata/{ids}/{element}?url={url}` — set a
@@ -319,7 +328,7 @@ mixin _PlexItemEditing {
     bool update = false,
   }) async {
     await _http.request<void>(
-      '/library/metadata/$ids/$element',
+      '/library/metadata/${seg(ids)}/${seg(element)}',
       method: update ? 'PUT' : 'POST',
       queryParameters: url != null ? {'url': url} : null,
       data: data,
