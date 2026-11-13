@@ -10,6 +10,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dart_plex/dart_plex.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 import '_helpers/capturing_client.dart';
@@ -220,6 +222,37 @@ void main() {
       adapter.respond = (_) =>
           CannedResponse(503, const [], contentType: 'text/html');
       expect(await plex.server.ping(), isFalse);
+    });
+
+    test('ping is false when the server cannot be reached', () async {
+      final unreachable = testClient(
+        MockClient((r) async => throw http.ClientException('refused', r.url)),
+      );
+      expect(await unreachable.server.ping(), isFalse);
+    });
+
+    test('ping rethrows a cancellation', () async {
+      final token = PlexCancelToken()..cancel();
+      await expectLater(
+        plex.withCancelToken(token).server.ping(),
+        throwsA(
+          isA<PlexException>().having((e) => e.isCancelled, 'cancelled', true),
+        ),
+      );
+    });
+
+    test('ping rethrows a state error: not connected, or closed', () async {
+      final state = throwsA(
+        isA<PlexException>().having((e) => e.type, 'type', PlexErrorType.state),
+      );
+      final offline = PlexClient(
+        credentials: testCredentials,
+        httpClient: adapter,
+      );
+      await expectLater(offline.server.ping(), state);
+      plex.close();
+      await expectLater(plex.server.ping(), state);
+      expect(adapter.requests, isEmpty);
     });
 
     test('transientToken reads the token, or null without one', () async {

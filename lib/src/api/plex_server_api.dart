@@ -5,6 +5,8 @@
 import '../models/plex_server_models.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
+import '../plex_error_type.dart';
+import '../plex_exception.dart';
 import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_parsing.dart';
@@ -34,13 +36,19 @@ class PlexServerApi {
     (json) => PlexServerInfo.fromJson(mediaContainer(json)),
   );
 
-  /// `true` when the server replies to `/identity`. Swallows transport
-  /// failures and timeouts. Use [identity] directly to inspect errors.
+  /// `true` when the server replies to `/identity`, `false` when it
+  /// cannot be reached, times out or answers something else. Use
+  /// [identity] directly to inspect errors.
+  ///
+  /// Not every failure is an answer about the server: a cancelled call
+  /// and a `state` [PlexException] (no [PlexClient.connect] yet, a closed
+  /// client) are rethrown.
   Future<bool> ping() async {
     try {
       await identity();
       return true;
-    } catch (_) {
+    } on PlexException catch (e) {
+      if (e.isCancelled || e.type == PlexErrorType.state) rethrow;
       return false;
     }
   }
