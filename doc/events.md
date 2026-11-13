@@ -16,13 +16,61 @@ await plex.notifications.closeWebSocket();
 ```
 
 `connectWebSocket()` returns once the socket is open, and throws a
-`PlexException` of type `connection` when it cannot open.
+`PlexException` when it cannot open: `connection`, `auth` when the server
+refuses the token, `timeout` when the handshake takes longer than
+`connectTimeout` (30 seconds), `state` when a socket is already open or
+connecting.
 `connectEventSource()` returns the same stream over Server-Sent Events,
 for networks whose proxies block WebSockets; close it with
 `closeEventSource()`. Both take an optional `filter` naming one frame
 type (`'playing'`, `'activity'`). Each frame is a `PlexNotification` with
 its `type` and `raw` body; `isWebSocketConnected` and
 `isEventSourceConnected` tell which transport is open.
+
+The event source sends its request when the stream gets its first
+listener, so a failure to open arrives there as an error followed by the
+end of the stream. Its frames come out in the WebSocket shape, whatever
+the transport: the server names the type in the `event:` line and sends
+one bare entry, and the package rebuilds `type` and the list of entries.
+
+### When a stream ends
+
+```dart
+Future<void> follow(PlexClient plex) async {
+  while (true) {
+    try {
+      final events = plex.notifications.connectEventSource().events();
+      await for (final event in events) {
+        print(event);
+      }
+    } on PlexException catch (e) {
+      if (e.isAuthError) rethrow;
+    }
+    // Ended or failed: wait, then open a new one.
+    await Future<void>.delayed(const Duration(seconds: 5));
+  }
+}
+```
+
+- Both streams are broadcast streams. A frame that arrives while nobody
+  listens is dropped, so subscribe as soon as you have the stream.
+- Cancelling the last subscription closes the connection, as
+  `closeWebSocket()` and `closeEventSource()` do. `PlexClient.close()`
+  closes both.
+- There is no automatic reconnection. When the stream ends, open a new
+  one; what changed in between is not replayed, so read the state again.
+- The event source notices a dead connection: the server sends a ping
+  every 10 seconds, and when nothing arrives for `idleTimeout` (60
+  seconds, `null` to wait forever) the stream gets a `PlexException` of
+  type `timeout` and ends. The WebSocket has no such check — the server
+  answers only the first ping a client sends — so a connection that dies
+  without a word (a suspended laptop, a dropped Wi-Fi) can stay open and
+  silent. Prefer the event source where that matters.
+- After a WebSocket ends on its own, `webSocketCloseCode` and
+  `webSocketCloseReason` hold what the server sent with its close.
+- A frame that cannot be read (invalid JSON, a binary frame) is dropped
+  without an error, so one bad frame does not end an `await for`;
+  `malformedFrameCount` counts them.
 
 ### Typed events
 
