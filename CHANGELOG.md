@@ -1,4 +1,4 @@
-## [0.3.1]
+## [0.3.1] - 14-11-2026
 
 ### All platforms
 **Deprecated**
