@@ -206,17 +206,53 @@ final class PlexConnection {
   /// [_tokenHosts] do. A full URL to any other host — artwork on a CDN,
   /// say — goes without, so the token never reaches a third party; a
   /// request that must send it there names it in its `extraHeaders`.
+  ///
+  /// A redirect is held to the same rule: the connection follows it
+  /// itself, and the token goes on only from the server to the server or
+  /// from plex.tv to plex.tv (see [keepsCredentialsOnRedirect]). In a browser the
+  /// redirect is the browser's to follow, and this does not apply.
   @visibleForTesting
-  bool sendsTokenTo(Uri uri) {
+  bool sendsTokenTo(Uri uri) => _isTokenHost(uri) || _isServer(uri);
+
+  static bool _isTokenHost(Uri uri) {
     final host = uri.host.toLowerCase();
-    for (final trusted in _tokenHosts) {
-      if (host == trusted || host.endsWith('.$trusted')) return true;
-    }
+    return _tokenHosts.any((t) => host == t || host.endsWith('.$t'));
+  }
+
+  bool _isServer(Uri uri) {
     final base = baseUrl == null ? null : Uri.tryParse(baseUrl!);
     return base != null &&
-        base.host.toLowerCase() == host &&
+        base.host.toLowerCase() == uri.host.toLowerCase() &&
         base.port == uri.port;
   }
+
+  /// Whether a redirect from [first] to [hop] may carry the credentials
+  /// [first] was sent: the same origin always; otherwise only from the
+  /// connected server to itself or from plex.tv to plex.tv, and never
+  /// from `https` down to `http`.
+  @visibleForTesting
+  bool keepsCredentialsOnRedirect(Uri first, Uri hop) {
+    if (first.scheme == hop.scheme &&
+        first.host.toLowerCase() == hop.host.toLowerCase() &&
+        first.port == hop.port) {
+      return true;
+    }
+    if (first.scheme == 'https' && hop.scheme != 'https') return false;
+    return (_isServer(first) && _isServer(hop)) ||
+        (_isTokenHost(first) && _isTokenHost(hop));
+  }
+
+  /// The headers that name a credential: a redirect to another origin
+  /// goes without them, `X-Plex-Token` unless [keepsCredentialsOnRedirect].
+  static const Set<String> _credentialHeaders = {
+    'x-plex-token',
+    'authorization',
+    'proxy-authorization',
+    'cookie',
+  };
+
+  /// The redirects followed for one request, as `dart:io` does.
+  static const int _maxRedirects = 5;
 
   /// Issues an HTTP request relative to [baseUrl] (or absolute when
   /// `absoluteUrl` is `true`) and decodes the body per [responseType].
@@ -537,9 +573,95 @@ final class PlexConnection {
     return _Exchange(opened.uri, res.statusCode, res.headers, bytes, gzipped);
   }
 
-  /// Sends the request and waits for the response headers.
+  /// Sends the request and waits for the response headers, following
+  /// redirects the way `dart:io` does — a `GET` or `HEAD` on `301`, `302`,
+  /// `303`, `307` and `308`, a `POST` on `303` as a `GET`, at most
+  /// [_maxRedirects] — but choosing the headers of every hop itself:
+  /// `dart:io` would copy `X-Plex-Token` to whatever host the redirect
+  /// names. A hop to another origin loses the credentials unless
+  /// [keepsCredentialsOnRedirect]. In a browser the redirect never gets here.
   Future<_Opened> _open(
     Uri uri, {
+    required String method,
+    required Object? data,
+    required Map<String, String>? extraHeaders,
+    required PlexCancelToken? cancelToken,
+  }) async {
+    var at = uri;
+    var verb = method;
+    var body = data;
+    var extra = extraHeaders;
+    final visited = <Uri>[];
+    for (;;) {
+      final opened = await _send(
+        uri,
+        at,
+        method: verb,
+        data: body,
+        extraHeaders: extra,
+        cancelToken: cancelToken,
+      );
+      if (platform.followsRedirects) return opened;
+      final status = opened.response.statusCode;
+      final location = opened.response.headers['location'];
+      final follows = switch (verb) {
+        'GET' || 'HEAD' => const {301, 302, 303, 307, 308}.contains(status),
+        'POST' => status == 303,
+        _ => false,
+      };
+      if (!follows || location == null) return opened;
+      // The body of a redirect is not wanted, and reading it frees the
+      // connection for the next hop.
+      await _readAll(opened);
+      final Uri next;
+      try {
+        next = at.resolve(location);
+      } on FormatException catch (e, st) {
+        throw _redirectError('Invalid redirect location', uri, status, e, st);
+      }
+      if (next.scheme != 'http' && next.scheme != 'https') {
+        throw _redirectError('Redirect to a ${next.scheme} URL', uri, status);
+      }
+      if (visited.contains(next)) {
+        throw _redirectError('Redirect loop detected', uri, status);
+      }
+      if (visited.length >= _maxRedirects) {
+        throw _redirectError('Redirect limit exceeded', uri, status);
+      }
+      visited.add(next);
+      if (!keepsCredentialsOnRedirect(uri, next)) {
+        // `X-Plex-Token: ''` keeps the connection's own token off the hop.
+        extra = {
+          for (final MapEntry(:key, :value) in (extra ?? const {}).entries)
+            if (!_credentialHeaders.contains(key.toLowerCase())) key: value,
+          'X-Plex-Token': '',
+        };
+      }
+      if (verb == 'POST') verb = 'GET';
+      body = null;
+      at = next;
+    }
+  }
+
+  PlexException _redirectError(
+    String message,
+    Uri uri,
+    int status, [
+    Object? cause,
+    StackTrace? st,
+  ]) => PlexException(
+    message,
+    statusCode: status,
+    path: uri.toString(),
+    cause: cause,
+    stackTrace: st ?? StackTrace.current,
+  );
+
+  /// One hop of [_open]: the request for [uri] sent to [at] (the same
+  /// URI, until a redirect).
+  Future<_Opened> _send(
+    Uri uri,
+    Uri at, {
     required String method,
     required Object? data,
     required Map<String, String>? extraHeaders,
@@ -552,13 +674,16 @@ final class PlexConnection {
     final abort = Completer<void>();
     final request = http.AbortableRequest(
       method,
-      uri,
+      at,
       abortTrigger: abort.future,
     );
+    // Redirects are followed by [_open]; a browser ignores this (it would
+    // fail the request instead) and follows them itself.
+    if (!platform.followsRedirects) request.followRedirects = false;
     // An empty extra header removes the header (`X-Plex-Token: ''`), whatever
     // the case of its name: HTTP header names are case-insensitive.
     final merged = <String, String>{
-      ..._headersFor(uri),
+      ..._headersFor(at),
       if (_shared.inflates) 'Accept-Encoding': 'gzip',
     };
     extraHeaders?.forEach((name, value) {

@@ -104,6 +104,10 @@ bool? timedOut(Object error) => switch (error) {
 /// (`WSAETIMEDOUT`).
 const Set<int> _timedOutCodes = {110, 60, 10060};
 
+/// Whether the default client follows redirects by itself, out of the
+/// connection's hands. `dart:io` can be told not to.
+const bool followsRedirects = false;
+
 /// Whether [runOffIsolate] really leaves the calling isolate.
 const bool canUseIsolates = true;
 

@@ -25,6 +25,11 @@ Stream<List<int>> gunzipStream(Stream<List<int>> body) =>
 /// The browser reports a failed request as text only: the type never says.
 bool? timedOut(Object error) => null;
 
+/// Whether the default client follows redirects by itself, out of the
+/// connection's hands. A browser always does: `fetch` can only follow a
+/// redirect or fail on it, never hand it back.
+const bool followsRedirects = true;
+
 /// Whether [runOffIsolate] really leaves the calling isolate.
 const bool canUseIsolates = false;
 
