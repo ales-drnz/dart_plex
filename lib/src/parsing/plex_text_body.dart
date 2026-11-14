@@ -3,11 +3,10 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 /// The text of a file PMS streams as it is on disk. Not exported.
+/// @docImport '../api/plex_streaming_api.dart';
 library;
 
 import 'dart:convert';
-
-import '../api/plex_streaming_api.dart';
 
 /// Decode a whole text body Plex streamed off disk, picking the codec the
 /// bytes — and, failing that, the response header — actually call for.

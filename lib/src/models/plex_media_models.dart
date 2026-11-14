@@ -3,11 +3,11 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 /// An item's media: versions, parts and streams.
+/// @docImport '../plex_filter.dart';
+/// @docImport 'plex_metadata_models.dart';
 library;
 
 import '../parsing/plex_json.dart';
-import '../plex_filter.dart';
-import 'plex_metadata_models.dart';
 
 /// One `<Media>` node under a [PlexMetadata]. Tracks/movies usually have
 /// exactly one; some items have alternate versions and produce several.

@@ -2,6 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+/// @docImport 'plex_client.dart';
+library;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -11,7 +14,6 @@ import 'package:cryptography/dart.dart';
 
 import 'api/plex_account_api.dart';
 import 'parsing/plex_json.dart';
-import 'plex_client.dart';
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
 
@@ -440,10 +442,3 @@ String _base64UrlEncode(List<int> bytes) =>
 /// Decodes base64url with or without padding.
 Uint8List _base64UrlDecode(String text) =>
     base64Url.decode(base64Url.normalize(text));
-
-/// A [PlexException] for a plex.tv answer that lacks what it should carry.
-PlexException missingField(String what, String route) => PlexException(
-  'plex.tv answered $route without $what',
-  type: PlexErrorType.parse,
-  path: route,
-);

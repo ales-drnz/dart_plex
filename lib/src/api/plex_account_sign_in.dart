@@ -138,7 +138,7 @@ mixin _PlexAccountSignIn {
       extraHeaders: const {'X-Plex-Token': ''},
     );
     final data = res.data;
-    if (data == null) throw missingField('a pin', '$_clients/pins');
+    if (data == null) throw _missingField('a pin', '$_clients/pins');
     return PlexPin.fromJson(data);
   }
 
@@ -173,7 +173,7 @@ mixin _PlexAccountSignIn {
       extraHeaders: const {'X-Plex-Token': ''},
     );
     final data = res.data;
-    if (data == null) throw missingField('a pin', '$_clients/pins/$id');
+    if (data == null) throw _missingField('a pin', '$_clients/pins/$id');
     final pin = PlexPin.fromJson(data);
     if (pin.isAuthenticated || pin.isExpired) _state.dropPinJwt(id);
     return pin;
@@ -242,7 +242,9 @@ mixin _PlexAccountSignIn {
       extraHeaders: const {'X-Plex-Token': ''},
     );
     final nonce = res.data?['nonce'];
-    if (nonce is! String) throw missingField('a nonce', '$_clients/auth/nonce');
+    if (nonce is! String) {
+      throw _missingField('a nonce', '$_clients/auth/nonce');
+    }
     return nonce;
   }
 
@@ -261,7 +263,7 @@ mixin _PlexAccountSignIn {
     // `authToken`: take either.
     final token = data['auth_token'] ?? data['authToken'];
     if (token is! String || token.isEmpty) {
-      throw missingField('a token', '$_clients/auth/token');
+      throw _missingField('a token', '$_clients/auth/token');
     }
     return PlexJwt.parse(token);
   }

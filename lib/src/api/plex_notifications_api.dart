@@ -2,6 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+/// @docImport '../plex_client.dart';
+library;
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -10,7 +13,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../notifications/sse_parser.dart';
 import '../notifications/ws_connect_io.dart'
     if (dart.library.js_interop) '../notifications/ws_connect_web.dart';
-import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_events.dart';

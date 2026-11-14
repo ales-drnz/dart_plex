@@ -2,8 +2,10 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+/// @docImport '../plex_client.dart';
+library;
+
 import '../models/plex_server_models.dart';
-import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_urls.dart';
 

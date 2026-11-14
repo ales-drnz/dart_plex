@@ -43,9 +43,8 @@
 ///   size: 50,
 /// );
 /// ```
+/// @docImport 'src/plex_client.dart';
 library;
-
-import 'src/plex_client.dart';
 
 export 'src/api/plex_account_api.dart';
 export 'src/api/plex_activities_api.dart';

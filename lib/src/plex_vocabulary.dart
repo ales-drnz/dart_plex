@@ -12,11 +12,10 @@
 /// (sort keys, media and marker types) are extension types over the wire
 /// string, so a value this package does not list yet is one constructor
 /// away: `PlexSort('mediaBitrate')`. The closed ones are enums.
+/// @docImport 'api/plex_account_api.dart';
+/// @docImport 'api/plex_streaming_api.dart';
+/// @docImport 'plex_models.dart';
 library;
-
-import 'api/plex_account_api.dart';
-import 'api/plex_streaming_api.dart';
-import 'plex_models.dart';
 
 /// A sort order, as sent in `sort`: a field, optionally with `:asc` or
 /// `:desc`, several joined with `,`.

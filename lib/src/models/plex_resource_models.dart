@@ -3,10 +3,10 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 /// Servers and devices of a plex.tv account, and how to reach them.
+/// @docImport '../plex_error_type.dart';
 library;
 
 import '../parsing/plex_json.dart';
-import '../plex_error_type.dart';
 
 /// One server entry from `plex.tv/api/v2/resources`.
 ///

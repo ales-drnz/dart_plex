@@ -2,6 +2,9 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+/// @docImport '../plex_client.dart';
+library;
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -10,7 +13,6 @@ import 'package:meta/meta.dart';
 import '../parsing/plex_json.dart';
 import '../parsing/plex_query.dart';
 import '../parsing/plex_xml.dart';
-import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
@@ -192,3 +194,10 @@ List<T> _list<T>(
 ) => json is List
     ? asObjectList(json, parser)
     : asObjectList(mediaContainer(json)[key], parser);
+
+/// A [PlexException] for a plex.tv answer that lacks what it should carry.
+PlexException _missingField(String what, String route) => PlexException(
+  'plex.tv answered $route without $what',
+  type: PlexErrorType.parse,
+  path: route,
+);

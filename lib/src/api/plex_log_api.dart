@@ -2,9 +2,11 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+/// @docImport '../plex_client.dart';
+library;
+
 import 'dart:typed_data';
 
-import '../plex_client.dart';
 import '../plex_connection.dart';
 
 /// `/log` — send log entries to the server.

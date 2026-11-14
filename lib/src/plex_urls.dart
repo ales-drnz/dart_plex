@@ -4,10 +4,10 @@
 
 /// The URLs and paths the sub-APIs build by hand. Plex only, so it lives
 /// apart from the transport shared with dart_jellyfin. Not exported.
+/// @docImport 'plex_exception.dart';
 library;
 
 import 'plex_connection.dart';
-import 'plex_exception.dart';
 
 /// URLs a player, an image widget or a download opens on its own: they
 /// cannot send headers, so the token rides in the query.
