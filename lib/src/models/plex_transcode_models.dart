@@ -3,10 +3,11 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 /// What a transcode decision says and the transcodes it starts.
+/// @docImport '../api/plex_streaming_api.dart';
 library;
 
-import '../api/plex_streaming_api.dart';
 import '../plex_json.dart';
+import '../plex_pass.dart';
 import '../plex_vocabulary.dart';
 
 /// Outcome of [PlexStreamingApi.decisionUniversal].
@@ -77,8 +78,7 @@ final class PlexTranscodeDecision {
   /// Whether the decision refuses playback and its texts say a Plex Pass
   /// or Remote Watch Pass is required (a heuristic: see
   /// [PlexStreamingApi]).
-  bool get isPassRequired =>
-      !isPlayable && PlexStreamingApi.mentionsPass(_texts.join(' '));
+  bool get isPassRequired => !isPlayable && mentionsPass(_texts.join(' '));
 }
 
 /// A started video transcode: the server's [decision] and the [url] to
