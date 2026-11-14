@@ -1,3 +1,13 @@
+## [0.3.2]
+
+### All platforms
+**Fixed**
+- A redirect to another host no longer takes the token there: outside a browser the client follows redirects itself. plex.tv redirects an avatar URL to Gravatar.
+
+**Changed**
+- A redirect loop, a sixth redirect and a `Location` that is not an `http` URL are `unknown` errors with the status of the redirect.
+- A client passed as `httpClient` is asked not to follow redirects, since the connection does.
+
 ## [0.3.1] - 14-11-2026
 
 ### All platforms
