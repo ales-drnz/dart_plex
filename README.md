@@ -66,7 +66,7 @@
 
 ```yaml
 dependencies:
-  dart_plex: ^0.3.1
+  dart_plex: ^0.3.2
 ```
 
 The package needs Dart 3.10 or later, and is tested against Plex Media Server 1.43.2.

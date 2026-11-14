@@ -2,11 +2,14 @@
 
 ### All platforms
 **Fixed**
-- A redirect to another host no longer takes the token there: outside a browser the client follows redirects itself. plex.tv redirects an avatar URL to Gravatar.
+- A redirect to another host no longer takes the token there. plex.tv redirects an avatar URL (`PlexUser.thumb`) to Gravatar, which received it.
+- `request()`, `requestBytes()`, `requestStream()` and `downloadToFile()` follow redirects themselves: a hop to another host loses the token, an `Authorization` and a `Cookie`.
 
 **Changed**
 - A redirect loop, a sixth redirect and a `Location` that is not an `http` URL are `unknown` errors with the status of the redirect.
+- A redirect without a `Location` is an error with its status, not a `connection` error.
 - A client passed as `httpClient` is asked not to follow redirects, since the connection does.
+- In a browser the redirect is the browser's to follow: a host whose CORS policy accepts `X-Plex-Token` still receives it.
 
 ## [0.3.1] - 14-11-2026
 
