@@ -1,3 +1,67 @@
+# Migrating to 0.3.1
+
+0.3.1 changes no signature. Three members are deprecated, two enum
+values swap their numbers, and the token stops following a request to
+another host. Most apps need nothing.
+
+## Deprecated
+
+They keep working until 0.4.0.
+
+| Deprecated | Use |
+| --- | --- |
+| `account.friends()` | Nothing replaces it: plex.tv removed the route (`410 Gone`). `account.connectedUsers()` lists the users the account shares with. |
+| `streaming.universalVideoUrl(…)` | `await streaming.startVideoTranscode(…)`, which makes the decision PMS needs before the start. |
+| `transcoder.startUrl(…)` | `streaming.startVideoTranscode(…)` or `startAudioTranscode(…)`. |
+
+## Photo and photo album
+
+`PlexMetadataType.photo.value` is `13` and `photoAlbum.value` is `14`:
+0.3.0 had them the other way round. Code that uses the enum values needs
+nothing; code that stored the number, or passes it by hand, does:
+
+| 0.3.0 | 0.3.1 |
+| --- | --- |
+| `PlexMetadataType.fromValue(13)` is `photoAlbum` | it is `photo` |
+| `allByType(type: PlexMetadataType.photo)` asked for albums | it asks for photos |
+
+## The token and other hosts
+
+The token goes to the connected server (its host and port) and to
+plex.tv, and nowhere else. `request()`, `requestBytes()`,
+`requestStream()` and `downloadToFile()` with a full URL to another host
+(artwork on a CDN, say) no longer carry it. To send one there, name it:
+
+```dart
+await plex.requestStream(
+  'https://other.example/file',
+  extraHeaders: {'X-Plex-Token': token},
+);
+```
+
+A server reached through a second address (its relay while the client is
+connected to its local one) is another host too: `connectTo()` that
+address, or name the token.
+
+## Behaviour changes
+
+- A URL builder (`library.streamUrl()`, `images.transcodeUrl()`,
+  `collections.compositeImageUrl()`, …) throws a `state` `PlexException`
+  before `connect()`; it used to answer a string starting with `null`.
+  With no token it leaves `X-Plex-Token` out instead of sending it empty.
+- An id that is empty, `.` or `..` throws an `ArgumentError` before
+  anything is sent; a call that returns a `Future` reports it through the
+  `Future`.
+- `connect()` throws a `state` error for a URL without `http://` or
+  `https://`.
+- `server.ping()` rethrows a cancellation and a `state` error; it still
+  answers `false` when the server does not.
+- `connectEventSource()` ends with a `timeout` error after 60 silent
+  seconds (PMS pings every 10); pass `idleTimeout: null` to wait forever.
+  Its frames now have their real `type`, where 0.3.0 gave `unknown`.
+- `PlexClient.close()` closes the notification streams as well.
+- `PlexHomeUser.protected` no longer counts an account password as a PIN.
+
 # Migrating to 0.3.0
 
 0.3.0 needs Dart 3.10, types the answers that were still maps, types the
