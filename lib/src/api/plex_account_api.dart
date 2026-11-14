@@ -31,11 +31,6 @@ import '../transport/plex_response.dart';
 ///
 /// {@category Client and sign-in}
 class PlexAccountApi {
-  static const String _v2 = 'https://plex.tv/api/v2';
-  static const String _plexTvLegacy = 'https://plex.tv';
-  static const String _clients = 'https://clients.plex.tv/api/v2';
-  static const String _discover = 'https://discover.provider.plex.tv';
-
   final PlexConnection _http;
   final PlexSessionState _state;
 
@@ -720,22 +715,27 @@ class PlexAccountApi {
     if (_state.accountToken == old) _state.accountToken = fresh;
     if (_http.token == old) _http.token = fresh;
   }
-
-  static Map<String, Object?> _object(Object? json) {
-    if (json is Map<String, Object?>) return json;
-    throw PlexException(
-      'Expected a JSON object, got ${json.runtimeType}',
-      type: PlexErrorType.parse,
-    );
-  }
-
-  /// The [key] entries of a `MediaContainer` (JSON or XML), of a bare
-  /// object holding them, or of a bare list.
-  static List<T> _list<T>(
-    Object? json,
-    String key,
-    T Function(Map<String, Object?>) parser,
-  ) => json is List
-      ? asObjectList(json, parser)
-      : asObjectList(mediaContainer(json)[key], parser);
 }
+
+const String _v2 = 'https://plex.tv/api/v2';
+const String _plexTvLegacy = 'https://plex.tv';
+const String _clients = 'https://clients.plex.tv/api/v2';
+const String _discover = 'https://discover.provider.plex.tv';
+
+Map<String, Object?> _object(Object? json) {
+  if (json is Map<String, Object?>) return json;
+  throw PlexException(
+    'Expected a JSON object, got ${json.runtimeType}',
+    type: PlexErrorType.parse,
+  );
+}
+
+/// The [key] entries of a `MediaContainer` (JSON or XML), of a bare
+/// object holding them, or of a bare list.
+List<T> _list<T>(
+  Object? json,
+  String key,
+  T Function(Map<String, Object?>) parser,
+) => json is List
+    ? asObjectList(json, parser)
+    : asObjectList(mediaContainer(json)[key], parser);
