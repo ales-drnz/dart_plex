@@ -1,7 +1,5 @@
 ## [0.3.1]
 
-A release for quality: no new features, no signature changed. See [MIGRATION.md](MIGRATION.md) for the few changes an app can notice.
-
 ### All platforms
 **Deprecated**
 - `account.friends()`: plex.tv removed the route (`410 Gone`) and has no REST replacement. `connectedUsers()` lists the users the account shares with.
@@ -27,6 +25,7 @@ A release for quality: no new features, no signature changed. See [MIGRATION.md]
 - `PlexFilter.tag()`, `of()`, `number()`, `text()` and `flag()` hold an unmodifiable list.
 - A failed TLS handshake is a `connection` error instead of `unknown`.
 - A token renewer that throws is the `cause` of the `401` it could not renew.
+- The models are libraries of their own, one file per area, and the larger sub-APIs are split by concern. Nothing exported changed.
 
 **Fixed**
 - `collections.removeItem()` sends `DELETE`, which removes the item; PMS answers `404` to the `PUT` of the API document.
@@ -43,9 +42,6 @@ A release for quality: no new features, no signature changed. See [MIGRATION.md]
 **Added**
 - `connectWebSocket(connectTimeout:)`, `connectEventSource(idleTimeout:)`, and `webSocketCloseCode`, `webSocketCloseReason` and `malformedFrameCount` on `notifications`.
 - The CI also checks the API docs, the web build and the pub.dev score, and runs on `quality/*` branches.
-
-**Internal**
-- The models are libraries of their own, one file per area, and the larger sub-APIs are split by concern. Nothing exported changed.
 
 ## [0.3.0] - 8-11-2026
 

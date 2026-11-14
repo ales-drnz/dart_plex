@@ -27,7 +27,7 @@ Add `dart_plex` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_plex: ^0.3.0
+  dart_plex: ^0.3.1
 ```
 
 ---
