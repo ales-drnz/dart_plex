@@ -79,21 +79,36 @@
 +   static const List<String> _tokenHosts = [];
 -   /// Headers sent to [uri]: the `X-X-*` identity, `Accept:
 -   /// application/json` (X answers XML otherwise) and, when
--   /// [sendsTokenTo] says so, the token.
+-   /// [sendsTokenTo] says so, the token — never when [withToken] is
+-   /// `false`, as after a redirect that lost the credentials.
 +   /// Headers sent to [uri].
 +   ///
 +   /// Only the `Authorization: MediaBrowser` header carries the session. It
 +   /// embeds `Token="…"`, the sole auth path X 12 honours by default
 +   /// (`EnableLegacyAuthorization` is off, and the `X-Emby-Authorization` /
 +   /// `X-MediaBrowser-Token` headers are rejected). The token is left out
-+   /// unless [sendsTokenTo] says [uri] gets it.
++   /// unless [sendsTokenTo] says [uri] gets it — and never when [withToken]
++   /// is `false`, as after a redirect that lost the credentials.
 -     ...credentials.toHeaders(),
--     if (sendsTokenTo(uri)) 'X-X-Token': ?token,
+-     if (withToken && sendsTokenTo(uri)) 'X-X-Token': ?token,
 +     'Accept': 'application/json',
 +     'Authorization': XAuthHeader.build(
 +       credentials,
-+       token: sendsTokenTo(uri) ? token : null,
++       token: withToken && sendsTokenTo(uri) ? token : null,
 +     ),
+-   /// itself, and the token goes on only from the server to the server or
+-   /// from x.tv to x.tv (see [keepsCredentialsOnRedirect]). In a browser the
+-   /// redirect is the browser's to follow, and this does not apply.
++   /// itself, and the token goes on only from the server to the server
++   /// (see [keepsCredentialsOnRedirect]). In a browser the redirect is the
++   /// browser's to follow, and this does not apply.
+-   /// connected server to itself or from x.tv to x.tv, and never
+-   /// from `https` down to `http`.
++   /// connected server to itself, and never from `https` down to `http`.
+-     'x-x-token',
++     'x-emby-authorization',
++     'x-emby-token',
++     'x-mediabrowser-token',
 -   /// Pass [absoluteUrl] = true and a full URL in [path] to target a host
 -   /// other than the connected server — used by the x.tv account API.
 -   /// The token goes only to the connected server and to x.tv (see
@@ -170,6 +185,11 @@
 -         : attempt;
 -         return await guarded();
 +         return await attempt();
+-   /// `dart:io` would copy `X-X-Token` to whatever host the redirect
+-   /// names. A hop to another origin loses the credentials unless
++   /// `dart:io` drops `Authorization` on the way to another origin, and
++   /// with it the client's identity, while it copies any other header a
++   /// caller named. A hop to another origin loses the credentials unless
 -     // An empty extra header removes the header (`X-X-Token: ''`), whatever
 +     // An empty extra header removes the header (`Authorization: ''`), whatever
 -         'XClient.connect() has not been called — no X base URL is set.',

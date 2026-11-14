@@ -195,10 +195,11 @@ final class PlexConnection {
 
   /// Headers sent to [uri]: the `X-Plex-*` identity, `Accept:
   /// application/json` (PMS answers XML otherwise) and, when
-  /// [sendsTokenTo] says so, the token.
-  Map<String, String> _headersFor(Uri uri) => {
+  /// [sendsTokenTo] says so, the token — never when [withToken] is
+  /// `false`, as after a redirect that lost the credentials.
+  Map<String, String> _headersFor(Uri uri, {bool withToken = true}) => {
     ...credentials.toHeaders(),
-    if (sendsTokenTo(uri)) 'X-Plex-Token': ?token,
+    if (withToken && sendsTokenTo(uri)) 'X-Plex-Token': ?token,
   };
 
   /// Whether a request to [uri] carries the token: only the connected
@@ -242,8 +243,8 @@ final class PlexConnection {
         (_isTokenHost(first) && _isTokenHost(hop));
   }
 
-  /// The headers that name a credential: a redirect to another origin
-  /// goes without them, `X-Plex-Token` unless [keepsCredentialsOnRedirect].
+  /// The headers that name a credential: a redirect goes without them
+  /// unless [keepsCredentialsOnRedirect].
   static const Set<String> _credentialHeaders = {
     'x-plex-token',
     'authorization',
@@ -591,6 +592,7 @@ final class PlexConnection {
     var verb = method;
     var body = data;
     var extra = extraHeaders;
+    var withToken = true;
     final visited = <Uri>[];
     for (;;) {
       final opened = await _send(
@@ -599,6 +601,7 @@ final class PlexConnection {
         method: verb,
         data: body,
         extraHeaders: extra,
+        withToken: withToken,
         cancelToken: cancelToken,
       );
       if (platform.followsRedirects) return opened;
@@ -630,11 +633,15 @@ final class PlexConnection {
       }
       visited.add(next);
       if (!keepsCredentialsOnRedirect(uri, next)) {
-        // `X-Plex-Token: ''` keeps the connection's own token off the hop.
+        // For good: a later hop back to the server does not pick the
+        // token up again, since another host chose where it leads. An
+        // empty value stays: it says "send none", and names no secret.
+        withToken = false;
         extra = {
           for (final MapEntry(:key, :value) in (extra ?? const {}).entries)
-            if (!_credentialHeaders.contains(key.toLowerCase())) key: value,
-          'X-Plex-Token': '',
+            if (value.isEmpty ||
+                !_credentialHeaders.contains(key.toLowerCase()))
+              key: value,
         };
       }
       if (verb == 'POST') verb = 'GET';
@@ -665,6 +672,7 @@ final class PlexConnection {
     required String method,
     required Object? data,
     required Map<String, String>? extraHeaders,
+    required bool withToken,
     required PlexCancelToken? cancelToken,
   }) async {
     _checkOpen();
@@ -683,7 +691,7 @@ final class PlexConnection {
     // An empty extra header removes the header (`X-Plex-Token: ''`), whatever
     // the case of its name: HTTP header names are case-insensitive.
     final merged = <String, String>{
-      ..._headersFor(at),
+      ..._headersFor(at, withToken: withToken),
       if (_shared.inflates) 'Accept-Encoding': 'gzip',
     };
     extraHeaders?.forEach((name, value) {
