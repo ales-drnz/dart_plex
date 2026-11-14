@@ -1,3 +1,52 @@
+## [0.3.1]
+
+A release for quality: no new features, no signature changed. See [MIGRATION.md](MIGRATION.md) for the few changes an app can notice.
+
+### All platforms
+**Deprecated**
+- `account.friends()`: plex.tv removed the route (`410 Gone`) and has no REST replacement. `connectedUsers()` lists the users the account shares with.
+- `transcoder.startUrl()` and `streaming.universalVideoUrl()`: PMS refuses a start without a decision, which `startVideoTranscode()` and `startAudioTranscode()` make first.
+
+**Changed**
+- The token goes only to the connected server and to plex.tv. A full URL to another host is requested without it, unless `extraHeaders` names one.
+- `PlexMetadataType.photo` is `13` and `photoAlbum` is `14`, as PMS has them, instead of the other way round.
+- A URL a player opens (`streamUrl()`, `transcodeUrl()`, `compositeImageUrl()` and the like) throws a `state` error before `connect()` instead of starting with `null`.
+- Those URLs form-encode the token, put it last and leave it out when there is none, instead of sending `X-Plex-Token=` empty.
+- An id in a request path is one encoded segment, so a `/` or a `?` in it cannot name another route. An empty id, `.` or `..` throws an `ArgumentError`.
+- A call that returns a `Future` reports a wrong argument through it, never while it is being called.
+- `playQueues.addItems()`, `epg.lineupChannels()`, `server.securityResources()`, `collections.create()` and `transcoder.imageUrl()` check their arguments in release builds too.
+- `connect()` throws a `state` error at once for a URL without `http://` or `https://`, or without a host.
+- `PlexClient.close()` also closes the notification WebSocket and event stream.
+- `connectEventSource()` sends its request at the first listener, so a failure to open reaches the stream instead of being lost.
+- An event stream that is silent for 60 seconds ends with a `timeout` error; `idleTimeout: null` turns that off.
+- The event stream sends the token in a header, not in the query.
+- `connectWebSocket()` gives up after `connectTimeout` (30 seconds), and a `401` or `403` on the handshake is an `auth` error.
+- `server.ping()` rethrows a cancellation and a `state` error instead of answering `false`.
+- `PlexHomeUser.protected` is the PIN flag alone; an account with a password and no PIN is no longer protected.
+- A timestamp without a zone is read as UTC, not as the device's local time.
+- `PlexFilter.tag()`, `of()`, `number()`, `text()` and `flag()` hold an unmodifiable list.
+- A failed TLS handshake is a `connection` error instead of `unknown`.
+- A token renewer that throws is the `cause` of the `401` it could not renew.
+
+**Fixed**
+- `collections.removeItem()` sends `DELETE`, which removes the item; PMS answers `404` to the `PUT` of the API document.
+- `hubs.continueWatching()` reads the items inside its hub, so it no longer always comes back empty.
+- A hub from `hubs.manage()` has its identifier, which `updateVisibility()`, `deleteCustom()` and `move()` need.
+- `account.switchHomeUser()` reads plex.tv's `<user>` answer, whose children repeat its attributes, instead of failing with a `parse` error.
+- Event-stream notifications have their real `type` and the WebSocket's shape, so `events()` reads them; the server's `ping` is no longer delivered.
+- A second `connectWebSocket()` while the first is connecting throws a `state` error instead of leaking a socket.
+- `pollJwtPin()` through `withCancelToken()` views asks plex.tv for one nonce, not one per view.
+- A date out of range or a number that is not finite reads as `null` instead of failing the whole page.
+- Lyrics lines that share a time keep the order of the file.
+- Malformed plex.tv XML (a wrong closing tag, text after the root, absurd nesting) throws a `FormatException`, never a `StackOverflowError`.
+
+**Added**
+- `connectWebSocket(connectTimeout:)`, `connectEventSource(idleTimeout:)`, and `webSocketCloseCode`, `webSocketCloseReason` and `malformedFrameCount` on `notifications`.
+- The CI also checks the API docs, the web build and the pub.dev score, and runs on `quality/*` branches.
+
+**Internal**
+- The models are libraries of their own, one file per area, and the larger sub-APIs are split by concern. Nothing exported changed.
+
 ## [0.3.0] - 8-11-2026
 
 ### All platforms
