@@ -5,7 +5,7 @@
 library;
 
 import '../plex_json.dart';
-import '../plex_models.dart';
+import 'plex_resource_models.dart';
 
 // ---------------------------------------------------------------------------
 // Server administration: updater, security, background jobs, providers,

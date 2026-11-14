@@ -317,3 +317,62 @@ final class PlexUnknownEvent extends PlexEvent {
   /// Wraps a frame of [type].
   const PlexUnknownEvent(this.type, super.raw);
 }
+
+/// One frame received from the Plex notifications stream.
+///
+/// {@category Events and downloads}
+final class PlexNotification {
+  /// Upstream `type` discriminator (e.g. `'playing'`, `'progress'`,
+  /// `'activity'`, `'transcodeSession.update'`,
+  /// `'transcodeSession.end'`, `'preference'`, `'reachability'`).
+  final String type;
+
+  /// The size of the payload as the server reported it.
+  final int? size;
+
+  /// The raw frame, useful when the notification type's payload is
+  /// not yet promoted to a typed accessor.
+  ///
+  /// Always in the WebSocket shape — `type` next to a list of entries
+  /// (`{"type": "activity", "ActivityNotification": [{…}]}`). The event
+  /// source sends the type apart and one bare entry; such a frame is
+  /// rebuilt to match, without a `size`.
+  final Map<String, Object?> raw;
+
+  /// Wraps a notification frame with its [type] discriminator and [raw] payload.
+  const PlexNotification({
+    required this.type,
+    required this.size,
+    required this.raw,
+  });
+
+  /// Parse a single notification frame from its server-side JSON representation.
+  factory PlexNotification.fromJson(Map<String, Object?> json) {
+    final t = json['type']?.toString() ?? 'unknown';
+    final sz = json['size'];
+    return PlexNotification(
+      type: t,
+      size: sz is int ? sz : (sz is String ? int.tryParse(sz) : null),
+      raw: json,
+    );
+  }
+
+  /// The frame's entries as typed events — usually one, sometimes
+  /// several. Frame types without a typed event give one
+  /// [PlexUnknownEvent].
+  List<PlexEvent> get events => PlexEvent.fromFrame(type, raw);
+
+  @override
+  String toString() => 'PlexNotification($type)';
+}
+
+/// Typed events from a notification stream.
+///
+/// {@category Events and downloads}
+extension PlexNotificationEvents on Stream<PlexNotification> {
+  /// Every entry of every frame as a [PlexEvent]: play state changes
+  /// ([PlexPlaySessionEvent]), library item changes
+  /// ([PlexLibraryItemEvent]), activities such as scans
+  /// ([PlexActivityEvent]) and status messages ([PlexStatusEvent]).
+  Stream<PlexEvent> events() => expand((n) => n.events);
+}

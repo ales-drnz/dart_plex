@@ -6,7 +6,7 @@ library;
 
 import '../plex_filter.dart';
 import '../plex_json.dart';
-import '../plex_models.dart';
+import 'plex_base_models.dart';
 
 // ---------------------------------------------------------------------------
 // Library sections

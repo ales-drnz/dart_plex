@@ -4,8 +4,8 @@
 
 library;
 
-import '../api/plex_streaming_api.dart' show PlexTranscodeDecision;
 import '../plex_json.dart';
+import 'plex_transcode_models.dart';
 
 // ---------------------------------------------------------------------------
 // Download queue
