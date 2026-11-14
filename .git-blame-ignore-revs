@@ -1,0 +1,12 @@
+# Commits that only move code. `git blame` skips them with
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# and GitHub's blame view reads this file by itself.
+
+# refactor(models): one file per area; the models leave the API files
+d5cb982f06f84be39f5e06c8a6ca1134fa03a31b
+# refactor(account): sign-in, discovery and Plex Home in files of their own
+5f9e7e7c99001bd18430062081e2c426768b62ae
+# refactor: the JSON, XML, query and text-body readers live in lib/src/parsing
+dfe5518f25acc86ec199abba47d9d518246df0c4
+# refactor(library): each method in the file its mixin names
+e335eb8e92cbe32f1c5ba11a91a98417946b0c38
