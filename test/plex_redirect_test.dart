@@ -221,6 +221,42 @@ void main() {
     });
   });
 
+  group('a connection probe', () {
+    PlexResource resource(String uri) => PlexResource.fromJson({
+      'name': 'server',
+      'clientIdentifier': 'machine-1',
+      'provides': 'server',
+      'owned': true,
+      'accessToken': 'resource-token',
+      'connections': [
+        {
+          'protocol': 'http',
+          'address': '127.0.0.1',
+          'port': pms.port,
+          'uri': uri,
+          'local': true,
+        },
+      ],
+    });
+
+    test('whose candidate redirects elsewhere sends the token to neither '
+        'host, not even to the server the client is connected to', () async {
+      // The candidate is the connected server itself, whose `/identity`
+      // redirects to another host.
+      await client.account.findConnection(
+        resource(
+          pmsUrl(
+            '/redirect/302?to=${Uri.encodeQueryComponent(thirdUrl('/landed'))}&x=',
+          ),
+        ),
+        timeout: const Duration(seconds: 5),
+      );
+
+      expect(atPms.single.headers.value('x-plex-token'), isNull);
+      expect(atThird.single.headers.value('x-plex-token'), isNull);
+    });
+  });
+
   group('a redirect within the server', () {
     test('keeps the token and the extra headers', () async {
       final res = await client.request<Map<String, Object?>>(
