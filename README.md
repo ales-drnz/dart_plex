@@ -19,19 +19,6 @@
 
 ---
 
-## Installation
-
-It needs Dart 3.10 or later, and is tested against Plex Media Server 1.43.2.
-
-Add `dart_plex` to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dart_plex: ^0.3.1
-```
-
----
-
 ## Features
 
 <table>
@@ -75,7 +62,16 @@ dependencies:
 
 ---
 
-## Quick start
+## Getting started
+
+```yaml
+dependencies:
+  dart_plex: ^0.3.1
+```
+
+The package needs Dart 3.10 or later, and is tested against Plex Media Server 1.43.2.
+
+### Stream a track
 
 ```dart
 import 'package:dart_plex/dart_plex.dart';
@@ -135,7 +131,7 @@ Future<void> main() async {
 }
 ```
 
-## How it works
+### How it works
 
 `PlexClient` holds the identity of your app, the server and the token. Each part of the Plex API is a sub-API on it (`plex.library`, `plex.playlists`, `plex.streaming` and so on), and every call goes through one connection, the same transport `dart_jellyfin` uses.
 
@@ -301,10 +297,8 @@ See [Images and hubs](https://pub.dev/documentation/dart_plex/latest/topics/Imag
   - [Errors and paging](https://pub.dev/documentation/dart_plex/latest/topics/Errors%20and%20paging-topic.html): typed errors, cancellation, retries and paging
   - [Events and downloads](https://pub.dev/documentation/dart_plex/latest/topics/Events%20and%20downloads-topic.html): notifications, typed events, downloads and download queues
   - [Raw requests](https://pub.dev/documentation/dart_plex/latest/topics/Raw%20requests-topic.html): `request()`, `requestBytes()` and `requestStream()`
-- [Example](example/dart_plex_example.dart)
+- [Example](example/)
 - [CHANGELOG](CHANGELOG.md) and [MIGRATION](MIGRATION.md)
-
----
 
 ## Project background
 
