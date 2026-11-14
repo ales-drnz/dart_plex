@@ -4,28 +4,14 @@
 
 part of 'plex_library_api.dart';
 
-/// Creating, editing, scanning and deleting library sections. Mixed into [PlexLibraryApi].
+/// Creating, editing, scanning and deleting library sections, and the
+/// housekeeping of the whole library. Mixed into [PlexLibraryApi].
 mixin _PlexSectionAdmin {
   PlexConnection get _http;
 
   // -------------------------------------------------------------------------
   // Section management
   // -------------------------------------------------------------------------
-
-  /// `GET /library/sections/{sectionId}?includeDetails={bool}` — the
-  /// section's details and views (all items, by genre, search, …).
-  Future<PlexSectionDetails> sectionDetails({
-    required String sectionId,
-    bool? includeDetails,
-  }) async {
-    return _http.requestJson(
-      '/library/sections/${seg(sectionId)}',
-      queryParameters: {'includeDetails': ?_flag(includeDetails)},
-      (json) => PlexSectionDetails.fromJson(
-        json is Map<String, Object?> ? json : const {},
-      ),
-    );
-  }
 
   /// `PUT /library/sections/{sectionId}` — edit a section.
   ///
@@ -129,18 +115,6 @@ mixin _PlexSectionAdmin {
     );
   }
 
-  /// `GET /library/sections/{sectionId}/prefs` — section preferences.
-  Future<Map<String, Object?>> sectionPreferences({
-    required String sectionId,
-    String? agent,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/sections/${seg(sectionId)}/prefs',
-      queryParameters: {'agent': ?agent},
-    );
-    return res.data ?? const {};
-  }
-
   /// `PUT /library/sections/{sectionId}/prefs` — replace the
   /// section preferences.
   Future<void> setSectionPreferences({
@@ -152,72 +126,6 @@ mixin _PlexSectionAdmin {
       method: 'PUT',
       queryParameters: prefs,
     );
-  }
-
-  /// `GET /library/sections/{sectionId}/autocomplete?type=...&field.query=...`
-  /// — autocomplete suggestions for a search field, e.g.
-  /// `fieldQuery: {'title.query': 'Tra'}`.
-  ///
-  /// [type] is required: PMS 1.43.2 answers 400 without it (verified).
-  Future<Map<String, Object?>> autocomplete({
-    required String sectionId,
-    required PlexMetadataType type,
-    Map<String, Object?>? fieldQuery,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/sections/${seg(sectionId)}/autocomplete',
-      queryParameters: {'type': type.value, ...?fieldQuery},
-    );
-    return res.data ?? const {};
-  }
-
-  /// `GET /library/sections/{sectionId}/firstCharacter?type=...&sort=...` (singular:
-  /// `firstCharacters`, as the community API document spells it, answers
-  /// 404 on PMS 1.43.2)
-  /// — A-Z scrubber index.
-  Future<List<PlexMetadata>> firstCharacters({
-    required String sectionId,
-    PlexMetadataType? type,
-    PlexSort? sort,
-  }) async {
-    return _http.requestJson(
-      '/library/sections/${seg(sectionId)}/firstCharacter',
-      queryParameters: {'type': ?type?.value, 'sort': ?sort},
-      itemsOf('Directory', PlexMetadata.fromJson),
-    );
-  }
-
-  /// `GET /library/sections/{sectionId}/sorts` — sorts available
-  /// on the section.
-  Future<List<PlexMetadata>> sectionSorts({required String sectionId}) async {
-    return _http.requestJson(
-      '/library/sections/${seg(sectionId)}/sorts',
-      itemsOf('Directory', PlexMetadata.fromJson),
-    );
-  }
-
-  /// `GET /library/sections/{sectionId}/collections` — collections
-  /// inside a section.
-  Future<List<PlexMetadata>> sectionCollections({
-    required String sectionId,
-  }) async {
-    return _http.requestJson(
-      '/library/sections/${seg(sectionId)}/collections',
-      itemsOf('Metadata', PlexMetadata.fromJson),
-    );
-  }
-
-  /// `GET /library/sections/{sectionId}/common?type=...` — common
-  /// fields across items (shared genres, ratings, etc.).
-  Future<Map<String, Object?>> sectionCommon({
-    required String sectionId,
-    required PlexMetadataType type,
-  }) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/sections/${seg(sectionId)}/common',
-      queryParameters: {'type': type.value},
-    );
-    return res.data ?? const {};
   }
 
   /// `DELETE /library/sections/{sectionId}/collection/{collectionId}`
@@ -232,15 +140,118 @@ mixin _PlexSectionAdmin {
     );
   }
 
-  /// `GET /library/sections/{sectionId}/composite/{updatedAt}` —
-  /// URL for the section's auto-composed cover image.
+  /// `PUT /library/sections/{sectionId}/all` — bulk-edit the fields
+  /// and tags of every item matching a filter, in a single call
+  /// (cheaper than N per-item [PlexLibraryApi.editItem] calls for batch tagging or
+  /// curation).
   ///
-  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
-  /// carries the token: keep it out of logs.
-  String sectionCompositeImageUrl({
+  /// All mutations travel as query parameters (the endpoint has no
+  /// request body). [type] is the item type integer.
+  ///
+  /// [filterExpression] selects the items to mutate and is sent under
+  /// the PUT route's own `filters` parameter, which takes one whole
+  /// expression as a string (e.g. `'genre=6'`). It is a different
+  /// mechanism from the per-parameter [PlexFilter] list that
+  /// [PlexLibraryApi.allByType] takes — the read and write routes genuinely disagree
+  /// here.
+  ///
+  /// [changes] holds already-flattened Plex keys, e.g.
+  /// `<field>.value` to set a value and `<field>.locked` (`1`/`0`) to
+  /// lock it. Tags are added with `<tagtype>[<idx>].tag.tag` and
+  /// removed with a trailing `-` on the key
+  /// (`<tagtype>[<idx>].tag.tag-`); the `<idx>` must increment per tag.
+  Future<void> updateSectionItems({
     required String sectionId,
-    required int updatedAt,
-  }) => _http.signedUrl(
-    '/library/sections/${seg(sectionId)}/composite/$updatedAt',
-  );
+    int? type,
+    String? filterExpression,
+    required Map<String, Object?> changes,
+  }) async {
+    await _http.request<void>(
+      '/library/sections/${seg(sectionId)}/all',
+      method: 'PUT',
+      queryParameters: {
+        'type': ?type,
+        'filters': ?filterExpression,
+        ...changes,
+      },
+    );
+  }
+
+  /// `POST /library/sections` — add a new section to the server.
+  /// The spec lists this as `/library/sections/all`, but in practice
+  /// the server only accepts POST at `/library/sections` (the `/all`
+  /// suffix is for GET reads). Verified against PMS 1.43.x.
+  ///
+  /// Pass [prefs] using bare preference names (e.g.
+  /// `{'enableCinemaTrailers': 0}`); they are auto-wrapped into the
+  /// `prefs[<name>]=<value>` form the server requires.
+  Future<void> addSection({
+    required String name,
+    required PlexLibraryType type,
+    required String scanner,
+    required String agent,
+    required List<String> locations,
+    String? metadataAgentProviderGroupId,
+    String? language,
+    Map<String, Object?>? prefs,
+    bool? relative,
+    bool? importFromiTunes,
+  }) async {
+    await _http.request<void>(
+      '/library/sections',
+      method: 'POST',
+      queryParameters: {
+        'name': name,
+        'type': type.wire,
+        'scanner': scanner,
+        'agent': agent,
+        'location': locations,
+        'metadataAgentProviderGroupId': ?metadataAgentProviderGroupId,
+        'language': ?language,
+        'relative': ?_flag(relative),
+        'importFromiTunes': ?_flag(importFromiTunes),
+        ...?prefs?.map((k, v) => MapEntry('prefs[$k]', v)),
+      },
+    );
+  }
+
+  /// `POST /library/sections/refresh?force={bool}` — refresh every
+  /// section.
+  Future<void> refreshAllSections({bool force = false}) async {
+    await _http.request<void>(
+      '/library/sections/refresh',
+      method: 'POST',
+      queryParameters: {'force': force ? 1 : 0},
+    );
+  }
+
+  /// `DELETE /library/sections/all/refresh` — stop every running
+  /// section refresh.
+  Future<void> stopAllRefreshes() async {
+    await _http.request<void>(
+      '/library/sections/all/refresh',
+      method: 'DELETE',
+    );
+  }
+
+  /// `DELETE /library/caches` — drop the library caches.
+  Future<void> deleteCaches() async {
+    await _http.request<void>('/library/caches', method: 'DELETE');
+  }
+
+  /// `PUT /library/clean/bundles` — clean orphaned metadata
+  /// bundles on disk.
+  Future<void> cleanBundles() async {
+    await _http.request<void>('/library/clean/bundles', method: 'PUT');
+  }
+
+  /// `PUT /library/optimize?async={bool}` — re-optimize the SQLite
+  /// database.
+  Future<void> optimizeDatabase({bool asyncMode = false}) async {
+    await _http.request<void>(
+      '/library/optimize',
+      method: 'PUT',
+      queryParameters: {'async': asyncMode ? 1 : 0},
+    );
+  }
 }

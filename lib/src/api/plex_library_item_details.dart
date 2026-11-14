@@ -4,7 +4,8 @@
 
 part of 'plex_library_api.dart';
 
-/// Markers, streams, parts and people of single items. Mixed into [PlexLibraryApi].
+/// Markers, streams, parts, people, extras and artwork of single items.
+/// Mixed into [PlexLibraryApi].
 mixin _PlexItemDetails {
   PlexConnection get _http;
 
@@ -254,50 +255,60 @@ mixin _PlexItemDetails {
     );
   }
 
-  /// `/library/sections/{sectionId}/computePath?startID=...&endID=...&maxDistance=...`
-  /// — sonic transition path between two tracks. Used to bridge two
-  /// songs with intermediate tracks for smooth crossfade compilations.
-  Future<List<PlexMetadata>> sonicPath({
-    required String sectionId,
-    required String startId,
-    required String endId,
-    double? maxDistance,
-  }) async {
+  /// `GET /library/metadata/{ids}/related` — related-items hub for
+  /// a metadata item.
+  Future<List<PlexHub>> relatedItems({required String ids}) async {
     return _http.requestJson(
-      '/library/sections/${seg(sectionId)}/computePath',
-      queryParameters: {
-        'startID': startId,
-        'endID': endId,
-        'maxDistance': ?maxDistance,
-      },
+      '/library/metadata/${seg(ids)}/related',
+      itemsOf('Hub', PlexHub.fromJson),
+    );
+  }
+
+  /// `GET /library/metadata/{ids}/extras` — bonus content
+  /// (interviews, trailers) attached to an item.
+  Future<List<PlexMetadata>> extras({required String ids}) async {
+    return _http.requestJson(
+      '/library/metadata/${seg(ids)}/extras',
       itemsOf('Metadata', PlexMetadata.fromJson),
     );
   }
 
-  /// `/library/sections/{sectionId}/nearest` — sonically nearest
-  /// tracks inside a section, seeded by a vector of music-analysis
-  /// values (typically `musicAnalysis` from another track or an
-  /// average across recently played).
-  ///
-  /// [values] is the 50-dimensional vector Plex uses for sonic
-  /// proximity. [maxDistance] defaults to 0.25 on the server. [type]
-  /// is the metadata type integer (10 for audio track).
-  Future<List<PlexMetadata>> nearestInSection({
-    required String sectionId,
-    required List<num> values,
-    int type = 10,
-    int? limit,
-    double? maxDistance,
-  }) async {
-    return _http.requestJson(
-      '/library/sections/${seg(sectionId)}/nearest',
-      queryParameters: {
-        'type': type,
-        'values': values.join(','),
-        'limit': ?limit,
-        'maxDistance': ?maxDistance,
-      },
-      itemsOf('Metadata', PlexMetadata.fromJson),
+  /// `GET /library/metadata/{ids}/tree` — items as a hierarchical
+  /// tree (parents → children).
+  Future<Map<String, Object?>> itemTree({required String ids}) async {
+    final res = await _http.request<Map<String, Object?>>(
+      '/library/metadata/${seg(ids)}/tree',
     );
+    return res.data ?? const {};
   }
+
+  /// `GET /library/metadata/{ids}/users/top` — top listeners /
+  /// viewers for this item.
+  Future<Map<String, Object?>> topUsers({required String ids}) async {
+    final res = await _http.request<Map<String, Object?>>(
+      '/library/metadata/${seg(ids)}/users/top',
+    );
+    return res.data ?? const {};
+  }
+
+  /// `GET /library/metadata/{ids}/file?url={inBundlePath}` — fetch
+  /// a file inside the item's metadata bundle.
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
+  String itemFileUrl({required String ids, required String url}) =>
+      _http.signedUrl('/library/metadata/${seg(ids)}/file', {'url': url});
+
+  /// `GET /library/metadata/{ids}/{element}/{timestamp}` — URL for
+  /// an item's artwork, theme, or other typed asset.
+  ///
+  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
+  /// carries the token: keep it out of logs.
+  String itemArtworkUrl({
+    required String ids,
+    required String element,
+    required int timestamp,
+  }) => _http.signedUrl(
+    '/library/metadata/${seg(ids)}/${seg(element)}/$timestamp',
+  );
 }

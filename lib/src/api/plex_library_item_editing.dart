@@ -200,21 +200,37 @@ mixin _PlexItemEditing {
     );
   }
 
-  /// `GET /library/metadata/{ids}/related` — related-items hub for
-  /// a metadata item.
-  Future<List<PlexHub>> relatedItems({required String ids}) async {
-    return _http.requestJson(
-      '/library/metadata/${seg(ids)}/related',
-      itemsOf('Hub', PlexHub.fromJson),
+  /// `PUT /library/metadata/{ids}` — edit metadata fields on one item
+  /// (or a comma-joined list of `ids`). Admin-token only.
+  ///
+  /// [args] holds already-flattened Plex query keys. Each field is set
+  /// with `<field>.value` and optionally locked against agent
+  /// overwrites with `<field>.locked` (`1`/`0`), e.g.
+  /// `{'title.value': 'New title', 'title.locked': 1}`. Pass [type]
+  /// (the item's [PlexMetadataType]) when the server needs the type
+  /// discriminator, mirroring plexapi's `Movie.edit`.
+  Future<void> editItem({
+    required String ids,
+    required Map<String, Object?> args,
+    PlexMetadataType? type,
+  }) async {
+    await _http.request<void>(
+      '/library/metadata/${seg(ids)}',
+      method: 'PUT',
+      queryParameters: {if (type != null) 'type': type.value, ...args},
     );
   }
 
-  /// `GET /library/metadata/{ids}/extras` — bonus content
-  /// (interviews, trailers) attached to an item.
-  Future<List<PlexMetadata>> extras({required String ids}) async {
-    return _http.requestJson(
-      '/library/metadata/${seg(ids)}/extras',
-      itemsOf('Metadata', PlexMetadata.fromJson),
+  /// `DELETE /library/metadata/{ids}` — delete a metadata item from
+  /// the library, removing its underlying media as well. Distinct from
+  /// [PlexLibraryApi.deleteMediaItem], which only removes one media version.
+  ///
+  /// Set [proxy] to also delete proxy items associated with the item.
+  Future<void> deleteMetadataItem({required String ids, bool? proxy}) async {
+    await _http.request<void>(
+      '/library/metadata/${seg(ids)}',
+      method: 'DELETE',
+      queryParameters: {'proxy': ?_flag(proxy)},
     );
   }
 
@@ -230,32 +246,6 @@ mixin _PlexItemEditing {
       method: 'POST',
       queryParameters: {'extraType': extraType, 'url': url},
     );
-  }
-
-  /// `GET /library/metadata/{ids}/file?url={inBundlePath}` — fetch
-  /// a file inside the item's metadata bundle.
-  ///
-  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
-  /// carries the token: keep it out of logs.
-  String itemFileUrl({required String ids, required String url}) =>
-      _http.signedUrl('/library/metadata/${seg(ids)}/file', {'url': url});
-
-  /// `GET /library/metadata/{ids}/tree` — items as a hierarchical
-  /// tree (parents → children).
-  Future<Map<String, Object?>> itemTree({required String ids}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/metadata/${seg(ids)}/tree',
-    );
-    return res.data ?? const {};
-  }
-
-  /// `GET /library/metadata/{ids}/users/top` — top listeners /
-  /// viewers for this item.
-  Future<Map<String, Object?>> topUsers({required String ids}) async {
-    final res = await _http.request<Map<String, Object?>>(
-      '/library/metadata/${seg(ids)}/users/top',
-    );
-    return res.data ?? const {};
   }
 
   /// `GET /library/metadata/{ids}/subtitles?title=...&language=...&url=...`
@@ -283,19 +273,6 @@ mixin _PlexItemEditing {
       },
     );
   }
-
-  /// `GET /library/metadata/{ids}/{element}/{timestamp}` — URL for
-  /// an item's artwork, theme, or other typed asset.
-  ///
-  /// Throws a `state` [PlexException] before [PlexClient.connect]. The URL
-  /// carries the token: keep it out of logs.
-  String itemArtworkUrl({
-    required String ids,
-    required String element,
-    required int timestamp,
-  }) => _http.signedUrl(
-    '/library/metadata/${seg(ids)}/${seg(element)}/$timestamp',
-  );
 
   /// `POST|PUT /library/metadata/{ids}/{element}?url={url}` — set a
   /// custom artwork/theme asset on an item (e.g. change its poster).
