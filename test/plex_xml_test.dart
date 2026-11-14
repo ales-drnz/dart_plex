@@ -10,8 +10,8 @@ library;
 import 'dart:io';
 
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_json.dart';
-import 'package:dart_plex/src/plex_xml.dart';
+import 'package:dart_plex/src/parsing/plex_json.dart';
+import 'package:dart_plex/src/parsing/plex_xml.dart';
 import 'package:test/test.dart';
 
 Map<String, Object?> _fixture(String name) =>

@@ -9,7 +9,7 @@
 /// responses, not only the API document.
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 
 /// `GET /identity` — who the server is. Answers without a token.
 ///

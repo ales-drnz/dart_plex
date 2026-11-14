@@ -4,8 +4,8 @@
 
 library;
 
+import '../parsing/plex_json.dart';
 import '../plex_filter.dart';
-import '../plex_json.dart';
 import 'plex_base_models.dart';
 
 // ---------------------------------------------------------------------------

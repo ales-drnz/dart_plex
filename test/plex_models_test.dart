@@ -3,7 +3,7 @@
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
 import 'package:dart_plex/dart_plex.dart';
-import 'package:dart_plex/src/plex_json.dart';
+import 'package:dart_plex/src/parsing/plex_json.dart';
 import 'package:test/test.dart';
 
 void main() {

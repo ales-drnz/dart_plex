@@ -5,9 +5,9 @@
 /// The type tags and the `MediaContainer` envelope every list answer shares.
 library;
 
+import '../parsing/plex_json.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
-import '../plex_json.dart';
 
 // ---------------------------------------------------------------------------
 // Type tags

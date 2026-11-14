@@ -5,8 +5,8 @@
 /// An item's media: versions, parts and streams.
 library;
 
+import '../parsing/plex_json.dart';
 import '../plex_filter.dart';
-import '../plex_json.dart';
 import 'plex_metadata_models.dart';
 
 /// One `<Media>` node under a [PlexMetadata]. Tracks/movies usually have

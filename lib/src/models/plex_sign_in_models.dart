@@ -5,7 +5,7 @@
 /// The plex.tv account and the PIN that signs it in.
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 
 // ---------------------------------------------------------------------------
 // plex.tv account

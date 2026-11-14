@@ -4,11 +4,11 @@
 
 import 'dart:typed_data';
 
+import '../parsing/plex_json.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
-import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_urls.dart';
 

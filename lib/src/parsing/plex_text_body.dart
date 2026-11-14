@@ -7,7 +7,7 @@ library;
 
 import 'dart:convert';
 
-import 'api/plex_streaming_api.dart';
+import '../api/plex_streaming_api.dart';
 
 /// Decode a whole text body Plex streamed off disk, picking the codec the
 /// bytes — and, failing that, the response header — actually call for.

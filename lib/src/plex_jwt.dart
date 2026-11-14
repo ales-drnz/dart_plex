@@ -10,10 +10,10 @@ import 'dart:typed_data';
 import 'package:cryptography/dart.dart';
 
 import 'api/plex_account_api.dart';
+import 'parsing/plex_json.dart';
 import 'plex_client.dart';
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
-import 'plex_json.dart';
 
 /// The Ed25519 key pair a device signs in to plex.tv with.
 ///

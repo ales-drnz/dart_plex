@@ -2,13 +2,13 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../parsing/plex_json.dart';
+import '../parsing/plex_parsing.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
-import '../plex_json.dart';
 import '../plex_models.dart';
-import '../plex_parsing.dart';
 
 /// Top-level server endpoints — `/`, `/identity`, `/capabilities`.
 ///

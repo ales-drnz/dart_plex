@@ -6,15 +6,15 @@ import 'dart:convert';
 
 import 'package:meta/meta.dart';
 
+import '../parsing/plex_json.dart';
+import '../parsing/plex_text_body.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_credentials.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
-import '../plex_json.dart';
 import '../plex_models.dart';
 import '../plex_pass.dart' as pass;
-import '../plex_text_body.dart';
 import '../plex_urls.dart';
 import '../plex_vocabulary.dart';
 import '../transport/plex_response.dart';

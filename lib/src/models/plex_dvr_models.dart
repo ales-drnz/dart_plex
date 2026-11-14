@@ -5,7 +5,7 @@
 /// DVRs, tuners and their channels.
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 
 // ---------------------------------------------------------------------------
 // Live TV, DVR, tuners, EPG, recordings

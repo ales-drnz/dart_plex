@@ -5,8 +5,8 @@
 /// Servers and devices of a plex.tv account, and how to reach them.
 library;
 
+import '../parsing/plex_json.dart';
 import '../plex_error_type.dart';
-import '../plex_json.dart';
 
 /// One server entry from `plex.tv/api/v2/resources`.
 ///

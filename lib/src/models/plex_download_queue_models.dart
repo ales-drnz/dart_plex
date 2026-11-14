@@ -4,7 +4,7 @@
 
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 import 'plex_transcode_models.dart';
 
 // ---------------------------------------------------------------------------

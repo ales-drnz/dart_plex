@@ -6,7 +6,7 @@
 /// @docImport '../api/plex_streaming_api.dart';
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 import '../plex_pass.dart';
 import '../plex_vocabulary.dart';
 

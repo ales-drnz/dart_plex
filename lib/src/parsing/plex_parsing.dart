@@ -11,10 +11,10 @@
 /// these exist so that the rule has one obvious way to be followed.
 library;
 
-import 'plex_error_type.dart';
-import 'plex_exception.dart';
+import '../plex_error_type.dart';
+import '../plex_exception.dart';
+import '../plex_models.dart';
 import 'plex_json.dart';
-import 'plex_models.dart';
 
 /// Parses a `MediaContainer` envelope whose entries sit under [arrayKey].
 PlexMediaContainer<T> Function(Object? json) containerOf<T>(

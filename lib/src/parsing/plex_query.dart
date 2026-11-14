@@ -5,9 +5,9 @@
 /// Query-string helpers shared by the sub-APIs. Not exported.
 library;
 
-import 'plex_error_type.dart';
-import 'plex_exception.dart';
-import 'plex_filter.dart';
+import '../plex_error_type.dart';
+import '../plex_exception.dart';
+import '../plex_filter.dart';
 
 /// Fold [filters] into [qp], one query parameter per condition.
 ///

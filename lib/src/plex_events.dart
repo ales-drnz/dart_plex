@@ -10,7 +10,7 @@
 /// document leaves out (`parentItemID`, `mediaState`, `Context`).
 library;
 
-import 'plex_json.dart';
+import 'parsing/plex_json.dart';
 import 'plex_models.dart';
 
 /// One event from the notification stream. Switch over the subtypes:

@@ -5,7 +5,7 @@
 /// The electronic programme guide.
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 
 /// A country (or a region of one) with program guide data
 /// (`/livetv/epg/countries`, `…/regions`).

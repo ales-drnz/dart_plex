@@ -5,7 +5,7 @@
 /// Plex Home, shared users and where a device is.
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 
 // ---------------------------------------------------------------------------
 // Plex Home, friends and sharing

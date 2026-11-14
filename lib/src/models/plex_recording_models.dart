@@ -5,7 +5,7 @@
 /// Recording rules and what is being recorded.
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 import 'plex_metadata_models.dart';
 
 /// A recording rule (`/media/subscriptions`): "record this show", "record

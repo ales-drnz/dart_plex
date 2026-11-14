@@ -2,12 +2,12 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
+import '../parsing/plex_parsing.dart';
 import '../plex_client.dart';
 import '../plex_connection.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
 import '../plex_models.dart';
-import '../plex_parsing.dart';
 import '../plex_urls.dart';
 import 'plex_library_api.dart';
 

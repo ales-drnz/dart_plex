@@ -5,9 +5,9 @@
 /// Play queues and what generates them.
 library;
 
+import '../parsing/plex_json.dart';
 import '../plex_error_type.dart';
 import '../plex_exception.dart';
-import '../plex_json.dart';
 import 'plex_metadata_models.dart';
 
 // ---------------------------------------------------------------------------

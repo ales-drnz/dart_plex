@@ -4,7 +4,7 @@
 
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 import '../plex_vocabulary.dart';
 import 'plex_base_models.dart';
 import 'plex_media_models.dart';

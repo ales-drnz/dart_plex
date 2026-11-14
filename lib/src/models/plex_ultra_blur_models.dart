@@ -5,7 +5,7 @@
 /// The UltraBlur colours of an artwork.
 library;
 
-import '../plex_json.dart';
+import '../parsing/plex_json.dart';
 
 // ---------------------------------------------------------------------------
 // UltraBlur (`/services/ultrablur/colors`)
