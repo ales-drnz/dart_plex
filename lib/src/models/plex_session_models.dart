@@ -2,7 +2,12 @@
 // All rights reserved.
 // Use of this source code is governed by BSD 3-Clause license that can be found in the LICENSE file.
 
-part of '../plex_models.dart';
+library;
+
+import '../plex_error_type.dart';
+import '../plex_exception.dart';
+import '../plex_json.dart';
+import '../plex_models.dart';
 
 // ---------------------------------------------------------------------------
 // Play queues (returned by /playQueues create + fetch)

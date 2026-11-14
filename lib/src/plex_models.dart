@@ -10,25 +10,20 @@
 /// nested inside a `MediaContainer` envelope (PMS endpoints).
 library;
 
-import 'dart:convert';
-
-import 'api/plex_streaming_api.dart' show PlexTranscodeDecision;
 import 'plex_error_type.dart';
 import 'plex_exception.dart';
-import 'plex_filter.dart';
 import 'plex_json.dart';
-import 'plex_vocabulary.dart';
 
-part 'models/plex_account_models.dart';
-part 'models/plex_download_queue_models.dart';
-part 'models/plex_hub_models.dart';
-part 'models/plex_library_models.dart';
-part 'models/plex_live_tv_models.dart';
-part 'models/plex_lyrics_models.dart';
-part 'models/plex_metadata_models.dart';
-part 'models/plex_playlist_models.dart';
-part 'models/plex_server_admin_models.dart';
-part 'models/plex_session_models.dart';
+export 'models/plex_account_models.dart';
+export 'models/plex_download_queue_models.dart';
+export 'models/plex_hub_models.dart';
+export 'models/plex_library_models.dart';
+export 'models/plex_live_tv_models.dart';
+export 'models/plex_lyrics_models.dart';
+export 'models/plex_metadata_models.dart';
+export 'models/plex_playlist_models.dart';
+export 'models/plex_server_admin_models.dart';
+export 'models/plex_session_models.dart';
 
 // ---------------------------------------------------------------------------
 // Type tags
